@@ -1,0 +1,60 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SpectralAssist.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SpectralAssist.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="SpectralAssist">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainViewModel/>
+    </Design.DataContext>
+    
+    
+    <Grid>
+        <!-- Main Layout -->
+        <Grid ColumnDefinitions="128,*">
+
+            <!-- LEFT: Static Sidebar -->
+            <Border Grid.Column="0" Background="#38423B">
+                <StackPanel Spacing="8" Margin="12">
+                    <TextBlock Text="SpectralAssist"></TextBlock>
+                    <Button Content="Open HSI" Click="OpenHSIButton_Clicked" />
+                    <Button Content="Home" Command="{Binding NavigateToHomeCommand}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- RIGHT: Dynamic Content -->
+            <ContentControl Grid.Column="1" Content="{Binding CurrentView}"/>
+        </Grid>
+        
+        <!-- Drag and Drop Overlay -->
+        <Border IsVisible="{Binding IsDragging}"
+                IsHitTestVisible="False"
+                Background="#CC000000"
+                CornerRadius="8"
+                Margin="16">
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="{Binding DragIcon}"
+                           FontSize="48"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding DragMessage}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Foreground="White"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+
+        </Border>
+            
+    </Grid>
+    
+</Window>

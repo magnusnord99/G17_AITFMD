@@ -1,0 +1,37 @@
+seed: 42
+
+paths:
+  input_dataset_root: "../../../PKG - HistologyHSI-GB"
+  metadata_csv: "../../data/interim/metadata_master.csv"
+  calibrated_dir: "../../data/interim/calibrated"
+  masks_dir: "../../data/interim/masks"
+  patches_dir: "../../data/processed/patches"
+  splits_dir: "../../data/splits"
+
+labels:
+  tumor_suffix: "_T"
+  non_tumor_suffix: "_NT"
+
+calibration:
+  eps: 1.0e-8
+  clip_min: 0.0
+  clip_max: 1.0
+
+spectral:
+  reduce_bands: true
+  reduction_window: 3
+  remove_edge_bands: false
+
+tissue_mask:
+  method: "mean_std_percentile"
+  min_object_size: 500
+  min_hole_size: 1000
+  tissue_side: "dark"           
+  target_tissue_ratio: null      
+
+patching:
+  patch_h: 64
+  patch_w: 64
+  stride_h: 32
+  stride_w: 32
+  min_tissue_ratio: 0.60

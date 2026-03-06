@@ -1,0 +1,82 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SpectralAssist.Views.ImageView"
+             x:DataType="vm:ImageViewModel">
+    
+    <Panel>
+        <!-- Loading State -->
+        <StackPanel IsVisible="{Binding IsLoading}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="16">
+            <TextBlock Text="{Binding StatusMessage}"
+                       HorizontalAlignment="Center"/>
+            <ProgressBar Value="{Binding Progress}"
+                         Minimum="0" Maximum="1"
+                         Width="300" Height="8"/>
+        </StackPanel>
+
+        <!-- Error State -->
+        <StackPanel IsVisible="{Binding IsError}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="12">
+            <TextBlock Text="⚠" FontSize="48"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="Red"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Ready State -->
+        <Grid IsVisible="{Binding IsReady}"
+              RowDefinitions="Auto,*,Auto">
+
+            <!-- Top toolbar -->
+            <StackPanel Grid.Row="0"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        Margin="12,8">
+
+                <ToggleSwitch OnContent="Grayscale"
+                              OffContent="RGB"
+                              IsChecked="{Binding IsGrayscale, Mode=TwoWay}"/>
+
+                <TextBlock Text="{Binding SelectedBandLabel}"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding IsGrayscale}"/>
+            </StackPanel>
+
+            <!-- Image display -->
+            <Image Grid.Row="1"
+                   Source="{Binding CurrentBitmap}"
+                   Stretch="Uniform"/>
+
+            <!-- Band scrubber (grayscale only) -->
+            <Grid Grid.Row="2"
+                  ColumnDefinitions="*,Auto"
+                  Margin="12,8"
+                  IsVisible="{Binding IsGrayscale}">
+
+                <Slider Grid.Column="0"
+                        Minimum="0"
+                        Maximum="{Binding MaxBandIndex}"
+                        Value="{Binding SelectedBand}"
+                        TickFrequency="1"
+                        IsSnapToTickEnabled="True"/>
+
+                <TextBlock Grid.Column="1"
+                           Text="{Binding MaxBandIndex, StringFormat='/ {0}'}"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0"/>
+            </Grid>
+
+        </Grid>
+
+    </Panel>
+
+</UserControl>

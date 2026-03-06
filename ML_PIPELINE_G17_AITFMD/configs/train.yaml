@@ -1,0 +1,37 @@
+seed: 42
+
+data:
+  fold_index: 0
+  batch_size: 8
+  num_workers: 4
+
+optimizer:
+  name: "adam"
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+
+scheduler:
+  enabled: true
+  name: "cosine"
+  t_max_epochs: 50
+
+loss:
+  name: "cross_entropy"
+  class_weighting: true
+
+trainer:
+  max_epochs: 50
+  early_stopping_patience: 10
+  mixed_precision: true
+  save_best_only: true
+
+paths:
+  checkpoints_dir: "../hsi_3dcnn_project/outputs/checkpoints"
+  logs_dir: "../hsi_3dcnn_project/outputs/logs"
+  reports_dir: "../hsi_3dcnn_project/outputs/reports"
+
+splits:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+
