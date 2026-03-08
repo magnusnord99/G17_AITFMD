@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
 
@@ -15,10 +16,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     private readonly CancellationTokenSource _cts = new();
     private readonly string  _hdrPath;
-    
+
     public ImageViewModel(string hdrPath = "")
     {
         _hdrPath = hdrPath;
+        RunInferenceCommand = new AsyncRelayCommand(RunInferenceAsync);
         _ = LoadAsync();
     }
     
@@ -43,6 +45,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private double _progress;
     [ObservableProperty] private WriteableBitmap? _currentBitmap;
+    [ObservableProperty] private string _inferenceOutput = "";
     
     public bool IsLoading => LoadingState == LoadingState.Loading;
     public bool IsError => LoadingState == LoadingState.Error;
@@ -66,6 +69,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(IsGrayscale));
         UpdateBitmap();
+    }
+
+    public IAsyncRelayCommand RunInferenceCommand { get; }
+
+    private async Task RunInferenceAsync()
+    {
+        InferenceOutput = "Running...";
+        var (ok, output) = await Task.Run(() => InferenceRunner.Run(_hdrPath));
+        InferenceOutput = ok ? output : $"Error: {output}";
     }
     
     

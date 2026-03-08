@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -49,12 +49,31 @@
                 <TextBlock Text="{Binding SelectedBandLabel}"
                            VerticalAlignment="Center"
                            IsVisible="{Binding IsGrayscale}"/>
+
+                <Button Content="Run inference"
+                        Command="{Binding RunInferenceCommand}"
+                        VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Image display -->
-            <Image Grid.Row="1"
-                   Source="{Binding CurrentBitmap}"
-                   Stretch="Uniform"/>
+            <!-- Image display + inference output -->
+            <Grid Grid.Row="1" RowDefinitions="*,Auto">
+                <Image Grid.Row="0"
+                       Source="{Binding CurrentBitmap}"
+                       Stretch="Uniform"/>
+                <Border Grid.Row="1"
+                        Background="#1E1E1E"
+                        Padding="12,8"
+                        MaxHeight="120">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding InferenceOutput}"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Consolas"
+                                   FontSize="12"
+                                   Foreground="#E0E0E0"/>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
 
             <!-- Band scrubber (grayscale only) -->
             <Grid Grid.Row="2"
