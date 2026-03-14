@@ -1,0 +1,43 @@
+seed: 42
+
+paths:
+  # Input avg3 cubes (same source as PCA/wavelet)
+  input_root: "/Volumes/OnG_13_2TB/hsi_avg3_float16"
+  # Where to save trained model (run/train_autoencoder.py)
+  model_dir: "../../data/interim/ae_models"
+  model_filename: "ae_avg3_16.pt"
+  # Output root for AE-transformed cubes (build/build_ae_dataset.py)
+  output_root: "../../data/processed/ae16"
+  # Patient-level split file
+  split_csv: "../../data/splits/patient_split.csv"
+  # Manifest of AE outputs
+  manifest_csv: "../../data/interim/ae_manifest.csv"
+
+autoencoder:
+  # Spectral channels in input (avg3 after reduce_bands)
+  in_channels: 275
+  # Latent/output channels (compressed representation)
+  latent_channels: 16
+  # Patch size for training (spatial crop from cube)
+  patch_size: 64
+  # Max cubes to use per epoch (null = all)
+  max_train_cubes: null
+  # Patches per cube per epoch
+  patches_per_cube: 8
+  # Cache N cubes in RAM to avoid re-reading from disk (~300 MB/cube)
+  max_cached_cubes: 10
+
+training:
+  epochs: 50
+  batch_size: 16
+  learning_rate: 0.001
+  # Use validation split for early stopping / best model
+  val_fraction: 0.15
+
+build:
+  output_dtype: "float32"
+  overwrite: false
+
+runtime:
+  device: "cuda"  # "cuda", "mps" (Apple Silicon), or "cpu"
+  verbose: true

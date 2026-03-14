@@ -8,30 +8,32 @@ import torch.nn as nn
 
 class ConvAutoencoder(nn.Module):
     """
-    Lightweight autoencoder for HSI patches.
+    Spectral autoencoder for HSI patches.
+    Uses 1x1 convolutions only — compresses along the spectral axis per pixel,
+    analogous to PCA/wavelets (no spatial mixing).
     """
 
     def __init__(self, in_channels: int = 275, latent_channels: int = 32) -> None:
         super().__init__()
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels, 128, kernel_size=1),
+            nn.GroupNorm(8, 128),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(128, 64, kernel_size=1),
+            nn.GroupNorm(8, 64),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, latent_channels, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(64, latent_channels, kernel_size=1),
         )
 
         self.decoder = nn.Sequential(
-            nn.Conv2d(latent_channels, 64, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(latent_channels, 64, kernel_size=1),
+            nn.GroupNorm(8, 64),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(64, 128, kernel_size=1),
+            nn.GroupNorm(8, 128),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, in_channels, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(128, in_channels, kernel_size=1),
         )
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:

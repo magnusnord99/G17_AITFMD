@@ -5,6 +5,7 @@ paths:
   metadata_csv: "../../data/interim/metadata_master.csv"
   calibrated_dir: "../../data/interim/calibrated"
   masks_dir: "../../data/interim/masks"
+  processed_dir: "../../data/processed"
   patches_dir: "../../data/processed/patches"
   splits_dir: "../../data/splits"
 
@@ -30,6 +31,11 @@ tissue_mask:
   target_tissue_ratio: null      
 
 patching:
+  # Which dataset version to patch (under paths.processed_dir)
+  input_subdir: "pca32"
+  output_subdir: "pca32"
+  mask_subdir: "final_mask"
+  splits_file: "patient_split.csv"
   patch_h: 64
   patch_w: 64
   stride_h: 32

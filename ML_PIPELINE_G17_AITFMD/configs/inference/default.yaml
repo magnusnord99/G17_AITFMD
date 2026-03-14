@@ -1,0 +1,29 @@
+# Inferanse-config for GUI-backend.
+# Preprocessing: kalibrering → clipping → avg3 → spektral reduksjon (AE eller PCA) → masking → patchifisering.
+
+paths:
+  # spectral_reducer: "ae" eller "pca"
+  spectral_reducer: "pca"
+  # AE-modell (fra run/train_autoencoder.py) – brukes når spectral_reducer=ae
+  ae_model: "data/interim/ae_models/ae_avg3_16.pt"
+  # PCA-modell (fra run/fit_pca.py) – brukes når spectral_reducer=pca
+  pca_model: "data/interim/pca_models/pca_avg3_16.joblib"
+
+preprocessing:
+  calibration:
+    eps: 1.0e-8
+    clip_min: 0.0
+    clip_max: 1.0
+  spectral:
+    reduction_window: 3  # avg3
+  tissue_mask:
+    method: "mean_std_percentile"
+    min_object_size: 500
+    min_hole_size: 1000
+    tissue_side: "dark"
+  patching:
+    patch_h: 64
+    patch_w: 64
+    stride_h: 32
+    stride_w: 32
+    min_tissue_ratio: 0.60

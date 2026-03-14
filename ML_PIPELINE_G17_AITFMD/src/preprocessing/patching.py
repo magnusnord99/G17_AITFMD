@@ -23,14 +23,29 @@ def iter_patches(
     patch_w: int,
     stride_h: int,
     stride_w: int,
+    mask: np.ndarray | None = None,
+    min_tissue_ratio: float = 0.0,
 ) -> Iterator[tuple[np.ndarray, int, int]]:
-    """Yield patches and top-left (y, x) coordinates."""
+    """Yield patches and top-left (y, x) coordinates.
+
+    If mask is provided and min_tissue_ratio > 0, only yields patches where
+    the fraction of tissue pixels (mask > 0) is at least min_tissue_ratio.
+    """
     h, w, _ = cube.shape
     if h < patch_h or w < patch_w:
         return
 
+    use_mask = mask is not None and min_tissue_ratio > 0
+    if use_mask and mask.shape[:2] != (h, w):
+        raise ValueError(f"Mask shape {mask.shape[:2]} must match cube spatial {h}x{w}")
+
     for y in range(0, h - patch_h + 1, stride_h):
         for x in range(0, w - patch_w + 1, stride_w):
+            if use_mask:
+                patch_mask = mask[y : y + patch_h, x : x + patch_w]
+                tissue_frac = float(np.mean(patch_mask > 0))
+                if tissue_frac < min_tissue_ratio:
+                    continue
             yield cube[y : y + patch_h, x : x + patch_w, :], y, x
 
 
@@ -42,6 +57,14 @@ def load_numpy_cube(cube_path: Path) -> np.ndarray:
     return cube.astype(np.float32, copy=False)
 
 
+def load_mask(mask_path: Path) -> np.ndarray:
+    """Load tissue mask as (H, W) with values 0 (background) or 1 (tissue)."""
+    mask = np.load(mask_path, allow_pickle=False)
+    if mask.ndim != 2:
+        raise ValueError(f"Mask must be 2D, got {mask.shape} at {mask_path}")
+    return mask
+
+
 def make_patches(
     input_root: Path,
     output_root: Path,
@@ -50,9 +73,17 @@ def make_patches(
     patch_size_w: int,
     stride_h: int,
     stride_w: int,
+    mask_root: Path | None = None,
+    min_tissue_ratio: float = 0.0,
 ) -> pd.DataFrame:
-    """Build patches from all split rows and write a single manifest CSV."""
+    """Build patches from all split rows and write a single manifest CSV.
+
+    If mask_root is set and min_tissue_ratio > 0, only patches with at least
+    that fraction of tissue pixels (from mask) are kept. Masks are expected at
+    mask_root/patient_id/{roi_name}_mask.npy.
+    """
     manifest_rows: list[dict[str, str | int]] = []
+    use_mask = mask_root is not None and min_tissue_ratio > 0
 
     for _, row in splits.iterrows():
         patient_id = str(row["patient_id"])
@@ -65,8 +96,23 @@ def make_patches(
             continue
 
         cube = load_numpy_cube(cube_path)
+        mask = None
+        if use_mask:
+            mask_path = mask_root / patient_id / f"{roi_name}_mask.npy"
+            if mask_path.exists():
+                mask = load_mask(mask_path)
+            # else: no mask for this ROI, include all patches
+
         for patch_idx, (patch, y, x) in enumerate(
-            iter_patches(cube, patch_size_h, patch_size_w, stride_h, stride_w)
+            iter_patches(
+                cube,
+                patch_size_h,
+                patch_size_w,
+                stride_h,
+                stride_w,
+                mask=mask,
+                min_tissue_ratio=min_tissue_ratio,
+            )
         ):
             patch_id = f"{patient_id}_{roi_name}_{y}_{x}_{patch_idx}"
             patch_path = output_root / split / str(label_id) / f"{patch_id}.npy"
@@ -97,10 +143,20 @@ def make_patches(
 
 
 def main() -> None:
+    """Standalone entry with hardcoded defaults. Prefer build_patches.py for config-driven runs."""
     input_root = Path("data/processed/pca32")
     output_root = Path("data/processed/patches/pca32")
     splits_path = Path("data/splits/patient_split.csv")
+    mask_root = Path("data/interim/masks/final_mask")
+    min_tissue_ratio = 0.60
+
     splits = get_patient_splits(splits_path)
+    effective_mask_root = mask_root if mask_root.exists() else None
+    if effective_mask_root:
+        print(f"Using tissue masks from {effective_mask_root} (min_tissue_ratio={min_tissue_ratio})")
+    else:
+        print(f"Mask root {mask_root} not found; including all patches (no mask filter)")
+
     manifest_df = make_patches(
         input_root=input_root,
         output_root=output_root,
@@ -109,6 +165,8 @@ def main() -> None:
         patch_size_w=64,
         stride_h=32,
         stride_w=32,
+        mask_root=effective_mask_root,
+        min_tissue_ratio=min_tissue_ratio,
     )
     print(f"saved patches: {len(manifest_df)}")
     print(f"manifest: {output_root / 'manifest.csv'}")

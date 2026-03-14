@@ -1,0 +1,22 @@
+# Band reduction by simple averaging — baseline for comparison with PCA/AE/wavelet.
+# No model fitting; deterministic transform.
+
+paths:
+  input_root: "/Volumes/OnG_13_2TB/hsi_avg3_float16"
+  output_root: "../../data/processed/avg16"
+  split_csv: "../../data/splits/patient_split.csv"
+  manifest_csv: "../../data/interim/avg_baseline_manifest.csv"
+
+band_reduce:
+  in_bands: 275
+  out_bands: 16
+  # "crop": crop to 272 bands (drop last 3), 17 bands per group
+  # "uneven": 13 groups of 17 + 3 groups of 18 (no info loss)
+  strategy: "crop"
+
+build:
+  output_dtype: "float32"
+  overwrite: false
+
+runtime:
+  verbose: true
