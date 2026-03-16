@@ -30,9 +30,14 @@ public static class InferenceRunner
         var outputPath = Path.Combine(Path.GetTempPath(), $"inference_{Guid.NewGuid():N}.json");
         try
         {
+            // Use venv Python if available, otherwise fall back to system Python
+            var scriptDir = Path.GetDirectoryName(scriptPath) ?? ".";
+            var venvPython = Path.Combine(scriptDir, "venv", "Scripts", "python.exe");
+            var pythonExe = File.Exists(venvPython) ? venvPython : "python";
+ 
             var psi = new ProcessStartInfo
             {
-                FileName = "python",
+                FileName = pythonExe,
                 Arguments = $"\"{scriptPath}\" --input \"{hdrPath}\" --output \"{outputPath}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
