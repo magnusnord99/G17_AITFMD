@@ -79,11 +79,7 @@ public static class HsiHeaderParser
     {
         var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         using var reader = new StreamReader(hdrPath);
-
-        var firstLine = reader.ReadLine()?.Trim();
-        if (firstLine is not "ENVI")
-            throw new FormatException("Not a valid ENVI header file.");
-
+        
         while (reader.ReadLine() is { } line)
         {
             line = line.Trim();
