@@ -1,8 +1,14 @@
 # Inferanse-config for GUI-backend.
-# Preprocessing: kalibrering → clipping → avg3 → spektral reduksjon (AE eller PCA) → masking → patchifisering.
+# Preprocessing: kalibrering → clipping → avg3 → spektral reduksjon → masking → patchifisering.
+# Model: "dummy" for GUI-testing (fake heatmap), "pytorch" for trained 3D CNN (senere).
+
+seed: 42
+
+model:
+  backend: "dummy"  # "dummy" = fake scores for GUI-testing, "pytorch" = trained 3D CNN
+  name: "dummy_3dcnn"
 
 paths:
-  # spectral_reducer: "ae" eller "pca"
   spectral_reducer: "pca"
   # AE-modell (fra run/train_autoencoder.py) – brukes når spectral_reducer=ae
   ae_model: "data/interim/ae_models/ae_avg3_16.pt"
