@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
@@ -48,6 +49,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _progress;
     [ObservableProperty] private WriteableBitmap? _currentBitmap;
     [ObservableProperty] private string _inferenceOutput = "";
+    [ObservableProperty] private Bitmap? _heatmapBitmap;
     
     public bool IsLoading => LoadingState == LoadingState.Loading;
     public bool IsError => LoadingState == LoadingState.Error;
@@ -151,8 +153,26 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private async Task RunInferenceAsync()
     {
         InferenceOutput = "Running...";
-        var (ok, output) = await Task.Run(() => InferenceRunner.Run(_hdrPath));
-        InferenceOutput = ok ? output : $"Error: {output}";
+        HeatmapBitmap = null;
+        var (ok, outputDir, output) = await Task.Run(() => InferenceRunner.Run(_hdrPath));
+        if (!ok)
+        {
+            InferenceOutput = $"Error: {output}";
+            return;
+        }
+        InferenceOutput = output;
+        if (!string.IsNullOrEmpty(outputDir))
+        {
+            var heatmapPath = Path.Combine(outputDir, "heatmap.png");
+            if (File.Exists(heatmapPath))
+            {
+                try
+                {
+                    HeatmapBitmap = new Bitmap(heatmapPath);
+                }
+                catch { /* ignore */ }
+            }
+        }
     }
     
     public void Dispose()

@@ -21,24 +21,31 @@ public static class InferenceRunner
         return Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "ML_PIPELINE_G17_AITFMD", "run_inference.py");
     }
 
-    public static (bool Success, string Output) Run(string hdrPath)
+    /// <summary>
+    /// Runs inference and returns (Success, OutputDir, Json). OutputDir contains heatmap.png for overlay.
+    /// </summary>
+    public static (bool Success, string? OutputDir, string Output) Run(string hdrPath)
     {
         var scriptPath = GetRunInferencePath();
         if (!File.Exists(scriptPath))
-            return (false, $"run_inference.py not found: {scriptPath}");
+            return (false, null, $"run_inference.py not found: {scriptPath}");
 
-        var outputPath = Path.Combine(Path.GetTempPath(), $"inference_{Guid.NewGuid():N}.json");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"inference_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(outputDir);
+        var predictionPath = Path.Combine(outputDir, "prediction.json");
+
         try
         {
-            // Use venv Python if available, otherwise fall back to system Python
             var scriptDir = Path.GetDirectoryName(scriptPath) ?? ".";
-            var venvPython = Path.Combine(scriptDir, "venv", "Scripts", "python.exe");
+            var venvPython = Path.Combine(scriptDir, ".venv", "bin", "python");
+            if (!File.Exists(venvPython))
+                venvPython = Path.Combine(scriptDir, "venv", "Scripts", "python.exe");
             var pythonExe = File.Exists(venvPython) ? venvPython : "python";
- 
+
             var psi = new ProcessStartInfo
             {
                 FileName = pythonExe,
-                Arguments = $"\"{scriptPath}\" --input \"{hdrPath}\" --output \"{outputPath}\"",
+                Arguments = $"\"{scriptPath}\" --input \"{hdrPath}\" --output-dir \"{outputDir}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -46,26 +53,21 @@ public static class InferenceRunner
             };
             using var proc = Process.Start(psi);
             if (proc == null)
-                return (false, "Failed to start process");
+                return (false, null, "Failed to start process");
 
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();
-            proc.WaitForExit(TimeSpan.FromSeconds(30));
+            proc.WaitForExit(TimeSpan.FromSeconds(120));
 
             if (proc.ExitCode != 0)
-                return (false, $"Exit {proc.ExitCode}: {stderr}");
+                return (false, null, $"Exit {proc.ExitCode}: {stderr}");
 
-            var json = File.Exists(outputPath) ? File.ReadAllText(outputPath) : stdout;
-            return (true, json);
+            var json = File.Exists(predictionPath) ? File.ReadAllText(predictionPath) : stdout;
+            return (true, outputDir, json);
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
-        }
-        finally
-        {
-            if (File.Exists(outputPath))
-                try { File.Delete(outputPath); } catch { /* ignore */ }
+            return (false, null, ex.Message);
         }
     }
 }
