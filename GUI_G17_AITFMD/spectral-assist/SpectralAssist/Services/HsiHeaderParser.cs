@@ -12,12 +12,7 @@ public static class HsiHeaderParser
 {
     public static HsiHeader Parse(string hdrPath)
     {
-        var text = File.ReadAllText(hdrPath);
-
-        if (!text.StartsWith("ENVI"))
-            throw new FormatException("Not a valid ENVI header file.");
-        
-        var fields = ParseFields(text);
+        var fields = ParseFields(hdrPath);
         
         var header = new HsiHeader
         {
@@ -42,7 +37,7 @@ public static class HsiHeaderParser
         return header;
     }
     
-    private static Dictionary<string, string> ParseFields(string text)
+    private static Dictionary<string, string> ParseFields2(string text)
     {
         var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var lines = text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
@@ -75,6 +70,46 @@ public static class HsiHeaderParser
             
             fields[key] = value;
             i++;
+        }
+
+        return fields;
+    }
+    
+    private static Dictionary<string, string> ParseFields(string hdrPath)
+    {
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        using var reader = new StreamReader(hdrPath);
+
+        var firstLine = reader.ReadLine()?.Trim();
+        if (firstLine is not "ENVI")
+            throw new FormatException("Not a valid ENVI header file.");
+
+        while (reader.ReadLine() is { } line)
+        {
+            line = line.Trim();
+            var equalsIndex = line.IndexOf('=');
+            if (equalsIndex < 0) continue;
+
+            var key = line[..equalsIndex].Trim();
+            var value = line[(equalsIndex + 1)..].Trim();
+
+            // Handles multi-line blocks
+            if (value.Contains('{') && !value.Contains('}'))
+            {
+                var sb = new StringBuilder(value);
+                while ((line = reader.ReadLine()) != null)
+                {
+                    sb.Append(' ').Append(line.Trim());
+                    if (line.Contains('}')) break;
+                }
+                value = sb.ToString();
+            }
+
+            // Strip outer braces
+            if (value.StartsWith('{') && value.EndsWith('}'))
+                value = value[1..^1].Trim();
+
+            fields[key] = value;
         }
 
         return fields;
