@@ -18,20 +18,51 @@
     
     <Grid>
         <!-- Main Layout -->
-        <Grid ColumnDefinitions="128,*">
+        <Grid ColumnDefinitions="Auto,*">
 
-            <!-- LEFT: Static Sidebar -->
-            <Border Grid.Column="0" Background="#38423B">
-                <StackPanel Spacing="8" Margin="12">
-                    <TextBlock Text="SpectralAssist"></TextBlock>
-                    <Button Content="Open HSI" Click="OpenHSIButton_Clicked" />
-                    <Button Content="Home" Command="{Binding NavigateToHomeCommand}"/>
-                </StackPanel>
+            <!-- LEFT: Sidebar -->
+            <Border Grid.Column="0"
+                    Background="#1A1A1A"
+                    BorderBrush="#2D2D2D"
+                    BorderThickness="0,0,1,0"
+                    Padding="8,12">
+                <DockPanel LastChildFill="False">
+            
+                    <StackPanel DockPanel.Dock="Top" Spacing="4">
+                        <TextBlock Text="SpectralAssist"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="#CCCCCC"
+                                   Margin="4,0,4,8"/>
+                
+                        <Border Height="1" Background="#2D2D2D" Margin="0,0,0,4"/>
+                
+                        <Button Content="Open HSI"
+                                Click="OpenHSIButton_Clicked"
+                                Background="Transparent"
+                                Foreground="#AAAAAA"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,6"
+                                CornerRadius="4"/>
+
+                        <Button Content="Home"
+                                Command="{Binding NavigateToHomeCommand}"
+                                Background="Transparent"
+                                Foreground="#AAAAAA"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,6"
+                                CornerRadius="4"/>
+                    </StackPanel>
+            
+                </DockPanel>
             </Border>
 
             <!-- RIGHT: Dynamic Content -->
             <ContentControl Grid.Column="1" Content="{Binding CurrentView}"/>
         </Grid>
+
         
         <!-- Drag and Drop Overlay -->
         <Border IsVisible="{Binding IsDragging}"

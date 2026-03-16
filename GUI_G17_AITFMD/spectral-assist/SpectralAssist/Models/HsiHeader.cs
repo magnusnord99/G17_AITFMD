@@ -1,4 +1,6 @@
 ﻿
+using System;
+
 namespace SpectralAssist.Models;
 
 public class HsiHeader
@@ -18,4 +20,24 @@ public class HsiHeader
     public int[] DefaultBands { get; set; } = [0, 0, 0];
     public string WavelengthUnit { get; set; } = string.Empty;
     public float[] WavelengthValues { get; set; } = [];
+    
+    /// <summary>
+    /// Returns the band index whose wavelength is closest to the target (in nm).
+    /// </summary>
+    public int FindClosestBand(float targetNm)
+    {
+        var closestBand = 0;
+        var closestDistance = float.MaxValue;
+
+        for (var i = 0; i < WavelengthValues.Length; i++)
+        {
+            var distance = MathF.Abs(WavelengthValues[i] - targetNm);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestBand = i;
+            }
+        }
+        return closestBand;
+    }
 }

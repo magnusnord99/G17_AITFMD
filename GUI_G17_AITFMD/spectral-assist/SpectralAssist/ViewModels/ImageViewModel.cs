@@ -16,7 +16,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     private readonly CancellationTokenSource _cts = new();
     private readonly string  _hdrPath;
-
+    
     public ImageViewModel(string hdrPath = "")
     {
         _hdrPath = hdrPath;
@@ -33,13 +33,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MaxBandIndex))]
-    [NotifyPropertyChangedFor(nameof(SelectedBandLabel))]
+    [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
+    [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private HsiCube? _cube;
     
     [ObservableProperty] private DisplayMode _currentDisplayMode = DisplayMode.Rgb;
     
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SelectedBandLabel))]
+    [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
+    [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private int _selectedBand;
     
     [ObservableProperty] private string _statusMessage = "";
@@ -51,7 +53,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public bool IsError => LoadingState == LoadingState.Error;
     public bool IsReady => LoadingState == LoadingState.Ready;
     public int MaxBandIndex => Cube?.Bands - 1 ?? 0;
-    public string SelectedBandLabel => Cube?.Header.WavelengthUnit ?? "Unit";
+    public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "Unit";
+    public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
     partial void OnSelectedBandChanged(int value) => UpdateBitmap();
     
     
@@ -70,15 +73,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsGrayscale));
         UpdateBitmap();
     }
-
-    public IAsyncRelayCommand RunInferenceCommand { get; }
-
-    private async Task RunInferenceAsync()
-    {
-        InferenceOutput = "Running...";
-        var (ok, output) = await Task.Run(() => InferenceRunner.Run(_hdrPath));
-        InferenceOutput = ok ? output : $"Error: {output}";
-    }
     
     
     private async Task LoadAsync()
@@ -93,7 +87,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             var header = HsiHeaderParser.Parse(_hdrPath);
             StatusMessage = $"{header.Samples}x{header.Lines}x{header.Bands} bands, {header.Interleave.ToUpper()}";
             
-            
             // Step 2: heavy load - load and convert binary data into memory
             var progressReporter = new Progress<(float percent, int band)>(p =>
             {
@@ -101,8 +94,23 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 StatusMessage = $"Loading image data... {p.percent:P0}";
             });
             Cube = await HsiCubeLoader.LoadAsync(header, progressReporter, _cts.Token);
+
+            // Step 3: calibrate if references exist
+            StatusMessage = "Checking for calibration references...";
+            var calibrated = await HsiCalibration.TryCalibrateAsync(_hdrPath, Cube);
+
+            if (calibrated != null)
+            {
+                Cube = calibrated;
+                StatusMessage = "Calibration complete...";
+            }
+            else
+            {
+                StatusMessage = "Calibration skipped...";
+            }
             
-            // Step 3: Show image or something
+            
+            // Step 4: Show image or something
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
             UpdateBitmap();
@@ -111,7 +119,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException)
         {
             LoadingState = LoadingState.Idle;
-            StatusMessage = "Operation Canceled";;
+            StatusMessage = "Operation Canceled";
         }
         catch (Exception ex)
         {
@@ -123,24 +131,32 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private void UpdateBitmap()
     {
         if (Cube == null) return;
-
+        
         CurrentBitmap = CurrentDisplayMode switch
         {
             DisplayMode.Grayscale => BitmapRenderer.BandToBitmap(Cube, SelectedBand),
             
             DisplayMode.Rgb => BitmapRenderer.RgbToBitmap(
                 Cube,
-                Cube.Header.DefaultBands[0],
-                Cube.Header.DefaultBands[1],
-                Cube.Header.DefaultBands[2]),
+                Cube.Header.FindClosestBand(630f),
+                Cube.Header.FindClosestBand(530f),
+                Cube.Header.FindClosestBand(460f)),
             _ => CurrentBitmap
                   
         };
     }
     
+    public IAsyncRelayCommand RunInferenceCommand { get; }
+
+    private async Task RunInferenceAsync()
+    {
+        InferenceOutput = "Running...";
+        var (ok, output) = await Task.Run(() => InferenceRunner.Run(_hdrPath));
+        InferenceOutput = ok ? output : $"Error: {output}";
+    }
+    
     public void Dispose()
     {
-        Console.WriteLine("ImageViewModel.Dispose() called");
         _cts.Cancel();
         _cts.Dispose();
         CurrentBitmap = null;

@@ -42,51 +42,10 @@ public static class HsiHeaderParser
         return header;
     }
     
-    
-    private static Dictionary<string, string> ParseFields2(string filePath)
-    {
-        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        using var reader = new StreamReader(filePath);
-        reader.ReadLine(); // skip "ENVI" line
-
-        while (reader.ReadLine() is { } line)
-        {
-            line = line.Trim();
-            var equalsIndex = line.IndexOf('=');
-            if (equalsIndex < 0) continue;
-
-            var key = line[..equalsIndex].Trim();
-            var value = line[(equalsIndex + 1)..].Trim();
-
-            if (value.Contains('{') && !value.Contains('}'))
-            {
-                var sb = new StringBuilder(value);
-                while ((line = reader.ReadLine()) != null)
-                {
-                    sb.Append(' ').Append(line.Trim());
-                    if (line.Contains('}')) break;
-                }
-                value = sb.ToString();
-            }
-
-            if (value.StartsWith('{') && value.EndsWith('}'))
-                value = value[1..^1].Trim();
-
-            fields[key] = value;
-        }
-
-        return fields;
-    }
-
-    
-    
-    
-    
     private static Dictionary<string, string> ParseFields(string text)
     {
         var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var lines = text.Split(['\n', '\r', '\r']);
+        var lines = text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
 
         var i = 1; // skips top "ENVI" line
         while (i < lines.Length)

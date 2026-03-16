@@ -3,10 +3,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
+             xmlns:paz="using:Avalonia.Controls.PanAndZoom"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SpectralAssist.Views.ImageView"
              x:DataType="vm:ImageViewModel">
-    
+
     <Panel>
         <!-- Loading State -->
         <StackPanel IsVisible="{Binding IsLoading}"
@@ -14,10 +15,11 @@
                     VerticalAlignment="Center"
                     Spacing="16">
             <TextBlock Text="{Binding StatusMessage}"
-                       HorizontalAlignment="Center"/>
+                       HorizontalAlignment="Center"
+                       Foreground="#AAAAAA"/>
             <ProgressBar Value="{Binding Progress}"
                          Minimum="0" Maximum="1"
-                         Width="300" Height="8"/>
+                         Width="300" Height="4"/>
         </StackPanel>
 
         <!-- Error State -->
@@ -28,74 +30,148 @@
             <TextBlock Text="⚠" FontSize="48"
                        HorizontalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}"
-                       Foreground="Red"
+                       Foreground="#FF6B6B"
                        HorizontalAlignment="Center"/>
         </StackPanel>
 
         <!-- Ready State -->
         <Grid IsVisible="{Binding IsReady}"
-              RowDefinitions="Auto,*,Auto">
+              RowDefinitions="Auto,*,Auto,Auto">
 
-            <!-- Top toolbar -->
-            <StackPanel Grid.Row="0"
-                        Orientation="Horizontal"
-                        Spacing="12"
-                        Margin="12,8">
+            <!-- Top Metadata Bar -->
+            <Border Grid.Row="0"
+                    Background="#1E1E1E"
+                    BorderBrush="#2D2D2D"
+                    BorderThickness="0,0,0,1"
+                    Padding="12,6">
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <TextBlock Foreground="#888888" FontSize="11">
+                        <Run Text="Description: "/>
+                        <Run Text="{Binding Cube.Header.Description}" Foreground="#CCCCCC"/>
+                    </TextBlock>
+                    <TextBlock Text="Dimensions:" Foreground="#888888" FontSize="11"/>
+                    <TextBlock Text="{Binding Cube.Header.Samples}" Foreground="#CCCCCC" FontSize="11"/>
+                    <TextBlock Text="×" Foreground="#888888" FontSize="11"/>
+                    <TextBlock Text="{Binding Cube.Header.Lines}" Foreground="#CCCCCC" FontSize="11"/>
+                    <TextBlock Text="×" Foreground="#888888" FontSize="11"/>
+                    <TextBlock Text="{Binding Cube.Header.Bands}" Foreground="#CCCCCC" FontSize="11"/>
+                    
+                    <!-- Inference button -->
+                    <Button Content="Run Inference"
+                            Command="{Binding RunInferenceCommand}"
+                            Background="#2D2D2D"
+                            Foreground="#CCCCCC"
+                            Padding="8,2"
+                            CornerRadius="4"
+                            FontSize="11"
+                            VerticalAlignment="Center"/>
+                    
+                </StackPanel>
+            </Border>
 
-                <ToggleSwitch OnContent="Grayscale"
-                              OffContent="RGB"
-                              IsChecked="{Binding IsGrayscale, Mode=TwoWay}"/>
+            <!-- Image Display -->
+            <paz:ZoomBorder x:Name="ZoomBorder" Grid.Row="1"
+                            Background="#121212"
+                            Stretch="None"
+                            BoundsMode="KeepContentVisible"
+                            ClipToBounds="True"
+                            EnableConstrains="True"
+                            
+                            EnablePan="True"
+                            PanButton="Left"
+                            
+                            ZoomSpeed="1.05"
+                            MinZoomX="1.0"
+                            MinZoomY="1.0"
+                            MaxZoomX="50"
+                            MaxZoomY="50">
+                <Image Source="{Binding CurrentBitmap}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+            </paz:ZoomBorder>
 
-                <TextBlock Text="{Binding SelectedBandLabel}"
-                           VerticalAlignment="Center"
-                           IsVisible="{Binding IsGrayscale}"/>
+            <!-- Inference Output (hidden when empty) -->
+            <Border Grid.Row="2"
+                    Background="#1A1A1A"
+                    BorderBrush="#2D2D2D"
+                    BorderThickness="0,1,0,0"
+                    Padding="12,8"
+                    MaxHeight="120"
+                    IsVisible="{Binding InferenceOutput, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock Text="{Binding InferenceOutput}"
+                               TextWrapping="Wrap"
+                               FontFamily="Consolas"
+                               FontSize="12"
+                               Foreground="#E0E0E0"/>
+                </ScrollViewer>
+            </Border>
+            
+            <!-- Bottom Toolbar -->
+            <Border Grid.Row="3"
+                    Background="#1E1E1E"
+                    BorderBrush="#2D2D2D"
+                    BorderThickness="0,1,0,0"
+                    Padding="12,6"
+                    MinHeight="64">
+                <Grid ColumnDefinitions="Auto,*">
 
-                <Button Content="Run inference"
-                        Command="{Binding RunInferenceCommand}"
-                        VerticalAlignment="Center"/>
-            </StackPanel>
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
 
-            <!-- Image display + inference output -->
-            <Grid Grid.Row="1" RowDefinitions="*,Auto">
-                <Image Grid.Row="0"
-                       Source="{Binding CurrentBitmap}"
-                       Stretch="Uniform"/>
-                <Border Grid.Row="1"
-                        Background="#1E1E1E"
-                        Padding="12,8"
-                        MaxHeight="120">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{Binding InferenceOutput}"
-                                   TextWrapping="Wrap"
-                                   FontFamily="Consolas"
+                        <ToggleSwitch OnContent="Spectral"
+                                      OffContent="RGB"
+                                      IsChecked="{Binding IsGrayscale, Mode=TwoWay}"
+                                      Padding="0"
+                                      MinWidth="0"/>
+
+                        <StackPanel Orientation="Horizontal"
+                                    IsVisible="{Binding IsGrayscale}"
+                                    Spacing="4">
+                            <TextBlock Text="{Binding SelectedBand, StringFormat='Band: {0}'}"
+                                       VerticalAlignment="Center"
+                                       Foreground="#CCCCCC"
+                                       FontSize="12"
+                                       Width="65"
+                                       TextAlignment="Right"/>
+                            <TextBlock VerticalAlignment="Center"
+                                       Foreground="#CCCCCC"
+                                       FontSize="12"
+                                       Width="75"
+                                       TextAlignment="Right">
+                                <Run Text="λ: "/>
+                                <Run Text="{Binding SelectedBandWaveLength, StringFormat='{}{0:F1}'}"/>
+                                <Run Text="{Binding WavelengthUnit}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Band Slider -->
+                    <Grid Grid.Column="1"
+                          ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding IsGrayscale}"
+                          Margin="12,0,0,0">
+                        <Slider Grid.Column="0"
+                                Minimum="0"
+                                Maximum="{Binding MaxBandIndex}"
+                                Value="{Binding SelectedBand}"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding MaxBandIndex, StringFormat='/ {0}'}"
+                                   VerticalAlignment="Center"
+                                   Foreground="#888888"
                                    FontSize="12"
-                                   Foreground="#E0E0E0"/>
-                    </ScrollViewer>
-                </Border>
-            </Grid>
-
-            <!-- Band scrubber (grayscale only) -->
-            <Grid Grid.Row="2"
-                  ColumnDefinitions="*,Auto"
-                  Margin="12,8"
-                  IsVisible="{Binding IsGrayscale}">
-
-                <Slider Grid.Column="0"
-                        Minimum="0"
-                        Maximum="{Binding MaxBandIndex}"
-                        Value="{Binding SelectedBand}"
-                        TickFrequency="1"
-                        IsSnapToTickEnabled="True"/>
-
-                <TextBlock Grid.Column="1"
-                           Text="{Binding MaxBandIndex, StringFormat='/ {0}'}"
-                           VerticalAlignment="Center"
-                           Margin="8,0,0,0"/>
-            </Grid>
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+                </Grid>
+            </Border>
 
         </Grid>
-
     </Panel>
-
 </UserControl>
