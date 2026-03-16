@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -12,11 +12,12 @@ public static class HsiHeaderParser
 {
     public static HsiHeader Parse(string hdrPath)
     {
-        var fields = ParseFields(hdrPath);
-        
+        var resolvedPath = ResolveMacResourceForkPath(hdrPath);
+        var fields = ParseFields(resolvedPath);
+
         var header = new HsiHeader
         {
-            DataFilePath = ResolveDataFilePath(hdrPath),
+            DataFilePath = ResolveDataFilePath(resolvedPath),
             Samples = GetInt(fields, "samples"),
             Lines = GetInt(fields, "lines"),
             Bands = GetInt(fields, "bands"),
@@ -75,6 +76,27 @@ public static class HsiHeaderParser
         return fields;
     }
     
+    /// <summary>
+    /// On macOS, paths may point to ._ resource-fork files. Resolve to the actual ENVI file.
+    /// Also handles file:// URLs.
+    /// </summary>
+    private static string ResolveMacResourceForkPath(string hdrPath)
+    {
+        var path = hdrPath;
+        if (path.StartsWith("file://", StringComparison.OrdinalIgnoreCase) && Uri.TryCreate(path, UriKind.Absolute, out var uri))
+            path = uri!.LocalPath;
+
+        var name = Path.GetFileName(path);
+        if (string.IsNullOrEmpty(name) || !name.StartsWith("._", StringComparison.Ordinal))
+            return path;
+
+        var dir = Path.GetDirectoryName(path);
+        var actualName = name.Substring(2);
+        var actualPath = !string.IsNullOrEmpty(dir) ? Path.Combine(dir, actualName) : actualName;
+
+        return File.Exists(actualPath) ? Path.GetFullPath(actualPath) : path;
+    }
+
     private static Dictionary<string, string> ParseFields(string hdrPath)
     {
         var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

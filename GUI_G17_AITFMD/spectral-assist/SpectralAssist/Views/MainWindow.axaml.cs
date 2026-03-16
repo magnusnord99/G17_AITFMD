@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -48,8 +48,18 @@ public partial class MainWindow : Window
         if (file == null) return;
 
         var filePath = file.Path.LocalPath;
-        if (Path.GetExtension(filePath.ToLowerInvariant()) == ".hdr")
-            Vm.NavigateToImage(filePath);
+        if (Path.GetExtension(filePath.ToLowerInvariant()) != ".hdr") return;
+
+        // On macOS, resolve ._ resource-fork files to the actual ENVI file
+        if (Path.GetFileName(filePath).StartsWith("._"))
+        {
+            var dir = Path.GetDirectoryName(filePath);
+            var actualName = Path.GetFileName(filePath).Substring(2);
+            var actualPath = !string.IsNullOrEmpty(dir) ? Path.Combine(dir, actualName) : actualName;
+            if (File.Exists(actualPath))
+                filePath = actualPath;
+        }
+        Vm.NavigateToImage(filePath);
     }
     
     
@@ -70,8 +80,18 @@ public partial class MainWindow : Window
             });
 
             if (files.Count < 1) return;
-            Debug.WriteLine($"File received via file picker: {files[0].Path.LocalPath}");
-            Vm.NavigateToImage(files[0].Path.LocalPath);
+            var path = files[0].Path.LocalPath;
+            // On macOS, skip ._ resource-fork files – use the actual ENVI file instead
+            if (Path.GetFileName(path).StartsWith("._"))
+            {
+                var dir = Path.GetDirectoryName(path);
+                var actualName = Path.GetFileName(path).Substring(2);
+                var actualPath = !string.IsNullOrEmpty(dir) ? Path.Combine(dir, actualName) : actualName;
+                if (File.Exists(actualPath))
+                    path = actualPath;
+            }
+            Debug.WriteLine($"File received via file picker: {path}");
+            Vm.NavigateToImage(path);
         }
         catch (Exception e)
         {
