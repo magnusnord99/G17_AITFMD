@@ -42,10 +42,16 @@ public static class InferenceRunner
                 venvPython = Path.Combine(scriptDir, "venv", "Scripts", "python.exe");
             var pythonExe = File.Exists(venvPython) ? venvPython : "python";
 
+            var configPath = Path.Combine(scriptDir, "configs", "inference", "pytorch.yaml");
+            var configArg = File.Exists(configPath)
+                ? $"--config \"{configPath}\""
+                : "--config configs/inference/pytorch.yaml";
+
             var psi = new ProcessStartInfo
             {
                 FileName = pythonExe,
-                Arguments = $"\"{scriptPath}\" --input \"{hdrPath}\" --output-dir \"{outputDir}\"",
+                Arguments = $"\"{scriptPath}\" --input \"{hdrPath}\" --output-dir \"{outputDir}\" {configArg}",
+                WorkingDirectory = scriptDir,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
