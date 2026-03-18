@@ -10,10 +10,10 @@ model:
 
 paths:
   spectral_reducer: "pca"
-  # AE-modell (fra run/train_autoencoder.py) – brukes når spectral_reducer=ae
-  ae_model: "data/interim/ae_models/ae_avg3_16.pt"
-  # PCA-modell (fra run/fit_pca.py) – brukes når spectral_reducer=pca
-  pca_model: "data/interim/pca_models/pca_avg3_16.joblib"
+  # AE-modell – brukes når spectral_reducer=ae (trenes med train_autoencoder.py)
+  ae_model: "models/ae_avg3_16.pt"
+  # PCA-modell – brukes når spectral_reducer=pca (trenes med fit_pca.py)
+  pca_model: "models/pca_avg3_16.joblib"
 
 preprocessing:
   calibration:

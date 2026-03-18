@@ -1,0 +1,40 @@
+# Inferanse med trent 3D CNN (baseline_3dcnn).
+#
+# Eksempel (fra prosjektrot):
+#   python run_inference.py \
+#     --input "/Volumes/DJI/G17_AITFMD /PKG - HistologyHSI-GB/P1/ROI_01_C01_T" \
+#     --output-dir "outputs/inference_test" \
+#     --config configs/inference/pytorch.yaml
+
+seed: 42
+
+model:
+  backend: "pytorch"
+  name: "baseline_3dcnn"
+  checkpoint_path: "outputs/checkpoints/baseline_3dcnn_20260317_102346_best.pt"
+  model_config_path: "configs/models/baseline_3dcnn.yaml"
+  batch_size: 32
+
+paths:
+  spectral_reducer: "pca"
+  ae_model: "models/ae_avg3_16.pt"
+  pca_model: "models/pca_avg3_16.joblib"
+
+preprocessing:
+  calibration:
+    eps: 1.0e-8
+    clip_min: 0.0
+    clip_max: 1.0
+  spectral:
+    reduction_window: 3
+  tissue_mask:
+    method: "mean_std_percentile"
+    min_object_size: 500
+    min_hole_size: 1000
+    tissue_side: "dark"
+  patching:
+    patch_h: 64
+    patch_w: 64
+    stride_h: 32
+    stride_w: 32
+    min_tissue_ratio: 0.60

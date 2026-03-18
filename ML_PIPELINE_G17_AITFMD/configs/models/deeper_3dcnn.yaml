@@ -1,0 +1,21 @@
+# Dypere 3D CNN – flere lag, flere kanaler.
+# For større datasett når baseline ikke er nok.
+
+model:
+  name: "deeper_3dcnn"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  dropout: 0.35
+  channels: [32, 64, 128, 256, 256]
+  kernel_size: 3
+
+input:
+  patch_h: 64
+  patch_w: 64
+  spectral_bands: 16
+
+regularization:
+  weight_decay: 1.0e-4

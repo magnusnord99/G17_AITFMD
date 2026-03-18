@@ -1,0 +1,22 @@
+# ResNet-inspirert 3D CNN – residual blocks.
+# Bedre gradient flow, ofte bedre på dypere nett.
+
+model:
+  name: "resnet_3dcnn"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  dropout: 0.30
+  base_channels: 32
+  num_blocks: [2, 2, 2]  # blocks per stage
+  kernel_size: 3
+
+input:
+  patch_h: 64
+  patch_w: 64
+  spectral_bands: 16
+
+regularization:
+  weight_decay: 1.0e-4

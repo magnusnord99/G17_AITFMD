@@ -11,6 +11,7 @@ This project structure is organized for a clean workflow:
 ```text
 hsi_3dcnn_project/
   configs/
+  models/              # PCA + AE for inference (committed for colleagues)
   data/
     raw/
     interim/
@@ -52,9 +53,10 @@ Use the same steps on both machines for reproducible runs.
    - `python -m pip install --upgrade pip`
    - `pip install -r requirements.txt`
 4. Verify paths in `configs/preprocessing/preprocessing.yaml` match local dataset location.
+5. **Inference:** `models/` contains PCA and AE models. Run `run_inference.py --input <ROI> --output-dir <dir>` – no extra setup needed.
 
 ### Recommended Git Practice
 
 - Do not commit `.venv`, generated patches, checkpoints, logs, or derived data.
-- Commit code, configs, and lightweight metadata only.
+- Commit code, configs, lightweight metadata, and `models/` (PCA + AE for inference).
 - Keep branch names task-based (example: `feat/preprocessing-indexer`).

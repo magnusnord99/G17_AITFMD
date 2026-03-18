@@ -1,9 +1,425 @@
-"""Entry point for 3D CNN training."""
+"""Train 3D CNN models from patch manifest."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+import torch
+import yaml
+from tqdm import tqdm
+from torch import nn
+from torch.amp import GradScaler, autocast
+from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data import DataLoader
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.datasets import CubePatchDataset, PatchManifestDataset
+from src.models import build_model_from_config
 
 
-def main() -> None:
-    print("TODO: load split, create dataloaders, train 3D CNN.")
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train 3D CNN on patches (on-the-fly or pre-built).")
+    parser.add_argument("--config", type=str, default="configs/train.yaml", help="Train config YAML")
+    parser.add_argument("--model", type=str, default=None, help="Override model config YAML")
+    parser.add_argument("--manifest", type=str, default=None, help="Override manifest CSV (patch or cube)")
+    parser.add_argument("--cube-manifest", type=str, default=None, help="Use cube manifest for on-the-fly patching")
+    return parser.parse_args()
+
+
+def _resolve_path(config_path: Path, raw: str) -> Path:
+    p = Path(raw).expanduser()
+    if p.is_absolute():
+        return p
+    candidate = (config_path.parent / p).resolve()
+    if candidate.exists():
+        return candidate
+    return (PROJECT_ROOT / p).resolve()
+
+
+def _pick_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def _binary_metrics(logits: torch.Tensor, targets: torch.Tensor) -> dict[str, float]:
+    preds = torch.argmax(logits, dim=1)
+    tp = int(((preds == 1) & (targets == 1)).sum().item())
+    tn = int(((preds == 0) & (targets == 0)).sum().item())
+    fp = int(((preds == 1) & (targets == 0)).sum().item())
+    fn = int(((preds == 0) & (targets == 1)).sum().item())
+
+    total = max(1, tp + tn + fp + fn)
+    precision = tp / max(1, tp + fp)
+    recall = tp / max(1, tp + fn)
+    f1 = 2 * precision * recall / max(1e-8, precision + recall)
+    acc = (tp + tn) / total
+
+    return {
+        "accuracy": float(acc),
+        "precision": float(precision),
+        "recall": float(recall),
+        "f1": float(f1),
+        "tp": tp,
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+    }
+
+
+def _run_train_epoch(
+    model: nn.Module,
+    loader: DataLoader,
+    optimizer: torch.optim.Optimizer,
+    criterion: nn.Module,
+    device: torch.device,
+    scaler: GradScaler,
+    amp_enabled: bool,
+    epoch: int | None = None,
+    max_epochs: int | None = None,
+) -> float:
+    model.train()
+    running_loss = 0.0
+    total = 0
+    desc = f"Epoch {epoch}/{max_epochs} train" if (epoch and max_epochs) else "train"
+    it = tqdm(loader, desc=desc, unit="batch", leave=False) if (epoch and max_epochs) else loader
+
+    for x, y in it:
+        x = x.to(device, non_blocking=True)
+        y = y.to(device, non_blocking=True)
+        optimizer.zero_grad(set_to_none=True)
+
+        with autocast(device_type=device.type, enabled=amp_enabled):
+            logits = model(x)
+            loss = criterion(logits, y)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+
+        batch_n = int(y.size(0))
+        running_loss += float(loss.detach().item()) * batch_n
+        total += batch_n
+        if hasattr(it, "set_postfix"):
+            it.set_postfix(loss=f"{running_loss / total:.4f}")
+
+    return running_loss / max(1, total)
+
+
+@torch.no_grad()
+def _run_eval_epoch(
+    model: nn.Module,
+    loader: DataLoader,
+    criterion: nn.Module,
+    device: torch.device,
+    epoch: int | None = None,
+    max_epochs: int | None = None,
+) -> dict[str, float]:
+    model.eval()
+    running_loss = 0.0
+    total = 0
+    all_logits: list[torch.Tensor] = []
+    all_targets: list[torch.Tensor] = []
+    desc = f"Epoch {epoch}/{max_epochs} val" if (epoch and max_epochs) else "val"
+    it = tqdm(loader, desc=desc, unit="batch", leave=False) if (epoch and max_epochs) else loader
+
+    for x, y in it:
+        x = x.to(device, non_blocking=True)
+        y = y.to(device, non_blocking=True)
+        logits = model(x)
+        loss = criterion(logits, y)
+
+        batch_n = int(y.size(0))
+        running_loss += float(loss.detach().item()) * batch_n
+        total += batch_n
+
+        all_logits.append(logits.detach().cpu())
+        all_targets.append(y.detach().cpu())
+
+    if total == 0:
+        return {"loss": float("inf"), "accuracy": 0.0, "precision": 0.0, "recall": 0.0, "f1": 0.0}
+
+    logits_cat = torch.cat(all_logits, dim=0)
+    targets_cat = torch.cat(all_targets, dim=0)
+    metrics = _binary_metrics(logits_cat, targets_cat)
+    metrics["loss"] = running_loss / total
+    return metrics
+
+
+def main() -> int:
+    args = _parse_args()
+
+    config_path = Path(args.config).expanduser().resolve()
+    if not config_path.exists():
+        config_path = (PROJECT_ROOT / args.config).resolve()
+    if not config_path.exists():
+        raise FileNotFoundError(f"Train config not found: {args.config}")
+
+    cfg: dict[str, Any] = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+
+    model_cfg_path = args.model or cfg.get("model_config", "configs/models/baseline_3dcnn.yaml")
+    model_config_path = _resolve_path(config_path, model_cfg_path)
+
+    data_cfg = cfg.get("data", {})
+    manifest_override = (
+        args.manifest
+        or args.cube_manifest
+        or data_cfg.get("cube_manifest_csv")
+        or data_cfg.get("manifest_csv")
+    )
+
+    if not manifest_override:
+        raise ValueError(
+            "Missing manifest. Set data.cube_manifest_csv (on-the-fly) or data.manifest_csv (pre-built) "
+            "in configs/train.yaml, or pass --manifest / --cube-manifest"
+        )
+
+    manifest_path = _resolve_path(config_path, manifest_override)
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+
+    train_df = pd.read_csv(manifest_path)
+
+    if "output_path" in train_df.columns:
+        # On-the-fly: cube manifest (output_path, label_id, split, patient_id, roi_name)
+        required = {"output_path", "label_id", "split"}
+        missing = required - set(train_df.columns)
+        if missing:
+            raise ValueError(f"Cube manifest missing columns: {sorted(missing)}")
+        if "patient_id" not in train_df.columns or "roi_name" not in train_df.columns:
+            raise ValueError("Cube manifest needs patient_id and roi_name for mask lookup")
+
+        patch_h = int(data_cfg.get("patch_h", 64))
+        patch_w = int(data_cfg.get("patch_w", 64))
+        mask_root_raw = data_cfg.get("mask_root")
+        mask_path = None
+        if mask_root_raw:
+            p = _resolve_path(config_path, mask_root_raw)
+            mask_path = p if p.exists() else None
+        cube_root_raw = data_cfg.get("cube_root")
+        cube_root_path = None
+        if cube_root_raw:
+            p = _resolve_path(config_path, cube_root_raw)
+            cube_root_path = p if p.exists() else None
+        min_tissue = float(data_cfg.get("min_tissue_ratio", 0.0))
+        val_seed = int(cfg.get("seed", 42))
+
+        train_rows = train_df[train_df["split"] == "train"].reset_index(drop=True)
+        val_rows = train_df[train_df["split"] == "val"].reset_index(drop=True)
+
+        train_ds = CubePatchDataset(
+            train_rows,
+            patch_h=patch_h,
+            patch_w=patch_w,
+            mask_root=mask_path,
+            min_tissue_ratio=min_tissue,
+            val_seed=None,
+            cube_root=cube_root_path,
+        )
+        val_ds = CubePatchDataset(
+            val_rows,
+            patch_h=patch_h,
+            patch_w=patch_w,
+            mask_root=mask_path,
+            min_tissue_ratio=min_tissue,
+            val_seed=val_seed,
+            cube_root=cube_root_path,
+        )
+        print(f"[train] mode=on-the-fly cubes")
+    else:
+        # Pre-built: patch manifest (patch_path, split, label_id)
+        required = {"patch_path", "split", "label_id"}
+        missing = required - set(train_df.columns)
+        if missing:
+            raise ValueError(f"Patch manifest missing columns: {sorted(missing)}")
+
+        train_rows = train_df[train_df["split"] == "train"].reset_index(drop=True)
+        val_rows = train_df[train_df["split"] == "val"].reset_index(drop=True)
+
+        train_ds = PatchManifestDataset(train_rows)
+        val_ds = PatchManifestDataset(val_rows)
+        print(f"[train] mode=pre-built patches")
+
+    if len(train_ds) == 0:
+        raise RuntimeError("No train samples.")
+    if len(val_ds) == 0:
+        raise RuntimeError("No val samples.")
+
+    batch_size = int(data_cfg.get("batch_size", 8))
+    num_workers = int(data_cfg.get("num_workers", 4))
+
+    device = _pick_device()
+    pin_memory = device.type == "cuda"
+
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=False,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=False,
+    )
+
+    model = build_model_from_config(model_config_path).to(device)
+
+    loss_cfg = cfg.get("loss", {})
+    class_weighting = bool(loss_cfg.get("class_weighting", False))
+    if class_weighting:
+        counts = train_rows["label_id"].value_counts().to_dict()
+        n0 = float(counts.get(0, 1.0))
+        n1 = float(counts.get(1, 1.0))
+        total = n0 + n1
+        weights = torch.tensor([total / (2.0 * n0), total / (2.0 * n1)], dtype=torch.float32, device=device)
+        criterion = nn.CrossEntropyLoss(weight=weights)
+    else:
+        criterion = nn.CrossEntropyLoss()
+
+    opt_cfg = cfg.get("optimizer", {})
+    lr = float(opt_cfg.get("lr", 1.0e-4))
+    weight_decay = float(opt_cfg.get("weight_decay", 1.0e-4))
+    optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+    sch_cfg = cfg.get("scheduler", {})
+    use_scheduler = bool(sch_cfg.get("enabled", False)) and str(sch_cfg.get("name", "")).lower() == "cosine"
+    scheduler = None
+    if use_scheduler:
+        t_max = int(sch_cfg.get("t_max_epochs", cfg.get("trainer", {}).get("max_epochs", 50)))
+        scheduler = CosineAnnealingLR(optimizer, T_max=max(1, t_max))
+
+    trainer_cfg = cfg.get("trainer", {})
+    max_epochs = int(trainer_cfg.get("max_epochs", 50))
+    patience = int(trainer_cfg.get("early_stopping_patience", 10))
+    amp_requested = bool(trainer_cfg.get("mixed_precision", False))
+    amp_enabled = amp_requested and device.type == "cuda"
+    scaler = GradScaler(device="cuda", enabled=amp_enabled)
+
+    paths_cfg = cfg.get("paths", {})
+    checkpoints_dir = _resolve_path(config_path, str(paths_cfg.get("checkpoints_dir", "outputs/checkpoints")))
+    reports_dir = _resolve_path(config_path, str(paths_cfg.get("reports_dir", "outputs/reports")))
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    model_name = model_config_path.stem
+    best_ckpt_path = checkpoints_dir / f"{model_name}_{run_id}_best.pt"
+    last_ckpt_path = checkpoints_dir / f"{model_name}_{run_id}_last.pt"
+
+    print(f"[train] device={device.type} model={model_name}")
+    print(f"[train] manifest={manifest_path}")
+    print(f"[train] train={len(train_ds)} val={len(val_ds)}")
+
+    history: list[dict[str, float | int]] = []
+    best_val_loss = float("inf")
+    best_epoch = -1
+    epochs_no_improve = 0
+
+    epoch_iter = tqdm(range(1, max_epochs + 1), desc="Training", unit="epoch")
+    for epoch in epoch_iter:
+        epoch_iter.set_postfix(epoch=epoch, best_val=f"{best_val_loss:.4f}")
+        train_loss = _run_train_epoch(
+            model, train_loader, optimizer, criterion, device, scaler, amp_enabled,
+            epoch=epoch, max_epochs=max_epochs,
+        )
+        val_metrics = _run_eval_epoch(
+            model, val_loader, criterion, device,
+            epoch=epoch, max_epochs=max_epochs,
+        )
+
+        if scheduler is not None:
+            scheduler.step()
+
+        row = {
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "val_loss": float(val_metrics["loss"]),
+            "val_acc": float(val_metrics["accuracy"]),
+            "val_precision": float(val_metrics["precision"]),
+            "val_recall": float(val_metrics["recall"]),
+            "val_f1": float(val_metrics["f1"]),
+        }
+        history.append(row)
+
+        print(
+            f"[epoch {epoch:03d}] train_loss={train_loss:.4f} "
+            f"val_loss={row['val_loss']:.4f} val_acc={row['val_acc']:.4f} val_f1={row['val_f1']:.4f}"
+        )
+
+        improved = row["val_loss"] < best_val_loss
+        if improved:
+            best_val_loss = row["val_loss"]
+            best_epoch = epoch
+            epochs_no_improve = 0
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "model_config_path": str(model_config_path),
+                    "train_config_path": str(config_path),
+                    "val_metrics": val_metrics,
+                },
+                best_ckpt_path,
+            )
+        else:
+            epochs_no_improve += 1
+
+        torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "model_config_path": str(model_config_path),
+                "train_config_path": str(config_path),
+                "val_metrics": val_metrics,
+            },
+            last_ckpt_path,
+        )
+
+        if epochs_no_improve >= patience:
+            print(f"[train] early stopping at epoch {epoch} (patience={patience})")
+            break
+
+    report = {
+        "run_id": run_id,
+        "device": device.type,
+        "model_config_path": str(model_config_path),
+        "train_config_path": str(config_path),
+        "manifest_path": str(manifest_path),
+        "best_epoch": best_epoch,
+        "best_val_loss": best_val_loss,
+        "best_checkpoint": str(best_ckpt_path),
+        "last_checkpoint": str(last_ckpt_path),
+        "history": history,
+    }
+
+    report_path = reports_dir / f"train_report_{model_name}_{run_id}.json"
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+    print(f"[train] best_epoch={best_epoch} best_val_loss={best_val_loss:.4f}")
+    print(f"[train] best_ckpt={best_ckpt_path}")
+    print(f"[train] report={report_path}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
