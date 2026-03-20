@@ -1,0 +1,6 @@
+{
+  "schema_version": 2,
+  "status": "error",
+  "error": "File not found: /path/to/missing/whiteReference.hdr",
+  "timestamp": "2026-03-20T10:20:00.000000+00:00"
+}

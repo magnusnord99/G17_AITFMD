@@ -6,8 +6,8 @@ Dette dokumentet beskriver grensesnittet mellom GUI og ML-backend, slik at GUI e
 
 - `run_inference.py` – entry point med `--input`, `--output`/`--output-dir`, `--config`
 - `src/inference/pipeline.py` – preprocessing: kalibrering → clipping → avg3 → PCA16 → masking → patchifisering
-- `configs/inference/default.yaml` – inference-config
-- Output: `prediction.json`, `metadata.json`, `pca16_cube.npy`
+- `configs/inference/pytorch.yaml` – inference-config
+- Output: `prediction.json` (**schema_version 2**), valgfritt `heatmap.png` / `.npy`, `reduced_cube.npy`
 
 **Forutsetning:** Kjør `fit_pca.py` og `build_pca_dataset.py` først for å ha PCA-modell tilgjengelig.
 
@@ -19,7 +19,7 @@ Dette dokumentet beskriver grensesnittet mellom GUI og ML-backend, slik at GUI e
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  GUI (C#/Avalonia)                                                      │
 │  • Sender: input-sti, config-sti, modellnavn, output-mappe               │
-│  • Leser: prediction.json, metadata.json, heatmaps                        │
+│  • Leser: prediction.json (heatmap kan bygges i GUI fra predictions + spatial) │
 │  • VET IKKE: PyTorch, ONNX, PCA, wavelet, preprocessing-detaljer         │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -59,7 +59,7 @@ ML_PIPELINE_G17_AITFMD/
 ├── run_inference.py              # Entry point – kalles av GUI
 ├── configs/
 │   └── inference/
-│       └── default.yaml          # Inferanse-config (modell, backend, paths)
+│       └── pytorch.yaml          # Inferanse-config (modell, backend, paths)
 ├── src/
 │   └── inference/
 │       ├── __init__.py
@@ -83,7 +83,7 @@ ML_PIPELINE_G17_AITFMD/
 |----------|---------|-------------|
 | `--input` | Ja | Sti til input (f.eks. .hdr eller .npy) |
 | `--output-dir` | Ja | Mappe der resultater skrives |
-| `--config` | Nei | Sti til inference-config (default: configs/inference/default.yaml) |
+| `--config` | Nei | Sti til inference-config (default: configs/inference/pytorch.yaml) |
 | `--model` | Nei | Modellnavn/sti (overstyrer config) |
 
 **Eksempel:**
@@ -91,7 +91,7 @@ ML_PIPELINE_G17_AITFMD/
 python run_inference.py \
   --input /path/to/ROI_01.hdr \
   --output-dir /path/to/results/run_001 \
-  --config configs/inference/default.yaml
+  --config configs/inference/pytorch.yaml
 ```
 
 ---
@@ -102,48 +102,44 @@ Alt skrives til `--output-dir`:
 
 | Fil | Innhold |
 |-----|---------|
-| `prediction.json` | Hovedresultat – status, predictions, summary |
-| `metadata.json` | Modellnavn, varighet, backend, versjon |
-| `heatmap.npy` | (Valgfritt) Heatmap for overlay |
-| `mask.npy` | (Valgfritt) Tissue mask |
+| `prediction.json` | **Eneste obligatoriske JSON** – se schema under |
+| `heatmap.png` / `heatmap.npy` | (Valgfritt) `write_heatmap_assets: true` i inference-config – ellers ikke skrevet |
+| `reduced_cube.npy` | (Valgfritt) `write_reduced_cube: true` – debugging |
 
-### prediction.json – schema
+### prediction.json – schema (**schema_version 2**)
 
-```json
-{
-  "status": "ok",
-  "input_path": "/path/to/input.hdr",
-  "timestamp": "2025-03-06T12:00:00Z",
-  "predictions": [
-    { "x": 10, "y": 20, "score": 0.92, "label": "anomaly" }
-  ],
-  "summary": {
-    "anomaly_ratio": 0.12,
-    "total_pixels": 1000,
-    "message": "Inference completed successfully."
-  },
-  "heatmap_path": "heatmap.npy",
-  "mask_path": "mask.npy"
-}
-```
+Fullt eksempel: [`examples/prediction_ok_example.json`](examples/prediction_ok_example.json).
+
+Hovedblokker ved `status: ok`:
+
+| Blokk | Innhold |
+|--------|---------|
+| `input` | `path`, `timestamp` |
+| `model_info` | `name`, `backend`, `checkpoint_path`, `checkpoint_file`, `model_config_path`, `num_classes`, `class_names` |
+| `decision` | `positive_class`, `anomaly_threshold`, `score_type`, `description`, `applies_to_class_index` (pytorch: softmax sannsynlighet for positiv klasse) |
+| `spatial` | `cube_shape`, `patch_*`, `stride_*`, `patch_anchor`, `origin`, `coordinate_space`, `coordinate_space_description`, `axes_order` |
+| `preprocessing` | `pipeline_config`, `steps` (enabled per steg), `spectral_reducer`, `num_spectral_bands`, `min_tissue_ratio_patch` |
+| `tissue_mask` | ROI-nivå maskestatistikk (etter avg3, før spektral reduksjon) |
+| `patch_stats` | `total_possible`, `evaluated`, `filtered_by_tissue`, `description` |
+| `predictions` | Sparse liste: `id`, `y`, `x`, `score`, `probabilities` (per klasse ved binær), `label` |
+| `summary` | `anomaly_ratio`, `message` |
+| `run` | `duration_ms` |
+
+**Koordinater:** `(y, x)` er **øvre venstre** hjørne av patchen i **`reduced_cube`** (ikke rå HDR). Se `spatial.coordinate_space_description`.
+
+**Heatmap i GUI:** aggreger `predictions[].score` over overlapp med samme logikk som `src/inference/heatmap.py` (`build_heatmap`).
+
+- **`tissue_mask.background_percent`**: andel piksler som **bakgrunn** på hele ROI etter avg3. **`patch_stats.filtered_by_tissue`**: patches hoppet pga. for lav vev-andel i patch-vindu (`min_tissue_ratio_patch`).
+
+Terskel for `label` styres av `decision.anomaly_threshold` i `configs/inference/pytorch.yaml` (nøkkel `decision.anomaly_threshold`).
 
 Ved feil:
 ```json
 {
+  "schema_version": 2,
   "status": "error",
   "error": "File not found: ...",
   "timestamp": "..."
-}
-```
-
-### metadata.json
-
-```json
-{
-  "model": "ae16_cnn",
-  "backend": "pytorch",
-  "duration_ms": 1234,
-  "version": "1.0"
 }
 ```
 
@@ -160,7 +156,7 @@ class InferenceBackend(Protocol):
 
 Pipeline velger backend ut fra config:
 ```yaml
-# configs/inference/default.yaml
+# configs/inference/pytorch.yaml
 backend: pytorch   # eller onnx
 model_path: "models/ae16_cnn.pt"
 ```

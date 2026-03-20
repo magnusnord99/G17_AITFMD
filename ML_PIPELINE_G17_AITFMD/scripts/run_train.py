@@ -1,10 +1,11 @@
-"""Train 3D CNN models from patch manifest."""
+"""Train 3D CNN models on HSI patches."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,11 +20,16 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.datasets import CubePatchDataset, PatchManifestDataset
+from src.datasets import CubePatchDataset
 from src.models import build_model_from_config
 
 
@@ -158,6 +164,97 @@ def _run_eval_epoch(
     return metrics
 
 
+def _count_params(model: nn.Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def _save_training_logs(
+    report: dict,
+    history: list[dict],
+    run_dir: Path,
+    model_name: str,
+) -> None:
+    """Lagre CSV, grafer og confusion matrix for sluttrapport."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. History som CSV
+    df = pd.DataFrame(history)
+    csv_path = run_dir / "history.csv"
+    df.to_csv(csv_path, index=False)
+
+    # 2. Treningskurver (loss, accuracy, F1)
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    epochs = [h["epoch"] for h in history]
+
+    axes[0].plot(epochs, [h["train_loss"] for h in history], label="Train", color="C0")
+    axes[0].plot(epochs, [h["val_loss"] for h in history], label="Val", color="C1")
+    axes[0].set_xlabel("Epoch")
+    axes[0].set_ylabel("Loss")
+    axes[0].set_title("Loss")
+    axes[0].legend()
+    axes[0].grid(alpha=0.3)
+
+    axes[1].plot(epochs, [h["val_acc"] for h in history], color="C2")
+    axes[1].set_xlabel("Epoch")
+    axes[1].set_ylabel("Accuracy")
+    axes[1].set_title("Validation Accuracy")
+    axes[1].grid(alpha=0.3)
+
+    axes[2].plot(epochs, [h["val_f1"] for h in history], color="C3")
+    axes[2].set_xlabel("Epoch")
+    axes[2].set_ylabel("F1")
+    axes[2].set_title("Validation F1")
+    axes[2].grid(alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(run_dir / "training_curves.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
+    # 3. Confusion matrix fra beste epoke
+    best_epoch = report.get("best_epoch", -1)
+    best_row = next((h for h in history if h["epoch"] == best_epoch), history[-1] if history else None)
+    if best_row and all(k in best_row for k in ["tp", "tn", "fp", "fn"]):
+        cm = np.array([[best_row["tn"], best_row["fp"]], [best_row["fn"], best_row["tp"]]])
+        fig, ax = plt.subplots(figsize=(5, 4))
+        im = ax.imshow(cm, cmap="Blues")
+        ax.set_xticks([0, 1])
+        ax.set_yticks([0, 1])
+        ax.set_xticklabels(["Normal", "Anomaly"])
+        ax.set_yticklabels(["Normal", "Anomaly"])
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("True")
+        for i in range(2):
+            for j in range(2):
+                ax.text(j, i, str(cm[i, j]), ha="center", va="center", fontsize=14)
+        plt.colorbar(im, ax=ax, label="Count")
+        ax.set_title(f"Confusion Matrix (epoch {best_epoch})")
+        plt.tight_layout()
+        plt.savefig(run_dir / "confusion_matrix.png", dpi=150, bbox_inches="tight")
+        plt.close()
+
+    # 4. Kort sammendrag for rapport
+    summary_path = run_dir / "summary.txt"
+    with summary_path.open("w", encoding="utf-8") as f:
+        f.write(f"# Treningsrapport: {model_name}\n\n")
+        f.write(f"Run ID: {report.get('run_id', 'N/A')}\n")
+        f.write(f"Device: {report.get('device', 'N/A')}\n")
+        f.write(f"Best epoch: {report.get('best_epoch', 'N/A')}\n")
+        bl = report.get("best_val_loss")
+        f.write(f"Best val loss: {bl:.4f}\n" if isinstance(bl, (int, float)) else f"Best val loss: N/A\n")
+        f.write(f"Train samples: {report.get('train_samples', 'N/A')}\n")
+        f.write(f"Val samples: {report.get('val_samples', 'N/A')}\n")
+        np_ = report.get("num_params")
+        f.write(f"Params: {np_:,}\n" if isinstance(np_, int) else f"Params: N/A\n")
+        dur = report.get("duration_sec")
+        f.write(f"Duration: {dur:.1f} s\n" if isinstance(dur, (int, float)) else f"Duration: N/A\n")
+        if best_row:
+            f.write(f"\nBest epoch metrics:\n")
+            f.write(f"  Accuracy:  {best_row.get('val_acc', 0):.4f}\n")
+            f.write(f"  Precision: {best_row.get('val_precision', 0):.4f}\n")
+            f.write(f"  Recall:    {best_row.get('val_recall', 0):.4f}\n")
+            f.write(f"  F1:        {best_row.get('val_f1', 0):.4f}\n")
+
+
 def main() -> int:
     args = _parse_args()
 
@@ -171,19 +268,21 @@ def main() -> int:
 
     model_cfg_path = args.model or cfg.get("model_config", "configs/models/baseline_3dcnn.yaml")
     model_config_path = _resolve_path(config_path, model_cfg_path)
+    model_cfg = yaml.safe_load(model_config_path.read_text(encoding="utf-8"))
+    model_input = model_cfg.get("input", {}) or model_cfg.get("model", {}).get("input", {})
+    model_patch_h = int(model_input.get("patch_h", 64))
+    model_patch_w = int(model_input.get("patch_w", 64))
 
     data_cfg = cfg.get("data", {})
     manifest_override = (
         args.manifest
         or args.cube_manifest
         or data_cfg.get("cube_manifest_csv")
-        or data_cfg.get("manifest_csv")
     )
 
     if not manifest_override:
         raise ValueError(
-            "Missing manifest. Set data.cube_manifest_csv (on-the-fly) or data.manifest_csv (pre-built) "
-            "in configs/train.yaml, or pass --manifest / --cube-manifest"
+            "Missing manifest. Set data.cube_manifest_csv in configs/train.yaml, or pass --manifest / --cube-manifest"
         )
 
     manifest_path = _resolve_path(config_path, manifest_override)
@@ -191,66 +290,65 @@ def main() -> int:
         raise FileNotFoundError(f"Manifest not found: {manifest_path}")
 
     train_df = pd.read_csv(manifest_path)
+    required = {"output_path", "label_id", "split"}
+    missing = required - set(train_df.columns)
+    if missing:
+        raise ValueError(f"Cube manifest missing columns: {sorted(missing)}")
 
-    if "output_path" in train_df.columns:
-        # On-the-fly: cube manifest (output_path, label_id, split, patient_id, roi_name)
-        required = {"output_path", "label_id", "split"}
-        missing = required - set(train_df.columns)
-        if missing:
-            raise ValueError(f"Cube manifest missing columns: {sorted(missing)}")
-        if "patient_id" not in train_df.columns or "roi_name" not in train_df.columns:
-            raise ValueError("Cube manifest needs patient_id and roi_name for mask lookup")
+    if "patient_id" not in train_df.columns or "roi_name" not in train_df.columns:
+        raise ValueError("Cube manifest needs patient_id and roi_name for mask lookup")
 
-        patch_h = int(data_cfg.get("patch_h", 64))
-        patch_w = int(data_cfg.get("patch_w", 64))
-        mask_root_raw = data_cfg.get("mask_root")
-        mask_path = None
-        if mask_root_raw:
-            p = _resolve_path(config_path, mask_root_raw)
-            mask_path = p if p.exists() else None
-        cube_root_raw = data_cfg.get("cube_root")
-        cube_root_path = None
-        if cube_root_raw:
-            p = _resolve_path(config_path, cube_root_raw)
-            cube_root_path = p if p.exists() else None
-        min_tissue = float(data_cfg.get("min_tissue_ratio", 0.0))
-        val_seed = int(cfg.get("seed", 42))
+    patch_h = int(data_cfg.get("patch_h", model_patch_h))
+    patch_w = int(data_cfg.get("patch_w", model_patch_w))
+    mask_root_raw = data_cfg.get("mask_root")
+    mask_path = None
+    if mask_root_raw:
+        p = _resolve_path(config_path, mask_root_raw)
+        mask_path = p if p.exists() else None
+    cube_root_raw = data_cfg.get("cube_root")
+    cube_root_path = None
+    if cube_root_raw:
+        p = _resolve_path(config_path, cube_root_raw)
+        cube_root_path = p if p.exists() else None
+    min_tissue = float(data_cfg.get("min_tissue_ratio", 0.0))
+    val_seed = int(cfg.get("seed", 42))
+    patches_per_cube = int(data_cfg.get("patches_per_cube", 1))
+    use_all_patches = bool(data_cfg.get("use_all_patches", False))
+    stride_h = int(data_cfg.get("stride_h", 32))
+    stride_w = int(data_cfg.get("stride_w", 32))
 
-        train_rows = train_df[train_df["split"] == "train"].reset_index(drop=True)
-        val_rows = train_df[train_df["split"] == "val"].reset_index(drop=True)
+    train_rows = train_df[train_df["split"] == "train"].reset_index(drop=True)
+    val_rows = train_df[train_df["split"] == "val"].reset_index(drop=True)
 
-        train_ds = CubePatchDataset(
-            train_rows,
-            patch_h=patch_h,
-            patch_w=patch_w,
-            mask_root=mask_path,
-            min_tissue_ratio=min_tissue,
-            val_seed=None,
-            cube_root=cube_root_path,
-        )
-        val_ds = CubePatchDataset(
-            val_rows,
-            patch_h=patch_h,
-            patch_w=patch_w,
-            mask_root=mask_path,
-            min_tissue_ratio=min_tissue,
-            val_seed=val_seed,
-            cube_root=cube_root_path,
-        )
-        print(f"[train] mode=on-the-fly cubes")
-    else:
-        # Pre-built: patch manifest (patch_path, split, label_id)
-        required = {"patch_path", "split", "label_id"}
-        missing = required - set(train_df.columns)
-        if missing:
-            raise ValueError(f"Patch manifest missing columns: {sorted(missing)}")
+    print(f"[train] patch size: {patch_h}x{patch_w}")
+    print(f"[train] patches per cube: {'all' if use_all_patches else patches_per_cube}")
 
-        train_rows = train_df[train_df["split"] == "train"].reset_index(drop=True)
-        val_rows = train_df[train_df["split"] == "val"].reset_index(drop=True)
-
-        train_ds = PatchManifestDataset(train_rows)
-        val_ds = PatchManifestDataset(val_rows)
-        print(f"[train] mode=pre-built patches")
+    train_ds = CubePatchDataset(
+        train_rows,
+        patch_h=patch_h,
+        patch_w=patch_w,
+        mask_root=mask_path,
+        min_tissue_ratio=min_tissue,
+        val_seed=None,
+        cube_root=cube_root_path,
+        patches_per_cube=patches_per_cube,
+        stride_h=stride_h,
+        stride_w=stride_w,
+        use_all_patches=use_all_patches,
+    )
+    val_ds = CubePatchDataset(
+        val_rows,
+        patch_h=patch_h,
+        patch_w=patch_w,
+        mask_root=mask_path,
+        min_tissue_ratio=min_tissue,
+        val_seed=val_seed,
+        cube_root=cube_root_path,
+        patches_per_cube=patches_per_cube,
+        stride_h=stride_h,
+        stride_w=stride_w,
+        use_all_patches=use_all_patches,
+    )
 
     if len(train_ds) == 0:
         raise RuntimeError("No train samples.")
@@ -316,6 +414,7 @@ def main() -> int:
     paths_cfg = cfg.get("paths", {})
     checkpoints_dir = _resolve_path(config_path, str(paths_cfg.get("checkpoints_dir", "outputs/checkpoints")))
     reports_dir = _resolve_path(config_path, str(paths_cfg.get("reports_dir", "outputs/reports")))
+    plots_dir = _resolve_path(config_path, str(paths_cfg.get("plots_dir", "outputs/plots")))
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -333,6 +432,7 @@ def main() -> int:
     best_epoch = -1
     epochs_no_improve = 0
 
+    t0 = time.perf_counter()
     epoch_iter = tqdm(range(1, max_epochs + 1), desc="Training", unit="epoch")
     for epoch in epoch_iter:
         epoch_iter.set_postfix(epoch=epoch, best_val=f"{best_val_loss:.4f}")
@@ -356,6 +456,10 @@ def main() -> int:
             "val_precision": float(val_metrics["precision"]),
             "val_recall": float(val_metrics["recall"]),
             "val_f1": float(val_metrics["f1"]),
+            "tp": val_metrics.get("tp", 0),
+            "tn": val_metrics.get("tn", 0),
+            "fp": val_metrics.get("fp", 0),
+            "fn": val_metrics.get("fn", 0),
         }
         history.append(row)
 
@@ -399,6 +503,8 @@ def main() -> int:
             print(f"[train] early stopping at epoch {epoch} (patience={patience})")
             break
 
+    duration_sec = time.perf_counter() - t0
+
     report = {
         "run_id": run_id,
         "device": device.type,
@@ -410,14 +516,22 @@ def main() -> int:
         "best_checkpoint": str(best_ckpt_path),
         "last_checkpoint": str(last_ckpt_path),
         "history": history,
+        "num_params": _count_params(model),
+        "train_samples": len(train_ds),
+        "val_samples": len(val_ds),
+        "duration_sec": duration_sec,
     }
 
     report_path = reports_dir / f"train_report_{model_name}_{run_id}.json"
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
+    run_plots_dir = plots_dir / f"{model_name}_{run_id}"
+    _save_training_logs(report, history, run_plots_dir, model_name)
+
     print(f"[train] best_epoch={best_epoch} best_val_loss={best_val_loss:.4f}")
     print(f"[train] best_ckpt={best_ckpt_path}")
     print(f"[train] report={report_path}")
+    print(f"[train] plots={run_plots_dir} (history.csv, training_curves.png, confusion_matrix.png, summary.txt)")
     return 0
 
 

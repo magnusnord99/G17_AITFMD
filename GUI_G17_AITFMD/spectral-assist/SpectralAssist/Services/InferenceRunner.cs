@@ -22,7 +22,7 @@ public static class InferenceRunner
     }
 
     /// <summary>
-    /// Runs inference and returns (Success, OutputDir, Json). OutputDir contains heatmap.png for overlay.
+    /// Runs inference and returns (Success, OutputDir, Json). Se prediction.json for patches/spatial (heatmap bygges i GUI om ønskelig).
     /// </summary>
     public static (bool Success, string? OutputDir, string Output) Run(string hdrPath)
     {

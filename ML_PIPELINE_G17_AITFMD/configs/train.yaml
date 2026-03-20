@@ -4,16 +4,19 @@ seed: 42
 model_config: "configs/models/baseline_3dcnn.yaml"
 
 data:
-  # On-the-fly: cube manifest from build_avg_baseline_dataset.py
-  cube_manifest_csv: "data/interim/avg_baseline_manifest.csv"
-  # Override cube paths when manifest points to wrong location (e.g. avg16 vs unpatched/avg16)
-  cube_root: "data/processed/unpatched/avg16"
-  # Pre-built: patch manifest from build_patches.py (used if cube_manifest_csv missing)
-  # manifest_csv: "data/processed/patches/pca32/manifest.csv"
+  cube_manifest_csv: "data/interim/pca_manifest.csv"
+  cube_root: "data/processed/unpatched/pca16"
   mask_root: "data/interim/masks/final_mask"
+  # patch_h, patch_w: overstyr model config. Uten disse brukes model input.patch_h/patch_w
   patch_h: 64
   patch_w: 64
   min_tissue_ratio: 0.0
+  # patches_per_cube: antall patches per kube per epoke (1 = én tilfeldig)
+  patches_per_cube: 10
+  # use_all_patches: true = alle gyldige posisjoner (stride_h/stride_w)
+  use_all_patches: true
+  stride_h: 32
+  stride_w: 32
   fold_index: 0
   batch_size: 8
   num_workers: 4
@@ -42,6 +45,7 @@ paths:
   checkpoints_dir: "outputs/checkpoints"
   logs_dir: "outputs/logs"
   reports_dir: "outputs/reports"
+  plots_dir: "outputs/plots"
 
 splits:
   train_ratio: 0.70
