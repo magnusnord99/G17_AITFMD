@@ -12,6 +12,12 @@ paths:
   model_filename: "pca_avg3_32.joblib"
   manifest_csv: "../../data/interim/pca_manifest.csv"
 
+# Vevsmaske: fit_pca bruker kun vevspiksler; build_pca_dataset nuller bakgrunn før transform
+mask:
+  root: "../../data/interim/masks/final_mask"
+  require: true
+  apply_to_cube: true
+
 pca:
   n_components: 16
   svd_solver: "auto"

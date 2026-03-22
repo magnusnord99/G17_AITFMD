@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.preprocessing.masked_cube import load_binary_mask, mask_path_for_roi
 from src.preprocessing.pca import fit_pca_from_pixels, flatten_cube
 
 
@@ -59,6 +60,8 @@ def _sample_train_pixels(
     compute_dtype: np.dtype,
     seed: int,
     verbose: bool,
+    mask_root: Path | None = None,
+    require_mask: bool = False,
 ) -> np.ndarray:
     rng = np.random.default_rng(seed)
     parts: list[np.ndarray] = []
@@ -71,7 +74,25 @@ def _sample_train_pixels(
 
     for i, (_, row) in enumerate(iterator):
         cube = np.load(Path(row["input_path"])).astype(compute_dtype, copy=False)
-        flat = flatten_cube(cube)
+        flat = flatten_cube(cube.astype(np.float32, copy=False))
+
+        if mask_root is not None:
+            mp = mask_path_for_roi(mask_root, str(row["patient_id"]), str(row["roi_name"]))
+            if not mp.exists():
+                if require_mask:
+                    raise FileNotFoundError(
+                        f"PCA fit require_mask=True but mask missing: {mp}"
+                    )
+            else:
+                mask = load_binary_mask(mp)
+                if mask.shape != cube.shape[:2]:
+                    raise ValueError(
+                        f"Mask {mp.shape} != cube spatial {cube.shape[:2]}"
+                    )
+                mflat = mask.reshape(-1)
+                flat = flat[mflat > 0]
+                if flat.size == 0:
+                    continue
 
         remaining_budget = max_train_pixels - total
         remaining_rois = max(1, n_rows - i)
@@ -131,6 +152,17 @@ def main() -> None:
     runtime_cfg = cfg.get("runtime", {})
     verbose = bool(runtime_cfg.get("verbose", False))
 
+    mask_cfg = cfg.get("mask") or {}
+    mask_root = None
+    if mask_cfg.get("root"):
+        mask_root = _resolve_path(config_path, str(mask_cfg["root"]))
+    require_mask = bool(mask_cfg.get("require", False))
+    if mask_root:
+        print(
+            f"[pca fit] mask: root={mask_root} require={require_mask} "
+            "(only tissue pixels used for fitting)"
+        )
+
     train_rows = split_df[split_df["split"] == "train"].reset_index(drop=True)
     if train_rows.empty:
         raise RuntimeError("No train rows found in split CSV.")
@@ -148,6 +180,8 @@ def main() -> None:
         compute_dtype=compute_dtype,
         seed=seed,
         verbose=verbose,
+        mask_root=mask_root,
+        require_mask=require_mask,
     )
     print(f"[pca] collected train pixels: {train_pixels.shape}")
 

@@ -14,6 +14,12 @@ band_reduce:
   # "uneven": 13 groups of 17 + 3 groups of 18 (no info loss)
   strategy: "crop"
 
+# Vevsmaske: må finnes før build hvis require=true (bygg masker med build_masks_from_avg3 / run_preprocessing)
+mask:
+  root: "../../data/interim/masks/final_mask"
+  require: true
+  apply_to_cube: true
+
 build:
   output_dtype: "float32"
   overwrite: false

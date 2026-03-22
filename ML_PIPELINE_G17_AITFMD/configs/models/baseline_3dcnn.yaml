@@ -9,8 +9,9 @@ architecture:
   in_channels: 1
   num_classes: 2
   dropout: 0.30
-  channels: [32, 64]  # per block
-  kernel_size: 3
+  channels: [16, 32]  # per block
+  # Conv3d (spektral D, H, W): 4×3×3 — lokalt spektralt vindu + 3×3 romlig
+  kernel_size: [4, 3, 3]
 
 input:
   patch_h: 64

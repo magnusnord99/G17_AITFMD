@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from src.models.conv_utils import Kernel3D
 from src.models.cnn3d.baseline import Baseline3DCNN
 
 
@@ -13,7 +14,7 @@ class Lightweight3DCNN(Baseline3DCNN):
         in_channels: int = 1,
         num_classes: int = 2,
         channels: list[int] = (16, 32, 64),
-        kernel_size: int = 3,
+        kernel_size: Kernel3D = 3,
         dropout: float = 0.25,
     ):
         super().__init__(

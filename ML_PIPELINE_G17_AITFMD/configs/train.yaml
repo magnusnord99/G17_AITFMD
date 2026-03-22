@@ -8,17 +8,17 @@ data:
   cube_root: "data/processed/unpatched/pca16"
   mask_root: "data/interim/masks/final_mask"
   # patch_h, patch_w: overstyr model config. Uten disse brukes model input.patch_h/patch_w
-  patch_h: 64
-  patch_w: 64
+  patch_h: 32
+  patch_w: 32
   min_tissue_ratio: 0.0
   # patches_per_cube: antall patches per kube per epoke (1 = én tilfeldig)
-  patches_per_cube: 10
+  patches_per_cube: 500
   # use_all_patches: true = alle gyldige posisjoner (stride_h/stride_w)
   use_all_patches: true
-  stride_h: 32
-  stride_w: 32
+  stride_h: 16
+  stride_w: 16
   fold_index: 0
-  batch_size: 8
+  batch_size: 16
   num_workers: 4
 
 optimizer:

@@ -20,6 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.preprocessing.autoencoder import ConvAutoencoder
+from src.preprocessing.masked_cube import prepare_cube_with_mask
 
 
 def load_yaml(path: Path) -> dict:
@@ -47,6 +48,9 @@ class HsiPatchDataset(Dataset):
         patches_per_cube: int,
         seed: int = 42,
         max_cached_cubes: int = 10,
+        mask_root: Path | None = None,
+        require_mask: bool = False,
+        apply_mask: bool = True,
     ) -> None:
         self.rows = rows.reset_index(drop=True)
         self.input_root = Path(input_root)
@@ -54,6 +58,9 @@ class HsiPatchDataset(Dataset):
         self.patches_per_cube = patches_per_cube
         self.rng = np.random.default_rng(seed)
         self.max_cached_cubes = max_cached_cubes
+        self.mask_root = Path(mask_root) if mask_root else None
+        self.require_mask = require_mask
+        self.apply_mask = apply_mask
         self._cache: dict[int, np.ndarray] = {}
         self._cache_order: list[int] = []
 
@@ -66,6 +73,15 @@ class HsiPatchDataset(Dataset):
         row = self.rows.iloc[row_idx]
         cube_path = self.input_root / str(row["patient_id"]) / f"{row['roi_name']}.npy"
         cube = np.load(cube_path).astype(np.float32)
+        if self.mask_root is not None:
+            cube, _ = prepare_cube_with_mask(
+                cube,
+                self.mask_root,
+                str(row["patient_id"]),
+                str(row["roi_name"]),
+                require_mask=self.require_mask,
+                apply_to_cube=self.apply_mask,
+            )
 
         while len(self._cache) >= self.max_cached_cubes and self._cache_order:
             evict = self._cache_order.pop(0)
@@ -139,6 +155,17 @@ def main() -> None:
     lr = float(train_cfg["learning_rate"])
     val_fraction = float(train_cfg.get("val_fraction", 0.15))
 
+    mask_cfg = cfg.get("mask") or {}
+    mask_root = None
+    if mask_cfg.get("root"):
+        mask_root = resolve_path(config_path, str(mask_cfg["root"]))
+    require_mask = bool(mask_cfg.get("require", False))
+    apply_mask = bool(mask_cfg.get("apply_to_cube", True))
+    if mask_root:
+        print(
+            f"[ae train] mask: root={mask_root} require={require_mask} apply_to_cube={apply_mask}"
+        )
+
     split_df = pd.read_csv(split_csv)
     split_df["input_path"] = split_df.apply(
         lambda r: str(input_root / str(r["patient_id"]) / f"{r['roi_name']}.npy"),
@@ -173,6 +200,9 @@ def main() -> None:
         patches_per_cube=patches_per_cube,
         seed=seed,
         max_cached_cubes=max_cached_cubes,
+        mask_root=mask_root,
+        require_mask=require_mask,
+        apply_mask=apply_mask,
     )
     val_ds = HsiPatchDataset(
         rows=val_sub,
@@ -181,6 +211,9 @@ def main() -> None:
         patches_per_cube=patches_per_cube,
         seed=seed + 1,
         max_cached_cubes=max_cached_cubes,
+        mask_root=mask_root,
+        require_mask=require_mask,
+        apply_mask=apply_mask,
     )
 
     train_loader = DataLoader(
