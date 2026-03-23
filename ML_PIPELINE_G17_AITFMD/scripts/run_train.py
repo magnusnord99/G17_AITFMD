@@ -268,12 +268,19 @@ def main() -> int:
 
     model_cfg_path = args.model or cfg.get("model_config", "configs/models/baseline_3dcnn.yaml")
     model_config_path = _resolve_path(config_path, model_cfg_path)
-    model_cfg = yaml.safe_load(model_config_path.read_text(encoding="utf-8"))
-    model_input = model_cfg.get("input", {}) or model_cfg.get("model", {}).get("input", {})
-    model_patch_h = int(model_input.get("patch_h", 64))
-    model_patch_w = int(model_input.get("patch_w", 64))
 
     data_cfg = cfg.get("data", {})
+    _geom = ("patch_h", "patch_w", "stride_h", "stride_w")
+    _missing = [k for k in _geom if k not in data_cfg]
+    if _missing:
+        raise ValueError(
+            f"Set {', '.join('data.' + k for k in _geom)} in {config_path} (no defaults in code). "
+            f"Missing: {_missing}"
+        )
+    patch_h = int(data_cfg["patch_h"])
+    patch_w = int(data_cfg["patch_w"])
+    stride_h = int(data_cfg["stride_h"])
+    stride_w = int(data_cfg["stride_w"])
     manifest_override = (
         args.manifest
         or args.cube_manifest
@@ -298,8 +305,6 @@ def main() -> int:
     if "patient_id" not in train_df.columns or "roi_name" not in train_df.columns:
         raise ValueError("Cube manifest needs patient_id and roi_name for mask lookup")
 
-    patch_h = int(data_cfg.get("patch_h", model_patch_h))
-    patch_w = int(data_cfg.get("patch_w", model_patch_w))
     mask_root_raw = data_cfg.get("mask_root")
     mask_path = None
     if mask_root_raw:
@@ -314,14 +319,14 @@ def main() -> int:
     val_seed = int(cfg.get("seed", 42))
     patches_per_cube = int(data_cfg.get("patches_per_cube", 1))
     use_all_patches = bool(data_cfg.get("use_all_patches", False))
-    stride_h = int(data_cfg.get("stride_h", 32))
-    stride_w = int(data_cfg.get("stride_w", 32))
+    max_cached_cubes = int(data_cfg.get("max_cached_cubes", 12))
 
     train_rows = train_df[train_df["split"] == "train"].reset_index(drop=True)
     val_rows = train_df[train_df["split"] == "val"].reset_index(drop=True)
 
     print(f"[train] patch size: {patch_h}x{patch_w}")
     print(f"[train] patches per cube: {'all' if use_all_patches else patches_per_cube}")
+    print(f"[train] max_cached_cubes: {max_cached_cubes}")
 
     train_ds = CubePatchDataset(
         train_rows,
@@ -335,6 +340,7 @@ def main() -> int:
         stride_h=stride_h,
         stride_w=stride_w,
         use_all_patches=use_all_patches,
+        max_cached_cubes=max_cached_cubes,
     )
     val_ds = CubePatchDataset(
         val_rows,
@@ -348,6 +354,7 @@ def main() -> int:
         stride_h=stride_h,
         stride_w=stride_w,
         use_all_patches=use_all_patches,
+        max_cached_cubes=max_cached_cubes,
     )
 
     if len(train_ds) == 0:

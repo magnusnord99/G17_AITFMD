@@ -7,24 +7,27 @@ data:
   cube_manifest_csv: "data/interim/pca_manifest.csv"
   cube_root: "data/processed/unpatched/pca16"
   mask_root: "data/interim/masks/final_mask"
-  # patch_h, patch_w: overstyr model config. Uten disse brukes model input.patch_h/patch_w
+  # Obligatorisk for run_train.py (ingen standardverdier i kode): patch + stride
   patch_h: 32
   patch_w: 32
-  min_tissue_ratio: 0.0
-  # patches_per_cube: antall patches per kube per epoke (1 = én tilfeldig)
-  patches_per_cube: 500
-  # use_all_patches: true = alle gyldige posisjoner (stride_h/stride_w)
-  use_all_patches: true
   stride_h: 16
   stride_w: 16
+  min_tissue_ratio: 0.3
+  # patches_per_cube: antall tilfeldige patcher per kube PER EPOKE (når use_all_patches: false)
+  patches_per_cube: 128
+  # false = undertrykk overtilpasning + raskere epoker vs. alle rutenett-posisjoner
+  use_all_patches: false
   fold_index: 0
   batch_size: 16
-  num_workers: 4
+  # LRU-cache av .npy-kuber i RAM (mye raskere ved tilfeldige patcher + shuffle)
+  max_cached_cubes: 12
+  # 0 = én prosess, én delt kube-cache. >0 = egen cache per worker (ofte tregere med shuffle)
+  num_workers: 0
 
 optimizer:
   name: "adam"
-  lr: 1.0e-4
-  weight_decay: 1.0e-4
+  lr: 5.0e-5
+  weight_decay: 5.0e-4
 
 scheduler:
   enabled: true
@@ -37,7 +40,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 10
+  early_stopping_patience: 5
   mixed_precision: true
   save_best_only: true
 

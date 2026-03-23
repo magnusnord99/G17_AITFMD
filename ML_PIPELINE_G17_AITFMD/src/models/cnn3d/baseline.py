@@ -25,8 +25,8 @@ class Baseline3DCNN(nn.Module):
         ks = normalize_conv3d_kernel_size(kernel_size)
         for c in channels:
             layers += [
-                # padding='same' + stride=1: PyTorch setter padding (også for jevne kjerner)
-                nn.Conv3d(prev, c, kernel_size=ks, stride=1, padding="same"),
+                # Valid conv (padding=0): D,H,W reduseres utover i nettet
+                nn.Conv3d(prev, c, kernel_size=ks, stride=1, padding=0),
                 nn.GroupNorm(8, c),
                 nn.ReLU(inplace=True),
                 nn.MaxPool3d(kernel_size=(1,2,2), stride=(1,2,2)),

@@ -3,7 +3,7 @@
 
 paths:
   input_root: "/Volumes/OnG_13_2TB/hsi_avg3_float16"
-  output_root: "../../data/processed/avg16"
+  output_root: "../../data/processed_V2/avg16"
   split_csv: "../../data/splits/patient_split.csv"
   manifest_csv: "../../data/interim/avg_baseline_manifest.csv"
 
@@ -22,7 +22,8 @@ mask:
 
 build:
   output_dtype: "float32"
-  overwrite: false
+  # true når du gjenbygger med maske (overskriv gamle avg16-kuber)
+  overwrite: true
 
 runtime:
   verbose: true

@@ -1,5 +1,5 @@
-# Enkel 3D CNN – 3 conv-blokker, global pooling.
-# God baseline for sammenligning.
+# Baseline 3D CNN – to conv-blokker (Conv → GroupNorm → ReLU → MaxPool), global pool → FC.
+# Patch-størrelse styres av train.yaml (data.patch_h / data.patch_w), ikke her.
 
 model:
   name: "baseline_3dcnn"
@@ -8,15 +8,10 @@ model:
 architecture:
   in_channels: 1
   num_classes: 2
-  dropout: 0.30
-  channels: [16, 32]  # per block
-  # Conv3d (spektral D, H, W): 4×3×3 — lokalt spektralt vindu + 3×3 romlig
+  dropout: 0.45
+  channels: [16, 32]  # to blokker
+  # Conv3d (spektral D, H, W): 4×3×3 — valid conv, dimensjoner synker per lag
   kernel_size: [4, 3, 3]
 
-input:
-  patch_h: 64
-  patch_w: 64
-  spectral_bands: 16
-
 regularization:
-  weight_decay: 1.0e-4
+  weight_decay: 5.0e-4

@@ -14,7 +14,7 @@ def normalize_conv3d_kernel_size(kernel_size: Kernel3D) -> tuple[int, int, int]:
     - int k → kubisk k×k×k
     - sekvens med tre tall → (k_D, k_H, k_W)
 
-    Bruk sammen med ``padding='same'`` og ``stride=1`` (PyTorch beregner padding).
+    Bruk med ``padding=0`` (valid) eller egen padding etter behov.
     """
     if isinstance(kernel_size, int):
         k = int(kernel_size)
