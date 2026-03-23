@@ -170,14 +170,18 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         try
         {
             InferenceOutput = "Running classification...";
-
-            // Pick classifier: Swap between these as needed
+            
+            // SETTINGS:
             const string packagePath =
                 @"E:\Dev\Projects\Rider\G17_AITFMD\GUI_G17_AITFMD\spectral-assist\SpectralAssist\Assets\exported_model";
             const string dummyJsonPath =
                 @"E:\Dev\Projects\Rider\G17_AITFMD\GUI_G17_AITFMD\spectral-assist\SpectralAssist\Assets\prediction.json";
+            const int dummyPatchW = 32;
+            const int dummyPatchH = 32;
+            const int dummyStride = 16;
             
-            var classifier = DummyClassifier.Random(32, 32, 12);
+            // PICK CLASSIFIER: 
+            var classifier = DummyClassifier.Random(dummyPatchW, dummyPatchH, dummyStride);
             //var classifier = DummyClassifier.FromJson(dummyJsonPath);
             //var classifier = new PythonClassifier(_hdrPath);
             //var classifier = CreateOnnxClassifier(packagePath);
