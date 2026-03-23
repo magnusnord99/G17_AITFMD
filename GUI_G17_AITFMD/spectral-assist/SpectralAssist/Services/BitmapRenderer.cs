@@ -9,7 +9,7 @@ namespace SpectralAssist.Services;
 /// <summary>
 /// Converts HSI cube bands into displayable bitmaps.
 /// Performs per-band min-max normalization to scale reflectance values to 0-255.
-/// This scaling is for display only — the underlying cube data is not modified.
+/// This scaling is for display only, the underlying cube data is not modified.
 /// </summary>
 public static class BitmapRenderer
 {
@@ -66,7 +66,7 @@ public static class BitmapRenderer
                 ptr[i * 4 + 0] = Norm(b[i], bMin, bRange); // B
                 ptr[i * 4 + 1] = Norm(g[i], gMin, gRange); // G
                 ptr[i * 4 + 2] = Norm(r[i], rMin, rRange); // R
-                ptr[i * 4 + 3] = 255;                       // A
+                ptr[i * 4 + 3] = 255;                      // A
             }
         }
         return bitmap;
@@ -104,5 +104,58 @@ public static class BitmapRenderer
         min = low;
         range = high - low;
         if (range < 1e-6f) range = 1f; // Prevent division by zero
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    public static WriteableBitmap ClassificationOverlay(
+        HsiCube cube,
+        ClassificationResult result,
+        Func<float, Color> colourMap,
+        int targetClassIndex = 1)
+    {
+        var bitmap = CreateBitmap(cube);
+
+        using var buffer = bitmap.Lock();
+        unsafe
+        {
+            var ptr = (byte*)buffer.Address;
+            var stride = buffer.RowBytes;
+
+            foreach (var pred in result.Predictions)
+            {
+                var prob = pred.Probabilities[targetClassIndex];
+                var colour = colourMap(prob);
+
+                for (var y = 0; y < result.PatchH; y++)
+                {
+                    for (var x = 0; x < result.PatchW; x++)
+                    {
+                        var px = pred.X + x;
+                        var py = pred.Y + y;
+
+                        if (px >= cube.Samples || py >= cube.Lines)
+                            continue;
+
+                        var offset = py * stride + px * 4;
+
+                        ptr[offset + 0] = colour.B;
+                        ptr[offset + 1] = colour.G;
+                        ptr[offset + 2] = colour.R;
+                        ptr[offset + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        return bitmap;
     }
 }

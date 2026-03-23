@@ -1,0 +1,4991 @@
+{
+  "schema_version": 2,
+  "status": "ok",
+  "input": {
+    "path": "/Volumes/DJI/G17_AITFMD /PKG - HistologyHSI-GB/P1/ROI_01_C01_T",
+    "timestamp": "2026-03-21T12:19:51.237933+00:00"
+  },
+  "model_info": {
+    "name": "baseline_3dcnn",
+    "backend": "pytorch",
+    "checkpoint_path": "outputs/checkpoints/baseline_3dcnn_20260317_102346_best.pt",
+    "checkpoint_file": "baseline_3dcnn_20260317_102346_best.pt",
+    "model_config_path": "configs/models/baseline_3dcnn.yaml",
+    "num_classes": 2,
+    "class_names": [
+      "normal",
+      "anomaly"
+    ]
+  },
+  "decision": {
+    "positive_class": "anomaly",
+    "anomaly_threshold": 0.5,
+    "score_type": "softmax_probability",
+    "description": "Verdien er P(klasse=positiv | patch) etter softmax på modellens logits. For binær modell er indeks 1 'anomaly' (se model_info.class_names).",
+    "applies_to_class_index": 1
+  },
+  "spatial": {
+    "coordinate_space": "reduced_cube",
+    "coordinate_space_description": "Koordinater (y, x) er rad/kolonne i den spektralt reduserte kuben (etter kalibrering, clip, avg3, tissue-mask på mellomkube, PCA/AE/wavelet). Ikke rå HDR uten videre.",
+    "axes_order": [
+      "y_lines",
+      "x_samples",
+      "spectral"
+    ],
+    "cube_shape": [
+      800,
+      1004,
+      16
+    ],
+    "patch_h": 64,
+    "patch_w": 64,
+    "stride_h": 32,
+    "stride_w": 32,
+    "patch_anchor": "top_left",
+    "origin": "top_left"
+  },
+  "preprocessing": {
+    "pipeline_config": "configs/preprocessing/pipeline.yaml",
+    "steps": {
+      "calibration": {
+        "enabled": true
+      },
+      "clip": {
+        "enabled": true
+      },
+      "avg3": {
+        "enabled": true
+      },
+      "tissue_mask": {
+        "enabled": true
+      },
+      "spectral_reduction": {
+        "enabled": true
+      },
+      "patching": {
+        "enabled": true
+      }
+    },
+    "spectral_reducer": "pca",
+    "num_spectral_bands": 16,
+    "min_tissue_ratio_patch": 0.6
+  },
+  "tissue_mask": {
+    "enabled": true,
+    "method": "mean_std_percentile",
+    "tissue_fraction": 0.656992,
+    "background_fraction": 0.343008,
+    "tissue_percent": 65.7,
+    "background_percent": 34.3
+  },
+  "patch_stats": {
+    "total_possible": 720,
+    "evaluated": 445,
+    "filtered_by_tissue": 275,
+    "description": "total_possible: gyldige grid-posisjoner; filtered_by_tissue: hoppet pga. min_tissue_ratio_patch i patch-vindu; evaluated: patches sendt til modell."
+  },
+  "predictions": [
+    {
+      "id": 0,
+      "y": 0,
+      "x": 160,
+      "score": 0.6100617051124573,
+      "probabilities": {
+        "normal": 0.3899382948875427,
+        "anomaly": 0.6100617051124573
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 1,
+      "y": 0,
+      "x": 192,
+      "score": 0.640212893486023,
+      "probabilities": {
+        "normal": 0.35978710651397705,
+        "anomaly": 0.640212893486023
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 2,
+      "y": 0,
+      "x": 384,
+      "score": 0.9982397556304932,
+      "probabilities": {
+        "normal": 0.001760244369506836,
+        "anomaly": 0.9982397556304932
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 3,
+      "y": 0,
+      "x": 416,
+      "score": 0.9920133948326111,
+      "probabilities": {
+        "normal": 0.007986605167388916,
+        "anomaly": 0.9920133948326111
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 4,
+      "y": 0,
+      "x": 480,
+      "score": 0.36406970024108887,
+      "probabilities": {
+        "normal": 0.6359302997589111,
+        "anomaly": 0.36406970024108887
+      },
+      "label": "normal"
+    },
+    {
+      "id": 5,
+      "y": 0,
+      "x": 512,
+      "score": 0.1184397041797638,
+      "probabilities": {
+        "normal": 0.8815602958202362,
+        "anomaly": 0.1184397041797638
+      },
+      "label": "normal"
+    },
+    {
+      "id": 6,
+      "y": 0,
+      "x": 544,
+      "score": 0.014831962995231152,
+      "probabilities": {
+        "normal": 0.9851680370047688,
+        "anomaly": 0.014831962995231152
+      },
+      "label": "normal"
+    },
+    {
+      "id": 7,
+      "y": 0,
+      "x": 576,
+      "score": 0.1805342733860016,
+      "probabilities": {
+        "normal": 0.8194657266139984,
+        "anomaly": 0.1805342733860016
+      },
+      "label": "normal"
+    },
+    {
+      "id": 8,
+      "y": 0,
+      "x": 608,
+      "score": 0.9488196969032288,
+      "probabilities": {
+        "normal": 0.05118030309677124,
+        "anomaly": 0.9488196969032288
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 9,
+      "y": 0,
+      "x": 640,
+      "score": 0.9929550290107727,
+      "probabilities": {
+        "normal": 0.007044970989227295,
+        "anomaly": 0.9929550290107727
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 10,
+      "y": 0,
+      "x": 672,
+      "score": 0.7450989484786987,
+      "probabilities": {
+        "normal": 0.25490105152130127,
+        "anomaly": 0.7450989484786987
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 11,
+      "y": 0,
+      "x": 704,
+      "score": 0.5400722622871399,
+      "probabilities": {
+        "normal": 0.4599277377128601,
+        "anomaly": 0.5400722622871399
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 12,
+      "y": 0,
+      "x": 736,
+      "score": 0.9589376449584961,
+      "probabilities": {
+        "normal": 0.041062355041503906,
+        "anomaly": 0.9589376449584961
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 13,
+      "y": 32,
+      "x": 64,
+      "score": 0.15138757228851318,
+      "probabilities": {
+        "normal": 0.8486124277114868,
+        "anomaly": 0.15138757228851318
+      },
+      "label": "normal"
+    },
+    {
+      "id": 14,
+      "y": 32,
+      "x": 96,
+      "score": 0.6917790174484253,
+      "probabilities": {
+        "normal": 0.3082209825515747,
+        "anomaly": 0.6917790174484253
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 15,
+      "y": 32,
+      "x": 128,
+      "score": 0.9431285858154297,
+      "probabilities": {
+        "normal": 0.05687141418457031,
+        "anomaly": 0.9431285858154297
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 16,
+      "y": 32,
+      "x": 160,
+      "score": 0.6964044570922852,
+      "probabilities": {
+        "normal": 0.30359554290771484,
+        "anomaly": 0.6964044570922852
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 17,
+      "y": 32,
+      "x": 192,
+      "score": 0.8462174534797668,
+      "probabilities": {
+        "normal": 0.15378254652023315,
+        "anomaly": 0.8462174534797668
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 18,
+      "y": 32,
+      "x": 224,
+      "score": 0.18762481212615967,
+      "probabilities": {
+        "normal": 0.8123751878738403,
+        "anomaly": 0.18762481212615967
+      },
+      "label": "normal"
+    },
+    {
+      "id": 19,
+      "y": 32,
+      "x": 256,
+      "score": 0.3624871075153351,
+      "probabilities": {
+        "normal": 0.6375128924846649,
+        "anomaly": 0.3624871075153351
+      },
+      "label": "normal"
+    },
+    {
+      "id": 20,
+      "y": 32,
+      "x": 288,
+      "score": 0.8896989226341248,
+      "probabilities": {
+        "normal": 0.11030107736587524,
+        "anomaly": 0.8896989226341248
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 21,
+      "y": 32,
+      "x": 320,
+      "score": 0.27900585532188416,
+      "probabilities": {
+        "normal": 0.7209941446781158,
+        "anomaly": 0.27900585532188416
+      },
+      "label": "normal"
+    },
+    {
+      "id": 22,
+      "y": 32,
+      "x": 352,
+      "score": 0.576633632183075,
+      "probabilities": {
+        "normal": 0.42336636781692505,
+        "anomaly": 0.576633632183075
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 23,
+      "y": 32,
+      "x": 384,
+      "score": 0.9964290261268616,
+      "probabilities": {
+        "normal": 0.0035709738731384277,
+        "anomaly": 0.9964290261268616
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 24,
+      "y": 32,
+      "x": 416,
+      "score": 0.9889864921569824,
+      "probabilities": {
+        "normal": 0.011013507843017578,
+        "anomaly": 0.9889864921569824
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 25,
+      "y": 32,
+      "x": 544,
+      "score": 0.08182697743177414,
+      "probabilities": {
+        "normal": 0.9181730225682259,
+        "anomaly": 0.08182697743177414
+      },
+      "label": "normal"
+    },
+    {
+      "id": 26,
+      "y": 32,
+      "x": 576,
+      "score": 0.7383504509925842,
+      "probabilities": {
+        "normal": 0.26164954900741577,
+        "anomaly": 0.7383504509925842
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 27,
+      "y": 32,
+      "x": 608,
+      "score": 0.996584415435791,
+      "probabilities": {
+        "normal": 0.0034155845642089844,
+        "anomaly": 0.996584415435791
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 28,
+      "y": 32,
+      "x": 672,
+      "score": 0.9703590869903564,
+      "probabilities": {
+        "normal": 0.029640913009643555,
+        "anomaly": 0.9703590869903564
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 29,
+      "y": 32,
+      "x": 704,
+      "score": 0.6893259882926941,
+      "probabilities": {
+        "normal": 0.3106740117073059,
+        "anomaly": 0.6893259882926941
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 30,
+      "y": 32,
+      "x": 736,
+      "score": 0.8718247413635254,
+      "probabilities": {
+        "normal": 0.1281752586364746,
+        "anomaly": 0.8718247413635254
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 31,
+      "y": 64,
+      "x": 0,
+      "score": 0.8687120079994202,
+      "probabilities": {
+        "normal": 0.13128799200057983,
+        "anomaly": 0.8687120079994202
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 32,
+      "y": 64,
+      "x": 64,
+      "score": 0.7720774412155151,
+      "probabilities": {
+        "normal": 0.22792255878448486,
+        "anomaly": 0.7720774412155151
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 33,
+      "y": 64,
+      "x": 96,
+      "score": 0.5616973042488098,
+      "probabilities": {
+        "normal": 0.4383026957511902,
+        "anomaly": 0.5616973042488098
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 34,
+      "y": 64,
+      "x": 128,
+      "score": 0.4830765128135681,
+      "probabilities": {
+        "normal": 0.5169234871864319,
+        "anomaly": 0.4830765128135681
+      },
+      "label": "normal"
+    },
+    {
+      "id": 35,
+      "y": 64,
+      "x": 160,
+      "score": 0.3247533142566681,
+      "probabilities": {
+        "normal": 0.6752466857433319,
+        "anomaly": 0.3247533142566681
+      },
+      "label": "normal"
+    },
+    {
+      "id": 36,
+      "y": 64,
+      "x": 192,
+      "score": 0.5067739486694336,
+      "probabilities": {
+        "normal": 0.4932260513305664,
+        "anomaly": 0.5067739486694336
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 37,
+      "y": 64,
+      "x": 224,
+      "score": 0.4954930245876312,
+      "probabilities": {
+        "normal": 0.5045069754123688,
+        "anomaly": 0.4954930245876312
+      },
+      "label": "normal"
+    },
+    {
+      "id": 38,
+      "y": 64,
+      "x": 256,
+      "score": 0.4569958746433258,
+      "probabilities": {
+        "normal": 0.5430041253566742,
+        "anomaly": 0.4569958746433258
+      },
+      "label": "normal"
+    },
+    {
+      "id": 39,
+      "y": 64,
+      "x": 288,
+      "score": 0.08115890622138977,
+      "probabilities": {
+        "normal": 0.9188410937786102,
+        "anomaly": 0.08115890622138977
+      },
+      "label": "normal"
+    },
+    {
+      "id": 40,
+      "y": 64,
+      "x": 320,
+      "score": 0.003705344395712018,
+      "probabilities": {
+        "normal": 0.996294655604288,
+        "anomaly": 0.003705344395712018
+      },
+      "label": "normal"
+    },
+    {
+      "id": 41,
+      "y": 64,
+      "x": 352,
+      "score": 0.25335147976875305,
+      "probabilities": {
+        "normal": 0.746648520231247,
+        "anomaly": 0.25335147976875305
+      },
+      "label": "normal"
+    },
+    {
+      "id": 42,
+      "y": 64,
+      "x": 416,
+      "score": 0.9531272053718567,
+      "probabilities": {
+        "normal": 0.04687279462814331,
+        "anomaly": 0.9531272053718567
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 43,
+      "y": 64,
+      "x": 512,
+      "score": 0.8504374623298645,
+      "probabilities": {
+        "normal": 0.1495625376701355,
+        "anomaly": 0.8504374623298645
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 44,
+      "y": 64,
+      "x": 544,
+      "score": 0.8489454388618469,
+      "probabilities": {
+        "normal": 0.15105456113815308,
+        "anomaly": 0.8489454388618469
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 45,
+      "y": 64,
+      "x": 672,
+      "score": 0.9061815738677979,
+      "probabilities": {
+        "normal": 0.09381842613220215,
+        "anomaly": 0.9061815738677979
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 46,
+      "y": 64,
+      "x": 704,
+      "score": 0.38176751136779785,
+      "probabilities": {
+        "normal": 0.6182324886322021,
+        "anomaly": 0.38176751136779785
+      },
+      "label": "normal"
+    },
+    {
+      "id": 47,
+      "y": 64,
+      "x": 736,
+      "score": 0.36831796169281006,
+      "probabilities": {
+        "normal": 0.6316820383071899,
+        "anomaly": 0.36831796169281006
+      },
+      "label": "normal"
+    },
+    {
+      "id": 48,
+      "y": 96,
+      "x": 0,
+      "score": 0.36389386653900146,
+      "probabilities": {
+        "normal": 0.6361061334609985,
+        "anomaly": 0.36389386653900146
+      },
+      "label": "normal"
+    },
+    {
+      "id": 49,
+      "y": 96,
+      "x": 64,
+      "score": 0.5638185739517212,
+      "probabilities": {
+        "normal": 0.4361814260482788,
+        "anomaly": 0.5638185739517212
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 50,
+      "y": 96,
+      "x": 96,
+      "score": 0.0019038727041333914,
+      "probabilities": {
+        "normal": 0.9980961272958666,
+        "anomaly": 0.0019038727041333914
+      },
+      "label": "normal"
+    },
+    {
+      "id": 51,
+      "y": 96,
+      "x": 128,
+      "score": 0.00385684915818274,
+      "probabilities": {
+        "normal": 0.9961431508418173,
+        "anomaly": 0.00385684915818274
+      },
+      "label": "normal"
+    },
+    {
+      "id": 52,
+      "y": 96,
+      "x": 160,
+      "score": 0.23153002560138702,
+      "probabilities": {
+        "normal": 0.768469974398613,
+        "anomaly": 0.23153002560138702
+      },
+      "label": "normal"
+    },
+    {
+      "id": 53,
+      "y": 96,
+      "x": 192,
+      "score": 0.42402127385139465,
+      "probabilities": {
+        "normal": 0.5759787261486053,
+        "anomaly": 0.42402127385139465
+      },
+      "label": "normal"
+    },
+    {
+      "id": 54,
+      "y": 96,
+      "x": 224,
+      "score": 0.9584717750549316,
+      "probabilities": {
+        "normal": 0.04152822494506836,
+        "anomaly": 0.9584717750549316
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 55,
+      "y": 96,
+      "x": 256,
+      "score": 0.9007919430732727,
+      "probabilities": {
+        "normal": 0.0992080569267273,
+        "anomaly": 0.9007919430732727
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 56,
+      "y": 96,
+      "x": 288,
+      "score": 0.06215757876634598,
+      "probabilities": {
+        "normal": 0.937842421233654,
+        "anomaly": 0.06215757876634598
+      },
+      "label": "normal"
+    },
+    {
+      "id": 57,
+      "y": 96,
+      "x": 320,
+      "score": 0.02632657065987587,
+      "probabilities": {
+        "normal": 0.9736734293401241,
+        "anomaly": 0.02632657065987587
+      },
+      "label": "normal"
+    },
+    {
+      "id": 58,
+      "y": 96,
+      "x": 352,
+      "score": 0.5250174403190613,
+      "probabilities": {
+        "normal": 0.4749825596809387,
+        "anomaly": 0.5250174403190613
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 59,
+      "y": 96,
+      "x": 384,
+      "score": 0.9224246144294739,
+      "probabilities": {
+        "normal": 0.07757538557052612,
+        "anomaly": 0.9224246144294739
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 60,
+      "y": 96,
+      "x": 448,
+      "score": 0.5174351930618286,
+      "probabilities": {
+        "normal": 0.4825648069381714,
+        "anomaly": 0.5174351930618286
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 61,
+      "y": 96,
+      "x": 480,
+      "score": 0.7388560175895691,
+      "probabilities": {
+        "normal": 0.2611439824104309,
+        "anomaly": 0.7388560175895691
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 62,
+      "y": 96,
+      "x": 512,
+      "score": 0.8645223379135132,
+      "probabilities": {
+        "normal": 0.13547766208648682,
+        "anomaly": 0.8645223379135132
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 63,
+      "y": 96,
+      "x": 544,
+      "score": 0.9654554724693298,
+      "probabilities": {
+        "normal": 0.034544527530670166,
+        "anomaly": 0.9654554724693298
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 64,
+      "y": 96,
+      "x": 672,
+      "score": 0.8876031637191772,
+      "probabilities": {
+        "normal": 0.11239683628082275,
+        "anomaly": 0.8876031637191772
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 65,
+      "y": 96,
+      "x": 704,
+      "score": 0.6080710887908936,
+      "probabilities": {
+        "normal": 0.39192891120910645,
+        "anomaly": 0.6080710887908936
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 66,
+      "y": 96,
+      "x": 736,
+      "score": 0.6313362717628479,
+      "probabilities": {
+        "normal": 0.3686637282371521,
+        "anomaly": 0.6313362717628479
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 67,
+      "y": 96,
+      "x": 768,
+      "score": 0.37532246112823486,
+      "probabilities": {
+        "normal": 0.6246775388717651,
+        "anomaly": 0.37532246112823486
+      },
+      "label": "normal"
+    },
+    {
+      "id": 68,
+      "y": 128,
+      "x": 0,
+      "score": 0.6159842014312744,
+      "probabilities": {
+        "normal": 0.3840157985687256,
+        "anomaly": 0.6159842014312744
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 69,
+      "y": 128,
+      "x": 32,
+      "score": 0.7734619379043579,
+      "probabilities": {
+        "normal": 0.2265380620956421,
+        "anomaly": 0.7734619379043579
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 70,
+      "y": 128,
+      "x": 64,
+      "score": 3.515415664878674e-05,
+      "probabilities": {
+        "normal": 0.9999648458433512,
+        "anomaly": 3.515415664878674e-05
+      },
+      "label": "normal"
+    },
+    {
+      "id": 71,
+      "y": 128,
+      "x": 96,
+      "score": 1.0763130831037415e-08,
+      "probabilities": {
+        "normal": 0.9999999892368692,
+        "anomaly": 1.0763130831037415e-08
+      },
+      "label": "normal"
+    },
+    {
+      "id": 72,
+      "y": 128,
+      "x": 128,
+      "score": 0.0005107462638989091,
+      "probabilities": {
+        "normal": 0.9994892537361011,
+        "anomaly": 0.0005107462638989091
+      },
+      "label": "normal"
+    },
+    {
+      "id": 73,
+      "y": 128,
+      "x": 160,
+      "score": 0.8619152307510376,
+      "probabilities": {
+        "normal": 0.1380847692489624,
+        "anomaly": 0.8619152307510376
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 74,
+      "y": 128,
+      "x": 192,
+      "score": 0.6731792688369751,
+      "probabilities": {
+        "normal": 0.3268207311630249,
+        "anomaly": 0.6731792688369751
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 75,
+      "y": 128,
+      "x": 288,
+      "score": 0.6185687184333801,
+      "probabilities": {
+        "normal": 0.3814312815666199,
+        "anomaly": 0.6185687184333801
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 76,
+      "y": 128,
+      "x": 320,
+      "score": 0.8298640847206116,
+      "probabilities": {
+        "normal": 0.17013591527938843,
+        "anomaly": 0.8298640847206116
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 77,
+      "y": 128,
+      "x": 352,
+      "score": 0.2856568694114685,
+      "probabilities": {
+        "normal": 0.7143431305885315,
+        "anomaly": 0.2856568694114685
+      },
+      "label": "normal"
+    },
+    {
+      "id": 78,
+      "y": 128,
+      "x": 384,
+      "score": 0.09255561232566833,
+      "probabilities": {
+        "normal": 0.9074443876743317,
+        "anomaly": 0.09255561232566833
+      },
+      "label": "normal"
+    },
+    {
+      "id": 79,
+      "y": 128,
+      "x": 416,
+      "score": 0.04189825803041458,
+      "probabilities": {
+        "normal": 0.9581017419695854,
+        "anomaly": 0.04189825803041458
+      },
+      "label": "normal"
+    },
+    {
+      "id": 80,
+      "y": 128,
+      "x": 448,
+      "score": 0.08986535668373108,
+      "probabilities": {
+        "normal": 0.9101346433162689,
+        "anomaly": 0.08986535668373108
+      },
+      "label": "normal"
+    },
+    {
+      "id": 81,
+      "y": 128,
+      "x": 480,
+      "score": 0.9120461940765381,
+      "probabilities": {
+        "normal": 0.08795380592346191,
+        "anomaly": 0.9120461940765381
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 82,
+      "y": 128,
+      "x": 512,
+      "score": 0.8908938765525818,
+      "probabilities": {
+        "normal": 0.10910612344741821,
+        "anomaly": 0.8908938765525818
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 83,
+      "y": 128,
+      "x": 544,
+      "score": 0.7116918563842773,
+      "probabilities": {
+        "normal": 0.28830814361572266,
+        "anomaly": 0.7116918563842773
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 84,
+      "y": 128,
+      "x": 640,
+      "score": 0.9364901781082153,
+      "probabilities": {
+        "normal": 0.06350982189178467,
+        "anomaly": 0.9364901781082153
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 85,
+      "y": 128,
+      "x": 704,
+      "score": 0.9616447687149048,
+      "probabilities": {
+        "normal": 0.038355231285095215,
+        "anomaly": 0.9616447687149048
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 86,
+      "y": 128,
+      "x": 736,
+      "score": 0.9920971393585205,
+      "probabilities": {
+        "normal": 0.007902860641479492,
+        "anomaly": 0.9920971393585205
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 87,
+      "y": 128,
+      "x": 768,
+      "score": 0.5115511417388916,
+      "probabilities": {
+        "normal": 0.4884488582611084,
+        "anomaly": 0.5115511417388916
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 88,
+      "y": 128,
+      "x": 800,
+      "score": 0.030221324414014816,
+      "probabilities": {
+        "normal": 0.9697786755859852,
+        "anomaly": 0.030221324414014816
+      },
+      "label": "normal"
+    },
+    {
+      "id": 89,
+      "y": 160,
+      "x": 0,
+      "score": 0.621225118637085,
+      "probabilities": {
+        "normal": 0.37877488136291504,
+        "anomaly": 0.621225118637085
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 90,
+      "y": 160,
+      "x": 32,
+      "score": 0.12090452015399933,
+      "probabilities": {
+        "normal": 0.8790954798460007,
+        "anomaly": 0.12090452015399933
+      },
+      "label": "normal"
+    },
+    {
+      "id": 91,
+      "y": 160,
+      "x": 64,
+      "score": 1.7327243995168828e-06,
+      "probabilities": {
+        "normal": 0.9999982672756005,
+        "anomaly": 1.7327243995168828e-06
+      },
+      "label": "normal"
+    },
+    {
+      "id": 92,
+      "y": 160,
+      "x": 96,
+      "score": 1.7051164924453133e-09,
+      "probabilities": {
+        "normal": 0.9999999982948835,
+        "anomaly": 1.7051164924453133e-09
+      },
+      "label": "normal"
+    },
+    {
+      "id": 93,
+      "y": 160,
+      "x": 128,
+      "score": 0.00367876049131155,
+      "probabilities": {
+        "normal": 0.9963212395086884,
+        "anomaly": 0.00367876049131155
+      },
+      "label": "normal"
+    },
+    {
+      "id": 94,
+      "y": 160,
+      "x": 288,
+      "score": 0.7558084726333618,
+      "probabilities": {
+        "normal": 0.24419152736663818,
+        "anomaly": 0.7558084726333618
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 95,
+      "y": 160,
+      "x": 320,
+      "score": 0.48255300521850586,
+      "probabilities": {
+        "normal": 0.5174469947814941,
+        "anomaly": 0.48255300521850586
+      },
+      "label": "normal"
+    },
+    {
+      "id": 96,
+      "y": 160,
+      "x": 352,
+      "score": 0.09198763221502304,
+      "probabilities": {
+        "normal": 0.908012367784977,
+        "anomaly": 0.09198763221502304
+      },
+      "label": "normal"
+    },
+    {
+      "id": 97,
+      "y": 160,
+      "x": 384,
+      "score": 0.00015921522572170943,
+      "probabilities": {
+        "normal": 0.9998407847742783,
+        "anomaly": 0.00015921522572170943
+      },
+      "label": "normal"
+    },
+    {
+      "id": 98,
+      "y": 160,
+      "x": 416,
+      "score": 6.223997388588032e-06,
+      "probabilities": {
+        "normal": 0.9999937760026114,
+        "anomaly": 6.223997388588032e-06
+      },
+      "label": "normal"
+    },
+    {
+      "id": 99,
+      "y": 160,
+      "x": 448,
+      "score": 0.0017213246319442987,
+      "probabilities": {
+        "normal": 0.9982786753680557,
+        "anomaly": 0.0017213246319442987
+      },
+      "label": "normal"
+    },
+    {
+      "id": 100,
+      "y": 160,
+      "x": 480,
+      "score": 0.2890215516090393,
+      "probabilities": {
+        "normal": 0.7109784483909607,
+        "anomaly": 0.2890215516090393
+      },
+      "label": "normal"
+    },
+    {
+      "id": 101,
+      "y": 160,
+      "x": 512,
+      "score": 0.6962398886680603,
+      "probabilities": {
+        "normal": 0.3037601113319397,
+        "anomaly": 0.6962398886680603
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 102,
+      "y": 160,
+      "x": 544,
+      "score": 0.4610094130039215,
+      "probabilities": {
+        "normal": 0.5389905869960785,
+        "anomaly": 0.4610094130039215
+      },
+      "label": "normal"
+    },
+    {
+      "id": 103,
+      "y": 160,
+      "x": 576,
+      "score": 0.22024866938591003,
+      "probabilities": {
+        "normal": 0.77975133061409,
+        "anomaly": 0.22024866938591003
+      },
+      "label": "normal"
+    },
+    {
+      "id": 104,
+      "y": 160,
+      "x": 608,
+      "score": 0.19119727611541748,
+      "probabilities": {
+        "normal": 0.8088027238845825,
+        "anomaly": 0.19119727611541748
+      },
+      "label": "normal"
+    },
+    {
+      "id": 105,
+      "y": 160,
+      "x": 640,
+      "score": 0.3871878683567047,
+      "probabilities": {
+        "normal": 0.6128121316432953,
+        "anomaly": 0.3871878683567047
+      },
+      "label": "normal"
+    },
+    {
+      "id": 106,
+      "y": 160,
+      "x": 672,
+      "score": 0.49470803141593933,
+      "probabilities": {
+        "normal": 0.5052919685840607,
+        "anomaly": 0.49470803141593933
+      },
+      "label": "normal"
+    },
+    {
+      "id": 107,
+      "y": 160,
+      "x": 704,
+      "score": 0.1347767859697342,
+      "probabilities": {
+        "normal": 0.8652232140302658,
+        "anomaly": 0.1347767859697342
+      },
+      "label": "normal"
+    },
+    {
+      "id": 108,
+      "y": 160,
+      "x": 800,
+      "score": 0.3025703728199005,
+      "probabilities": {
+        "normal": 0.6974296271800995,
+        "anomaly": 0.3025703728199005
+      },
+      "label": "normal"
+    },
+    {
+      "id": 109,
+      "y": 192,
+      "x": 0,
+      "score": 0.4724106788635254,
+      "probabilities": {
+        "normal": 0.5275893211364746,
+        "anomaly": 0.4724106788635254
+      },
+      "label": "normal"
+    },
+    {
+      "id": 110,
+      "y": 192,
+      "x": 32,
+      "score": 0.0009865344036370516,
+      "probabilities": {
+        "normal": 0.999013465596363,
+        "anomaly": 0.0009865344036370516
+      },
+      "label": "normal"
+    },
+    {
+      "id": 111,
+      "y": 192,
+      "x": 64,
+      "score": 0.00013723813754040748,
+      "probabilities": {
+        "normal": 0.9998627618624596,
+        "anomaly": 0.00013723813754040748
+      },
+      "label": "normal"
+    },
+    {
+      "id": 112,
+      "y": 192,
+      "x": 96,
+      "score": 3.916611967724748e-05,
+      "probabilities": {
+        "normal": 0.9999608338803228,
+        "anomaly": 3.916611967724748e-05
+      },
+      "label": "normal"
+    },
+    {
+      "id": 113,
+      "y": 192,
+      "x": 128,
+      "score": 0.0455622635781765,
+      "probabilities": {
+        "normal": 0.9544377364218235,
+        "anomaly": 0.0455622635781765
+      },
+      "label": "normal"
+    },
+    {
+      "id": 114,
+      "y": 192,
+      "x": 256,
+      "score": 0.5259858965873718,
+      "probabilities": {
+        "normal": 0.4740141034126282,
+        "anomaly": 0.5259858965873718
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 115,
+      "y": 192,
+      "x": 288,
+      "score": 0.14145319163799286,
+      "probabilities": {
+        "normal": 0.8585468083620071,
+        "anomaly": 0.14145319163799286
+      },
+      "label": "normal"
+    },
+    {
+      "id": 116,
+      "y": 192,
+      "x": 416,
+      "score": 0.0006581737543456256,
+      "probabilities": {
+        "normal": 0.9993418262456544,
+        "anomaly": 0.0006581737543456256
+      },
+      "label": "normal"
+    },
+    {
+      "id": 117,
+      "y": 192,
+      "x": 448,
+      "score": 0.008930278941988945,
+      "probabilities": {
+        "normal": 0.991069721058011,
+        "anomaly": 0.008930278941988945
+      },
+      "label": "normal"
+    },
+    {
+      "id": 118,
+      "y": 192,
+      "x": 480,
+      "score": 0.20931123197078705,
+      "probabilities": {
+        "normal": 0.790688768029213,
+        "anomaly": 0.20931123197078705
+      },
+      "label": "normal"
+    },
+    {
+      "id": 119,
+      "y": 192,
+      "x": 512,
+      "score": 0.6156988143920898,
+      "probabilities": {
+        "normal": 0.38430118560791016,
+        "anomaly": 0.6156988143920898
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 120,
+      "y": 192,
+      "x": 544,
+      "score": 0.24251355230808258,
+      "probabilities": {
+        "normal": 0.7574864476919174,
+        "anomaly": 0.24251355230808258
+      },
+      "label": "normal"
+    },
+    {
+      "id": 121,
+      "y": 192,
+      "x": 576,
+      "score": 0.1639525443315506,
+      "probabilities": {
+        "normal": 0.8360474556684494,
+        "anomaly": 0.1639525443315506
+      },
+      "label": "normal"
+    },
+    {
+      "id": 122,
+      "y": 192,
+      "x": 608,
+      "score": 0.13833536207675934,
+      "probabilities": {
+        "normal": 0.8616646379232407,
+        "anomaly": 0.13833536207675934
+      },
+      "label": "normal"
+    },
+    {
+      "id": 123,
+      "y": 192,
+      "x": 640,
+      "score": 0.11553619801998138,
+      "probabilities": {
+        "normal": 0.8844638019800186,
+        "anomaly": 0.11553619801998138
+      },
+      "label": "normal"
+    },
+    {
+      "id": 124,
+      "y": 192,
+      "x": 672,
+      "score": 0.027919625863432884,
+      "probabilities": {
+        "normal": 0.9720803741365671,
+        "anomaly": 0.027919625863432884
+      },
+      "label": "normal"
+    },
+    {
+      "id": 125,
+      "y": 192,
+      "x": 704,
+      "score": 0.0004652438801713288,
+      "probabilities": {
+        "normal": 0.9995347561198287,
+        "anomaly": 0.0004652438801713288
+      },
+      "label": "normal"
+    },
+    {
+      "id": 126,
+      "y": 192,
+      "x": 800,
+      "score": 0.9258589744567871,
+      "probabilities": {
+        "normal": 0.07414102554321289,
+        "anomaly": 0.9258589744567871
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 127,
+      "y": 224,
+      "x": 0,
+      "score": 0.026089772582054138,
+      "probabilities": {
+        "normal": 0.9739102274179459,
+        "anomaly": 0.026089772582054138
+      },
+      "label": "normal"
+    },
+    {
+      "id": 128,
+      "y": 224,
+      "x": 32,
+      "score": 2.9790269763907418e-05,
+      "probabilities": {
+        "normal": 0.9999702097302361,
+        "anomaly": 2.9790269763907418e-05
+      },
+      "label": "normal"
+    },
+    {
+      "id": 129,
+      "y": 224,
+      "x": 64,
+      "score": 1.847974090196658e-05,
+      "probabilities": {
+        "normal": 0.999981520259098,
+        "anomaly": 1.847974090196658e-05
+      },
+      "label": "normal"
+    },
+    {
+      "id": 130,
+      "y": 224,
+      "x": 96,
+      "score": 0.0003074577543884516,
+      "probabilities": {
+        "normal": 0.9996925422456115,
+        "anomaly": 0.0003074577543884516
+      },
+      "label": "normal"
+    },
+    {
+      "id": 131,
+      "y": 224,
+      "x": 128,
+      "score": 0.07932695001363754,
+      "probabilities": {
+        "normal": 0.9206730499863625,
+        "anomaly": 0.07932695001363754
+      },
+      "label": "normal"
+    },
+    {
+      "id": 132,
+      "y": 224,
+      "x": 256,
+      "score": 0.053264640271663666,
+      "probabilities": {
+        "normal": 0.9467353597283363,
+        "anomaly": 0.053264640271663666
+      },
+      "label": "normal"
+    },
+    {
+      "id": 133,
+      "y": 224,
+      "x": 288,
+      "score": 0.014461086131632328,
+      "probabilities": {
+        "normal": 0.9855389138683677,
+        "anomaly": 0.014461086131632328
+      },
+      "label": "normal"
+    },
+    {
+      "id": 134,
+      "y": 224,
+      "x": 416,
+      "score": 0.9423975944519043,
+      "probabilities": {
+        "normal": 0.0576024055480957,
+        "anomaly": 0.9423975944519043
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 135,
+      "y": 224,
+      "x": 448,
+      "score": 0.5182676911354065,
+      "probabilities": {
+        "normal": 0.4817323088645935,
+        "anomaly": 0.5182676911354065
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 136,
+      "y": 224,
+      "x": 480,
+      "score": 0.8048700094223022,
+      "probabilities": {
+        "normal": 0.19512999057769775,
+        "anomaly": 0.8048700094223022
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 137,
+      "y": 224,
+      "x": 512,
+      "score": 0.11487309634685516,
+      "probabilities": {
+        "normal": 0.8851269036531448,
+        "anomaly": 0.11487309634685516
+      },
+      "label": "normal"
+    },
+    {
+      "id": 138,
+      "y": 224,
+      "x": 544,
+      "score": 0.20070402324199677,
+      "probabilities": {
+        "normal": 0.7992959767580032,
+        "anomaly": 0.20070402324199677
+      },
+      "label": "normal"
+    },
+    {
+      "id": 139,
+      "y": 224,
+      "x": 640,
+      "score": 0.8067840337753296,
+      "probabilities": {
+        "normal": 0.1932159662246704,
+        "anomaly": 0.8067840337753296
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 140,
+      "y": 224,
+      "x": 672,
+      "score": 0.9171964526176453,
+      "probabilities": {
+        "normal": 0.08280354738235474,
+        "anomaly": 0.9171964526176453
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 141,
+      "y": 224,
+      "x": 704,
+      "score": 0.3103583753108978,
+      "probabilities": {
+        "normal": 0.6896416246891022,
+        "anomaly": 0.3103583753108978
+      },
+      "label": "normal"
+    },
+    {
+      "id": 142,
+      "y": 224,
+      "x": 736,
+      "score": 0.6575050354003906,
+      "probabilities": {
+        "normal": 0.3424949645996094,
+        "anomaly": 0.6575050354003906
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 143,
+      "y": 256,
+      "x": 0,
+      "score": 0.16172073781490326,
+      "probabilities": {
+        "normal": 0.8382792621850967,
+        "anomaly": 0.16172073781490326
+      },
+      "label": "normal"
+    },
+    {
+      "id": 144,
+      "y": 256,
+      "x": 32,
+      "score": 0.02378811128437519,
+      "probabilities": {
+        "normal": 0.9762118887156248,
+        "anomaly": 0.02378811128437519
+      },
+      "label": "normal"
+    },
+    {
+      "id": 145,
+      "y": 256,
+      "x": 64,
+      "score": 0.0008642260800115764,
+      "probabilities": {
+        "normal": 0.9991357739199884,
+        "anomaly": 0.0008642260800115764
+      },
+      "label": "normal"
+    },
+    {
+      "id": 146,
+      "y": 256,
+      "x": 96,
+      "score": 0.0009922676254063845,
+      "probabilities": {
+        "normal": 0.9990077323745936,
+        "anomaly": 0.0009922676254063845
+      },
+      "label": "normal"
+    },
+    {
+      "id": 147,
+      "y": 256,
+      "x": 128,
+      "score": 0.048085540533065796,
+      "probabilities": {
+        "normal": 0.9519144594669342,
+        "anomaly": 0.048085540533065796
+      },
+      "label": "normal"
+    },
+    {
+      "id": 148,
+      "y": 256,
+      "x": 160,
+      "score": 0.34137728810310364,
+      "probabilities": {
+        "normal": 0.6586227118968964,
+        "anomaly": 0.34137728810310364
+      },
+      "label": "normal"
+    },
+    {
+      "id": 149,
+      "y": 256,
+      "x": 192,
+      "score": 0.7104609608650208,
+      "probabilities": {
+        "normal": 0.28953903913497925,
+        "anomaly": 0.7104609608650208
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 150,
+      "y": 256,
+      "x": 416,
+      "score": 0.9641598463058472,
+      "probabilities": {
+        "normal": 0.03584015369415283,
+        "anomaly": 0.9641598463058472
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 151,
+      "y": 256,
+      "x": 448,
+      "score": 0.1531849503517151,
+      "probabilities": {
+        "normal": 0.8468150496482849,
+        "anomaly": 0.1531849503517151
+      },
+      "label": "normal"
+    },
+    {
+      "id": 152,
+      "y": 256,
+      "x": 480,
+      "score": 0.05598907545208931,
+      "probabilities": {
+        "normal": 0.9440109245479107,
+        "anomaly": 0.05598907545208931
+      },
+      "label": "normal"
+    },
+    {
+      "id": 153,
+      "y": 256,
+      "x": 512,
+      "score": 0.02035740576684475,
+      "probabilities": {
+        "normal": 0.9796425942331553,
+        "anomaly": 0.02035740576684475
+      },
+      "label": "normal"
+    },
+    {
+      "id": 154,
+      "y": 256,
+      "x": 544,
+      "score": 0.37713056802749634,
+      "probabilities": {
+        "normal": 0.6228694319725037,
+        "anomaly": 0.37713056802749634
+      },
+      "label": "normal"
+    },
+    {
+      "id": 155,
+      "y": 256,
+      "x": 704,
+      "score": 0.9978221654891968,
+      "probabilities": {
+        "normal": 0.0021778345108032227,
+        "anomaly": 0.9978221654891968
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 156,
+      "y": 288,
+      "x": 0,
+      "score": 0.7837588787078857,
+      "probabilities": {
+        "normal": 0.21624112129211426,
+        "anomaly": 0.7837588787078857
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 157,
+      "y": 288,
+      "x": 32,
+      "score": 0.812798261642456,
+      "probabilities": {
+        "normal": 0.18720173835754395,
+        "anomaly": 0.812798261642456
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 158,
+      "y": 288,
+      "x": 64,
+      "score": 0.19933728873729706,
+      "probabilities": {
+        "normal": 0.8006627112627029,
+        "anomaly": 0.19933728873729706
+      },
+      "label": "normal"
+    },
+    {
+      "id": 159,
+      "y": 288,
+      "x": 96,
+      "score": 0.0517764538526535,
+      "probabilities": {
+        "normal": 0.9482235461473465,
+        "anomaly": 0.0517764538526535
+      },
+      "label": "normal"
+    },
+    {
+      "id": 160,
+      "y": 288,
+      "x": 128,
+      "score": 0.2735818326473236,
+      "probabilities": {
+        "normal": 0.7264181673526764,
+        "anomaly": 0.2735818326473236
+      },
+      "label": "normal"
+    },
+    {
+      "id": 161,
+      "y": 288,
+      "x": 160,
+      "score": 0.1190461739897728,
+      "probabilities": {
+        "normal": 0.8809538260102272,
+        "anomaly": 0.1190461739897728
+      },
+      "label": "normal"
+    },
+    {
+      "id": 162,
+      "y": 288,
+      "x": 192,
+      "score": 0.016551509499549866,
+      "probabilities": {
+        "normal": 0.9834484905004501,
+        "anomaly": 0.016551509499549866
+      },
+      "label": "normal"
+    },
+    {
+      "id": 163,
+      "y": 288,
+      "x": 224,
+      "score": 0.0010149996960535645,
+      "probabilities": {
+        "normal": 0.9989850003039464,
+        "anomaly": 0.0010149996960535645
+      },
+      "label": "normal"
+    },
+    {
+      "id": 164,
+      "y": 288,
+      "x": 320,
+      "score": 0.9001642465591431,
+      "probabilities": {
+        "normal": 0.09983575344085693,
+        "anomaly": 0.9001642465591431
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 165,
+      "y": 288,
+      "x": 352,
+      "score": 0.7985489368438721,
+      "probabilities": {
+        "normal": 0.20145106315612793,
+        "anomaly": 0.7985489368438721
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 166,
+      "y": 288,
+      "x": 416,
+      "score": 0.9202946424484253,
+      "probabilities": {
+        "normal": 0.07970535755157471,
+        "anomaly": 0.9202946424484253
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 167,
+      "y": 288,
+      "x": 448,
+      "score": 0.34496447443962097,
+      "probabilities": {
+        "normal": 0.655035525560379,
+        "anomaly": 0.34496447443962097
+      },
+      "label": "normal"
+    },
+    {
+      "id": 168,
+      "y": 288,
+      "x": 480,
+      "score": 0.04620026797056198,
+      "probabilities": {
+        "normal": 0.953799732029438,
+        "anomaly": 0.04620026797056198
+      },
+      "label": "normal"
+    },
+    {
+      "id": 169,
+      "y": 288,
+      "x": 512,
+      "score": 0.04608914256095886,
+      "probabilities": {
+        "normal": 0.9539108574390411,
+        "anomaly": 0.04608914256095886
+      },
+      "label": "normal"
+    },
+    {
+      "id": 170,
+      "y": 288,
+      "x": 544,
+      "score": 0.19136536121368408,
+      "probabilities": {
+        "normal": 0.8086346387863159,
+        "anomaly": 0.19136536121368408
+      },
+      "label": "normal"
+    },
+    {
+      "id": 171,
+      "y": 288,
+      "x": 576,
+      "score": 0.3252929151058197,
+      "probabilities": {
+        "normal": 0.6747070848941803,
+        "anomaly": 0.3252929151058197
+      },
+      "label": "normal"
+    },
+    {
+      "id": 172,
+      "y": 288,
+      "x": 608,
+      "score": 0.947549045085907,
+      "probabilities": {
+        "normal": 0.05245095491409302,
+        "anomaly": 0.947549045085907
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 173,
+      "y": 288,
+      "x": 672,
+      "score": 0.9751688241958618,
+      "probabilities": {
+        "normal": 0.024831175804138184,
+        "anomaly": 0.9751688241958618
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 174,
+      "y": 288,
+      "x": 704,
+      "score": 0.9124124646186829,
+      "probabilities": {
+        "normal": 0.08758753538131714,
+        "anomaly": 0.9124124646186829
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 175,
+      "y": 288,
+      "x": 736,
+      "score": 0.9367767572402954,
+      "probabilities": {
+        "normal": 0.06322324275970459,
+        "anomaly": 0.9367767572402954
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 176,
+      "y": 288,
+      "x": 800,
+      "score": 0.9454750418663025,
+      "probabilities": {
+        "normal": 0.05452495813369751,
+        "anomaly": 0.9454750418663025
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 177,
+      "y": 288,
+      "x": 832,
+      "score": 0.46084538102149963,
+      "probabilities": {
+        "normal": 0.5391546189785004,
+        "anomaly": 0.46084538102149963
+      },
+      "label": "normal"
+    },
+    {
+      "id": 178,
+      "y": 288,
+      "x": 864,
+      "score": 0.13599537312984467,
+      "probabilities": {
+        "normal": 0.8640046268701553,
+        "anomaly": 0.13599537312984467
+      },
+      "label": "normal"
+    },
+    {
+      "id": 179,
+      "y": 320,
+      "x": 0,
+      "score": 0.4078000485897064,
+      "probabilities": {
+        "normal": 0.5921999514102936,
+        "anomaly": 0.4078000485897064
+      },
+      "label": "normal"
+    },
+    {
+      "id": 180,
+      "y": 320,
+      "x": 32,
+      "score": 0.6376571655273438,
+      "probabilities": {
+        "normal": 0.36234283447265625,
+        "anomaly": 0.6376571655273438
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 181,
+      "y": 320,
+      "x": 64,
+      "score": 0.4272523522377014,
+      "probabilities": {
+        "normal": 0.5727476477622986,
+        "anomaly": 0.4272523522377014
+      },
+      "label": "normal"
+    },
+    {
+      "id": 182,
+      "y": 320,
+      "x": 96,
+      "score": 0.45187100768089294,
+      "probabilities": {
+        "normal": 0.5481289923191071,
+        "anomaly": 0.45187100768089294
+      },
+      "label": "normal"
+    },
+    {
+      "id": 183,
+      "y": 320,
+      "x": 128,
+      "score": 0.8633340001106262,
+      "probabilities": {
+        "normal": 0.13666599988937378,
+        "anomaly": 0.8633340001106262
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 184,
+      "y": 320,
+      "x": 160,
+      "score": 0.28132960200309753,
+      "probabilities": {
+        "normal": 0.7186703979969025,
+        "anomaly": 0.28132960200309753
+      },
+      "label": "normal"
+    },
+    {
+      "id": 185,
+      "y": 320,
+      "x": 192,
+      "score": 0.02538803592324257,
+      "probabilities": {
+        "normal": 0.9746119640767574,
+        "anomaly": 0.02538803592324257
+      },
+      "label": "normal"
+    },
+    {
+      "id": 186,
+      "y": 320,
+      "x": 224,
+      "score": 0.0016880471957847476,
+      "probabilities": {
+        "normal": 0.9983119528042153,
+        "anomaly": 0.0016880471957847476
+      },
+      "label": "normal"
+    },
+    {
+      "id": 187,
+      "y": 320,
+      "x": 352,
+      "score": 0.675369381904602,
+      "probabilities": {
+        "normal": 0.32463061809539795,
+        "anomaly": 0.675369381904602
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 188,
+      "y": 320,
+      "x": 384,
+      "score": 0.5179741382598877,
+      "probabilities": {
+        "normal": 0.4820258617401123,
+        "anomaly": 0.5179741382598877
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 189,
+      "y": 320,
+      "x": 416,
+      "score": 0.8917900323867798,
+      "probabilities": {
+        "normal": 0.10820996761322021,
+        "anomaly": 0.8917900323867798
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 190,
+      "y": 320,
+      "x": 512,
+      "score": 0.08445072174072266,
+      "probabilities": {
+        "normal": 0.9155492782592773,
+        "anomaly": 0.08445072174072266
+      },
+      "label": "normal"
+    },
+    {
+      "id": 191,
+      "y": 320,
+      "x": 544,
+      "score": 0.05453678220510483,
+      "probabilities": {
+        "normal": 0.9454632177948952,
+        "anomaly": 0.05453678220510483
+      },
+      "label": "normal"
+    },
+    {
+      "id": 192,
+      "y": 320,
+      "x": 576,
+      "score": 0.11539113521575928,
+      "probabilities": {
+        "normal": 0.8846088647842407,
+        "anomaly": 0.11539113521575928
+      },
+      "label": "normal"
+    },
+    {
+      "id": 193,
+      "y": 320,
+      "x": 608,
+      "score": 0.5511967539787292,
+      "probabilities": {
+        "normal": 0.44880324602127075,
+        "anomaly": 0.5511967539787292
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 194,
+      "y": 320,
+      "x": 640,
+      "score": 0.9278292059898376,
+      "probabilities": {
+        "normal": 0.07217079401016235,
+        "anomaly": 0.9278292059898376
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 195,
+      "y": 320,
+      "x": 672,
+      "score": 0.8073640465736389,
+      "probabilities": {
+        "normal": 0.19263595342636108,
+        "anomaly": 0.8073640465736389
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 196,
+      "y": 320,
+      "x": 704,
+      "score": 0.4262429475784302,
+      "probabilities": {
+        "normal": 0.5737570524215698,
+        "anomaly": 0.4262429475784302
+      },
+      "label": "normal"
+    },
+    {
+      "id": 197,
+      "y": 320,
+      "x": 832,
+      "score": 0.44171595573425293,
+      "probabilities": {
+        "normal": 0.5582840442657471,
+        "anomaly": 0.44171595573425293
+      },
+      "label": "normal"
+    },
+    {
+      "id": 198,
+      "y": 320,
+      "x": 864,
+      "score": 0.019498653709888458,
+      "probabilities": {
+        "normal": 0.9805013462901115,
+        "anomaly": 0.019498653709888458
+      },
+      "label": "normal"
+    },
+    {
+      "id": 199,
+      "y": 352,
+      "x": 0,
+      "score": 0.34346914291381836,
+      "probabilities": {
+        "normal": 0.6565308570861816,
+        "anomaly": 0.34346914291381836
+      },
+      "label": "normal"
+    },
+    {
+      "id": 200,
+      "y": 352,
+      "x": 32,
+      "score": 0.9763665199279785,
+      "probabilities": {
+        "normal": 0.023633480072021484,
+        "anomaly": 0.9763665199279785
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 201,
+      "y": 352,
+      "x": 64,
+      "score": 0.932317316532135,
+      "probabilities": {
+        "normal": 0.06768268346786499,
+        "anomaly": 0.932317316532135
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 202,
+      "y": 352,
+      "x": 96,
+      "score": 0.4749627411365509,
+      "probabilities": {
+        "normal": 0.5250372588634491,
+        "anomaly": 0.4749627411365509
+      },
+      "label": "normal"
+    },
+    {
+      "id": 203,
+      "y": 352,
+      "x": 128,
+      "score": 0.15271376073360443,
+      "probabilities": {
+        "normal": 0.8472862392663956,
+        "anomaly": 0.15271376073360443
+      },
+      "label": "normal"
+    },
+    {
+      "id": 204,
+      "y": 352,
+      "x": 160,
+      "score": 0.008422705344855785,
+      "probabilities": {
+        "normal": 0.9915772946551442,
+        "anomaly": 0.008422705344855785
+      },
+      "label": "normal"
+    },
+    {
+      "id": 205,
+      "y": 352,
+      "x": 192,
+      "score": 0.0059087518602609634,
+      "probabilities": {
+        "normal": 0.994091248139739,
+        "anomaly": 0.0059087518602609634
+      },
+      "label": "normal"
+    },
+    {
+      "id": 206,
+      "y": 352,
+      "x": 224,
+      "score": 0.0027479776181280613,
+      "probabilities": {
+        "normal": 0.9972520223818719,
+        "anomaly": 0.0027479776181280613
+      },
+      "label": "normal"
+    },
+    {
+      "id": 207,
+      "y": 352,
+      "x": 256,
+      "score": 0.0422084778547287,
+      "probabilities": {
+        "normal": 0.9577915221452713,
+        "anomaly": 0.0422084778547287
+      },
+      "label": "normal"
+    },
+    {
+      "id": 208,
+      "y": 352,
+      "x": 352,
+      "score": 0.6767818331718445,
+      "probabilities": {
+        "normal": 0.3232181668281555,
+        "anomaly": 0.6767818331718445
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 209,
+      "y": 352,
+      "x": 384,
+      "score": 0.08781234174966812,
+      "probabilities": {
+        "normal": 0.9121876582503319,
+        "anomaly": 0.08781234174966812
+      },
+      "label": "normal"
+    },
+    {
+      "id": 210,
+      "y": 352,
+      "x": 416,
+      "score": 0.7970200181007385,
+      "probabilities": {
+        "normal": 0.20297998189926147,
+        "anomaly": 0.7970200181007385
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 211,
+      "y": 352,
+      "x": 512,
+      "score": 0.3631500005722046,
+      "probabilities": {
+        "normal": 0.6368499994277954,
+        "anomaly": 0.3631500005722046
+      },
+      "label": "normal"
+    },
+    {
+      "id": 212,
+      "y": 352,
+      "x": 544,
+      "score": 0.14860565960407257,
+      "probabilities": {
+        "normal": 0.8513943403959274,
+        "anomaly": 0.14860565960407257
+      },
+      "label": "normal"
+    },
+    {
+      "id": 213,
+      "y": 352,
+      "x": 576,
+      "score": 0.7236607670783997,
+      "probabilities": {
+        "normal": 0.27633923292160034,
+        "anomaly": 0.7236607670783997
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 214,
+      "y": 352,
+      "x": 608,
+      "score": 0.9757533073425293,
+      "probabilities": {
+        "normal": 0.024246692657470703,
+        "anomaly": 0.9757533073425293
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 215,
+      "y": 352,
+      "x": 640,
+      "score": 0.9987066984176636,
+      "probabilities": {
+        "normal": 0.0012933015823364258,
+        "anomaly": 0.9987066984176636
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 216,
+      "y": 352,
+      "x": 672,
+      "score": 0.9965937733650208,
+      "probabilities": {
+        "normal": 0.003406226634979248,
+        "anomaly": 0.9965937733650208
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 217,
+      "y": 352,
+      "x": 704,
+      "score": 0.9903476238250732,
+      "probabilities": {
+        "normal": 0.009652376174926758,
+        "anomaly": 0.9903476238250732
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 218,
+      "y": 352,
+      "x": 832,
+      "score": 0.9190534353256226,
+      "probabilities": {
+        "normal": 0.08094656467437744,
+        "anomaly": 0.9190534353256226
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 219,
+      "y": 352,
+      "x": 864,
+      "score": 0.6294348239898682,
+      "probabilities": {
+        "normal": 0.37056517601013184,
+        "anomaly": 0.6294348239898682
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 220,
+      "y": 384,
+      "x": 0,
+      "score": 0.205110564827919,
+      "probabilities": {
+        "normal": 0.794889435172081,
+        "anomaly": 0.205110564827919
+      },
+      "label": "normal"
+    },
+    {
+      "id": 221,
+      "y": 384,
+      "x": 64,
+      "score": 0.8734636902809143,
+      "probabilities": {
+        "normal": 0.1265363097190857,
+        "anomaly": 0.8734636902809143
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 222,
+      "y": 384,
+      "x": 96,
+      "score": 0.5869230031967163,
+      "probabilities": {
+        "normal": 0.4130769968032837,
+        "anomaly": 0.5869230031967163
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 223,
+      "y": 384,
+      "x": 160,
+      "score": 0.07171833515167236,
+      "probabilities": {
+        "normal": 0.9282816648483276,
+        "anomaly": 0.07171833515167236
+      },
+      "label": "normal"
+    },
+    {
+      "id": 224,
+      "y": 384,
+      "x": 192,
+      "score": 0.32332122325897217,
+      "probabilities": {
+        "normal": 0.6766787767410278,
+        "anomaly": 0.32332122325897217
+      },
+      "label": "normal"
+    },
+    {
+      "id": 225,
+      "y": 384,
+      "x": 224,
+      "score": 0.4527365267276764,
+      "probabilities": {
+        "normal": 0.5472634732723236,
+        "anomaly": 0.4527365267276764
+      },
+      "label": "normal"
+    },
+    {
+      "id": 226,
+      "y": 384,
+      "x": 256,
+      "score": 0.6951327323913574,
+      "probabilities": {
+        "normal": 0.3048672676086426,
+        "anomaly": 0.6951327323913574
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 227,
+      "y": 384,
+      "x": 352,
+      "score": 0.4892963469028473,
+      "probabilities": {
+        "normal": 0.5107036530971527,
+        "anomaly": 0.4892963469028473
+      },
+      "label": "normal"
+    },
+    {
+      "id": 228,
+      "y": 384,
+      "x": 384,
+      "score": 0.06404490023851395,
+      "probabilities": {
+        "normal": 0.935955099761486,
+        "anomaly": 0.06404490023851395
+      },
+      "label": "normal"
+    },
+    {
+      "id": 229,
+      "y": 384,
+      "x": 416,
+      "score": 0.19124704599380493,
+      "probabilities": {
+        "normal": 0.8087529540061951,
+        "anomaly": 0.19124704599380493
+      },
+      "label": "normal"
+    },
+    {
+      "id": 230,
+      "y": 384,
+      "x": 480,
+      "score": 0.32577213644981384,
+      "probabilities": {
+        "normal": 0.6742278635501862,
+        "anomaly": 0.32577213644981384
+      },
+      "label": "normal"
+    },
+    {
+      "id": 231,
+      "y": 384,
+      "x": 512,
+      "score": 0.8274056911468506,
+      "probabilities": {
+        "normal": 0.17259430885314941,
+        "anomaly": 0.8274056911468506
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 232,
+      "y": 384,
+      "x": 576,
+      "score": 0.9894587993621826,
+      "probabilities": {
+        "normal": 0.010541200637817383,
+        "anomaly": 0.9894587993621826
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 233,
+      "y": 384,
+      "x": 704,
+      "score": 0.984458327293396,
+      "probabilities": {
+        "normal": 0.015541672706604004,
+        "anomaly": 0.984458327293396
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 234,
+      "y": 384,
+      "x": 864,
+      "score": 0.3580041825771332,
+      "probabilities": {
+        "normal": 0.6419958174228668,
+        "anomaly": 0.3580041825771332
+      },
+      "label": "normal"
+    },
+    {
+      "id": 235,
+      "y": 416,
+      "x": 0,
+      "score": 0.6712931394577026,
+      "probabilities": {
+        "normal": 0.32870686054229736,
+        "anomaly": 0.6712931394577026
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 236,
+      "y": 416,
+      "x": 64,
+      "score": 0.9162522554397583,
+      "probabilities": {
+        "normal": 0.0837477445602417,
+        "anomaly": 0.9162522554397583
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 237,
+      "y": 416,
+      "x": 224,
+      "score": 0.8657087683677673,
+      "probabilities": {
+        "normal": 0.13429123163223267,
+        "anomaly": 0.8657087683677673
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 238,
+      "y": 416,
+      "x": 256,
+      "score": 0.9957245588302612,
+      "probabilities": {
+        "normal": 0.0042754411697387695,
+        "anomaly": 0.9957245588302612
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 239,
+      "y": 416,
+      "x": 320,
+      "score": 0.9496450424194336,
+      "probabilities": {
+        "normal": 0.050354957580566406,
+        "anomaly": 0.9496450424194336
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 240,
+      "y": 416,
+      "x": 352,
+      "score": 0.9524977803230286,
+      "probabilities": {
+        "normal": 0.047502219676971436,
+        "anomaly": 0.9524977803230286
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 241,
+      "y": 416,
+      "x": 384,
+      "score": 0.6856963038444519,
+      "probabilities": {
+        "normal": 0.3143036961555481,
+        "anomaly": 0.6856963038444519
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 242,
+      "y": 416,
+      "x": 416,
+      "score": 0.7054130434989929,
+      "probabilities": {
+        "normal": 0.2945869565010071,
+        "anomaly": 0.7054130434989929
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 243,
+      "y": 416,
+      "x": 448,
+      "score": 0.8048414587974548,
+      "probabilities": {
+        "normal": 0.19515854120254517,
+        "anomaly": 0.8048414587974548
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 244,
+      "y": 416,
+      "x": 480,
+      "score": 0.7055242657661438,
+      "probabilities": {
+        "normal": 0.2944757342338562,
+        "anomaly": 0.7055242657661438
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 245,
+      "y": 416,
+      "x": 512,
+      "score": 0.712297260761261,
+      "probabilities": {
+        "normal": 0.287702739238739,
+        "anomaly": 0.712297260761261
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 246,
+      "y": 416,
+      "x": 544,
+      "score": 0.5265066623687744,
+      "probabilities": {
+        "normal": 0.4734933376312256,
+        "anomaly": 0.5265066623687744
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 247,
+      "y": 416,
+      "x": 576,
+      "score": 0.677413821220398,
+      "probabilities": {
+        "normal": 0.32258617877960205,
+        "anomaly": 0.677413821220398
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 248,
+      "y": 416,
+      "x": 608,
+      "score": 0.7710261344909668,
+      "probabilities": {
+        "normal": 0.2289738655090332,
+        "anomaly": 0.7710261344909668
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 249,
+      "y": 416,
+      "x": 704,
+      "score": 0.13828636705875397,
+      "probabilities": {
+        "normal": 0.861713632941246,
+        "anomaly": 0.13828636705875397
+      },
+      "label": "normal"
+    },
+    {
+      "id": 250,
+      "y": 416,
+      "x": 736,
+      "score": 0.06115037202835083,
+      "probabilities": {
+        "normal": 0.9388496279716492,
+        "anomaly": 0.06115037202835083
+      },
+      "label": "normal"
+    },
+    {
+      "id": 251,
+      "y": 416,
+      "x": 768,
+      "score": 0.048238757997751236,
+      "probabilities": {
+        "normal": 0.9517612420022488,
+        "anomaly": 0.048238757997751236
+      },
+      "label": "normal"
+    },
+    {
+      "id": 252,
+      "y": 416,
+      "x": 800,
+      "score": 0.3515620231628418,
+      "probabilities": {
+        "normal": 0.6484379768371582,
+        "anomaly": 0.3515620231628418
+      },
+      "label": "normal"
+    },
+    {
+      "id": 253,
+      "y": 448,
+      "x": 0,
+      "score": 0.9189481139183044,
+      "probabilities": {
+        "normal": 0.08105188608169556,
+        "anomaly": 0.9189481139183044
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 254,
+      "y": 448,
+      "x": 64,
+      "score": 0.935425341129303,
+      "probabilities": {
+        "normal": 0.06457465887069702,
+        "anomaly": 0.935425341129303
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 255,
+      "y": 448,
+      "x": 96,
+      "score": 0.9568823575973511,
+      "probabilities": {
+        "normal": 0.043117642402648926,
+        "anomaly": 0.9568823575973511
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 256,
+      "y": 448,
+      "x": 224,
+      "score": 0.4342198371887207,
+      "probabilities": {
+        "normal": 0.5657801628112793,
+        "anomaly": 0.4342198371887207
+      },
+      "label": "normal"
+    },
+    {
+      "id": 257,
+      "y": 448,
+      "x": 320,
+      "score": 0.4436935782432556,
+      "probabilities": {
+        "normal": 0.5563064217567444,
+        "anomaly": 0.4436935782432556
+      },
+      "label": "normal"
+    },
+    {
+      "id": 258,
+      "y": 448,
+      "x": 352,
+      "score": 0.9424712061882019,
+      "probabilities": {
+        "normal": 0.057528793811798096,
+        "anomaly": 0.9424712061882019
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 259,
+      "y": 448,
+      "x": 384,
+      "score": 0.8115255236625671,
+      "probabilities": {
+        "normal": 0.18847447633743286,
+        "anomaly": 0.8115255236625671
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 260,
+      "y": 448,
+      "x": 416,
+      "score": 0.8793513178825378,
+      "probabilities": {
+        "normal": 0.12064868211746216,
+        "anomaly": 0.8793513178825378
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 261,
+      "y": 448,
+      "x": 448,
+      "score": 0.9503689408302307,
+      "probabilities": {
+        "normal": 0.04963105916976929,
+        "anomaly": 0.9503689408302307
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 262,
+      "y": 448,
+      "x": 480,
+      "score": 0.5042994022369385,
+      "probabilities": {
+        "normal": 0.4957005977630615,
+        "anomaly": 0.5042994022369385
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 263,
+      "y": 448,
+      "x": 512,
+      "score": 0.14769789576530457,
+      "probabilities": {
+        "normal": 0.8523021042346954,
+        "anomaly": 0.14769789576530457
+      },
+      "label": "normal"
+    },
+    {
+      "id": 264,
+      "y": 448,
+      "x": 544,
+      "score": 0.040162719786167145,
+      "probabilities": {
+        "normal": 0.9598372802138329,
+        "anomaly": 0.040162719786167145
+      },
+      "label": "normal"
+    },
+    {
+      "id": 265,
+      "y": 448,
+      "x": 576,
+      "score": 0.2220085710287094,
+      "probabilities": {
+        "normal": 0.7779914289712906,
+        "anomaly": 0.2220085710287094
+      },
+      "label": "normal"
+    },
+    {
+      "id": 266,
+      "y": 448,
+      "x": 672,
+      "score": 0.4226756989955902,
+      "probabilities": {
+        "normal": 0.5773243010044098,
+        "anomaly": 0.4226756989955902
+      },
+      "label": "normal"
+    },
+    {
+      "id": 267,
+      "y": 448,
+      "x": 704,
+      "score": 0.014185822568833828,
+      "probabilities": {
+        "normal": 0.9858141774311662,
+        "anomaly": 0.014185822568833828
+      },
+      "label": "normal"
+    },
+    {
+      "id": 268,
+      "y": 448,
+      "x": 736,
+      "score": 0.13676013052463531,
+      "probabilities": {
+        "normal": 0.8632398694753647,
+        "anomaly": 0.13676013052463531
+      },
+      "label": "normal"
+    },
+    {
+      "id": 269,
+      "y": 448,
+      "x": 768,
+      "score": 0.8610597848892212,
+      "probabilities": {
+        "normal": 0.1389402151107788,
+        "anomaly": 0.8610597848892212
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 270,
+      "y": 448,
+      "x": 928,
+      "score": 0.6793813109397888,
+      "probabilities": {
+        "normal": 0.3206186890602112,
+        "anomaly": 0.6793813109397888
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 271,
+      "y": 480,
+      "x": 0,
+      "score": 0.35783660411834717,
+      "probabilities": {
+        "normal": 0.6421633958816528,
+        "anomaly": 0.35783660411834717
+      },
+      "label": "normal"
+    },
+    {
+      "id": 272,
+      "y": 480,
+      "x": 96,
+      "score": 0.8087358474731445,
+      "probabilities": {
+        "normal": 0.19126415252685547,
+        "anomaly": 0.8087358474731445
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 273,
+      "y": 480,
+      "x": 320,
+      "score": 0.7967445850372314,
+      "probabilities": {
+        "normal": 0.20325541496276855,
+        "anomaly": 0.7967445850372314
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 274,
+      "y": 480,
+      "x": 352,
+      "score": 0.960931122303009,
+      "probabilities": {
+        "normal": 0.03906887769699097,
+        "anomaly": 0.960931122303009
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 275,
+      "y": 480,
+      "x": 384,
+      "score": 0.7566857933998108,
+      "probabilities": {
+        "normal": 0.2433142066001892,
+        "anomaly": 0.7566857933998108
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 276,
+      "y": 480,
+      "x": 416,
+      "score": 0.6577638983726501,
+      "probabilities": {
+        "normal": 0.34223610162734985,
+        "anomaly": 0.6577638983726501
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 277,
+      "y": 480,
+      "x": 448,
+      "score": 0.24470670521259308,
+      "probabilities": {
+        "normal": 0.7552932947874069,
+        "anomaly": 0.24470670521259308
+      },
+      "label": "normal"
+    },
+    {
+      "id": 278,
+      "y": 480,
+      "x": 480,
+      "score": 0.05308648198843002,
+      "probabilities": {
+        "normal": 0.94691351801157,
+        "anomaly": 0.05308648198843002
+      },
+      "label": "normal"
+    },
+    {
+      "id": 279,
+      "y": 480,
+      "x": 512,
+      "score": 0.3135429322719574,
+      "probabilities": {
+        "normal": 0.6864570677280426,
+        "anomaly": 0.3135429322719574
+      },
+      "label": "normal"
+    },
+    {
+      "id": 280,
+      "y": 480,
+      "x": 544,
+      "score": 0.6784796118736267,
+      "probabilities": {
+        "normal": 0.3215203881263733,
+        "anomaly": 0.6784796118736267
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 281,
+      "y": 480,
+      "x": 672,
+      "score": 0.18493707478046417,
+      "probabilities": {
+        "normal": 0.8150629252195358,
+        "anomaly": 0.18493707478046417
+      },
+      "label": "normal"
+    },
+    {
+      "id": 282,
+      "y": 480,
+      "x": 704,
+      "score": 0.21091872453689575,
+      "probabilities": {
+        "normal": 0.7890812754631042,
+        "anomaly": 0.21091872453689575
+      },
+      "label": "normal"
+    },
+    {
+      "id": 283,
+      "y": 480,
+      "x": 736,
+      "score": 0.29893752932548523,
+      "probabilities": {
+        "normal": 0.7010624706745148,
+        "anomaly": 0.29893752932548523
+      },
+      "label": "normal"
+    },
+    {
+      "id": 284,
+      "y": 480,
+      "x": 768,
+      "score": 0.9696964025497437,
+      "probabilities": {
+        "normal": 0.030303597450256348,
+        "anomaly": 0.9696964025497437
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 285,
+      "y": 512,
+      "x": 0,
+      "score": 0.0033015813678503036,
+      "probabilities": {
+        "normal": 0.9966984186321497,
+        "anomaly": 0.0033015813678503036
+      },
+      "label": "normal"
+    },
+    {
+      "id": 286,
+      "y": 512,
+      "x": 32,
+      "score": 0.8634817004203796,
+      "probabilities": {
+        "normal": 0.13651829957962036,
+        "anomaly": 0.8634817004203796
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 287,
+      "y": 512,
+      "x": 64,
+      "score": 0.8419204950332642,
+      "probabilities": {
+        "normal": 0.15807950496673584,
+        "anomaly": 0.8419204950332642
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 288,
+      "y": 512,
+      "x": 160,
+      "score": 0.8865470290184021,
+      "probabilities": {
+        "normal": 0.1134529709815979,
+        "anomaly": 0.8865470290184021
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 289,
+      "y": 512,
+      "x": 192,
+      "score": 0.13985298573970795,
+      "probabilities": {
+        "normal": 0.860147014260292,
+        "anomaly": 0.13985298573970795
+      },
+      "label": "normal"
+    },
+    {
+      "id": 290,
+      "y": 512,
+      "x": 224,
+      "score": 0.7972941398620605,
+      "probabilities": {
+        "normal": 0.20270586013793945,
+        "anomaly": 0.7972941398620605
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 291,
+      "y": 512,
+      "x": 352,
+      "score": 0.9950506091117859,
+      "probabilities": {
+        "normal": 0.004949390888214111,
+        "anomaly": 0.9950506091117859
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 292,
+      "y": 512,
+      "x": 384,
+      "score": 0.6073263883590698,
+      "probabilities": {
+        "normal": 0.3926736116409302,
+        "anomaly": 0.6073263883590698
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 293,
+      "y": 512,
+      "x": 416,
+      "score": 0.109803706407547,
+      "probabilities": {
+        "normal": 0.890196293592453,
+        "anomaly": 0.109803706407547
+      },
+      "label": "normal"
+    },
+    {
+      "id": 294,
+      "y": 512,
+      "x": 448,
+      "score": 0.034899577498435974,
+      "probabilities": {
+        "normal": 0.965100422501564,
+        "anomaly": 0.034899577498435974
+      },
+      "label": "normal"
+    },
+    {
+      "id": 295,
+      "y": 512,
+      "x": 480,
+      "score": 0.7187128067016602,
+      "probabilities": {
+        "normal": 0.28128719329833984,
+        "anomaly": 0.7187128067016602
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 296,
+      "y": 512,
+      "x": 640,
+      "score": 0.6919388175010681,
+      "probabilities": {
+        "normal": 0.3080611824989319,
+        "anomaly": 0.6919388175010681
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 297,
+      "y": 512,
+      "x": 672,
+      "score": 0.0737009346485138,
+      "probabilities": {
+        "normal": 0.9262990653514862,
+        "anomaly": 0.0737009346485138
+      },
+      "label": "normal"
+    },
+    {
+      "id": 298,
+      "y": 512,
+      "x": 704,
+      "score": 0.7962559461593628,
+      "probabilities": {
+        "normal": 0.2037440538406372,
+        "anomaly": 0.7962559461593628
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 299,
+      "y": 512,
+      "x": 736,
+      "score": 0.9533554315567017,
+      "probabilities": {
+        "normal": 0.04664456844329834,
+        "anomaly": 0.9533554315567017
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 300,
+      "y": 512,
+      "x": 768,
+      "score": 0.9382824301719666,
+      "probabilities": {
+        "normal": 0.06171756982803345,
+        "anomaly": 0.9382824301719666
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 301,
+      "y": 512,
+      "x": 800,
+      "score": 0.9440773725509644,
+      "probabilities": {
+        "normal": 0.055922627449035645,
+        "anomaly": 0.9440773725509644
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 302,
+      "y": 512,
+      "x": 832,
+      "score": 0.9421372413635254,
+      "probabilities": {
+        "normal": 0.05786275863647461,
+        "anomaly": 0.9421372413635254
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 303,
+      "y": 544,
+      "x": 0,
+      "score": 0.01961914263665676,
+      "probabilities": {
+        "normal": 0.9803808573633432,
+        "anomaly": 0.01961914263665676
+      },
+      "label": "normal"
+    },
+    {
+      "id": 304,
+      "y": 544,
+      "x": 32,
+      "score": 0.3569582998752594,
+      "probabilities": {
+        "normal": 0.6430417001247406,
+        "anomaly": 0.3569582998752594
+      },
+      "label": "normal"
+    },
+    {
+      "id": 305,
+      "y": 544,
+      "x": 64,
+      "score": 0.21702459454536438,
+      "probabilities": {
+        "normal": 0.7829754054546356,
+        "anomaly": 0.21702459454536438
+      },
+      "label": "normal"
+    },
+    {
+      "id": 306,
+      "y": 544,
+      "x": 192,
+      "score": 0.012938412837684155,
+      "probabilities": {
+        "normal": 0.9870615871623158,
+        "anomaly": 0.012938412837684155
+      },
+      "label": "normal"
+    },
+    {
+      "id": 307,
+      "y": 544,
+      "x": 224,
+      "score": 0.16493679583072662,
+      "probabilities": {
+        "normal": 0.8350632041692734,
+        "anomaly": 0.16493679583072662
+      },
+      "label": "normal"
+    },
+    {
+      "id": 308,
+      "y": 544,
+      "x": 256,
+      "score": 0.9377908110618591,
+      "probabilities": {
+        "normal": 0.06220918893814087,
+        "anomaly": 0.9377908110618591
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 309,
+      "y": 544,
+      "x": 352,
+      "score": 0.9406812787055969,
+      "probabilities": {
+        "normal": 0.059318721294403076,
+        "anomaly": 0.9406812787055969
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 310,
+      "y": 544,
+      "x": 384,
+      "score": 0.14854103326797485,
+      "probabilities": {
+        "normal": 0.8514589667320251,
+        "anomaly": 0.14854103326797485
+      },
+      "label": "normal"
+    },
+    {
+      "id": 311,
+      "y": 544,
+      "x": 416,
+      "score": 0.16626602411270142,
+      "probabilities": {
+        "normal": 0.8337339758872986,
+        "anomaly": 0.16626602411270142
+      },
+      "label": "normal"
+    },
+    {
+      "id": 312,
+      "y": 544,
+      "x": 448,
+      "score": 0.6569658517837524,
+      "probabilities": {
+        "normal": 0.34303414821624756,
+        "anomaly": 0.6569658517837524
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 313,
+      "y": 544,
+      "x": 544,
+      "score": 0.4638729393482208,
+      "probabilities": {
+        "normal": 0.5361270606517792,
+        "anomaly": 0.4638729393482208
+      },
+      "label": "normal"
+    },
+    {
+      "id": 314,
+      "y": 544,
+      "x": 800,
+      "score": 0.8570603132247925,
+      "probabilities": {
+        "normal": 0.14293968677520752,
+        "anomaly": 0.8570603132247925
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 315,
+      "y": 544,
+      "x": 832,
+      "score": 0.803433895111084,
+      "probabilities": {
+        "normal": 0.19656610488891602,
+        "anomaly": 0.803433895111084
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 316,
+      "y": 544,
+      "x": 864,
+      "score": 0.3985920548439026,
+      "probabilities": {
+        "normal": 0.6014079451560974,
+        "anomaly": 0.3985920548439026
+      },
+      "label": "normal"
+    },
+    {
+      "id": 317,
+      "y": 544,
+      "x": 896,
+      "score": 0.06151512637734413,
+      "probabilities": {
+        "normal": 0.9384848736226559,
+        "anomaly": 0.06151512637734413
+      },
+      "label": "normal"
+    },
+    {
+      "id": 318,
+      "y": 544,
+      "x": 928,
+      "score": 0.07627633213996887,
+      "probabilities": {
+        "normal": 0.9237236678600311,
+        "anomaly": 0.07627633213996887
+      },
+      "label": "normal"
+    },
+    {
+      "id": 319,
+      "y": 576,
+      "x": 0,
+      "score": 0.1368148773908615,
+      "probabilities": {
+        "normal": 0.8631851226091385,
+        "anomaly": 0.1368148773908615
+      },
+      "label": "normal"
+    },
+    {
+      "id": 320,
+      "y": 576,
+      "x": 32,
+      "score": 0.44574272632598877,
+      "probabilities": {
+        "normal": 0.5542572736740112,
+        "anomaly": 0.44574272632598877
+      },
+      "label": "normal"
+    },
+    {
+      "id": 321,
+      "y": 576,
+      "x": 64,
+      "score": 0.4210963249206543,
+      "probabilities": {
+        "normal": 0.5789036750793457,
+        "anomaly": 0.4210963249206543
+      },
+      "label": "normal"
+    },
+    {
+      "id": 322,
+      "y": 576,
+      "x": 192,
+      "score": 0.10744918882846832,
+      "probabilities": {
+        "normal": 0.8925508111715317,
+        "anomaly": 0.10744918882846832
+      },
+      "label": "normal"
+    },
+    {
+      "id": 323,
+      "y": 576,
+      "x": 224,
+      "score": 0.09372440725564957,
+      "probabilities": {
+        "normal": 0.9062755927443504,
+        "anomaly": 0.09372440725564957
+      },
+      "label": "normal"
+    },
+    {
+      "id": 324,
+      "y": 576,
+      "x": 256,
+      "score": 0.08879760652780533,
+      "probabilities": {
+        "normal": 0.9112023934721947,
+        "anomaly": 0.08879760652780533
+      },
+      "label": "normal"
+    },
+    {
+      "id": 325,
+      "y": 576,
+      "x": 288,
+      "score": 0.15356895327568054,
+      "probabilities": {
+        "normal": 0.8464310467243195,
+        "anomaly": 0.15356895327568054
+      },
+      "label": "normal"
+    },
+    {
+      "id": 326,
+      "y": 576,
+      "x": 320,
+      "score": 0.15426869690418243,
+      "probabilities": {
+        "normal": 0.8457313030958176,
+        "anomaly": 0.15426869690418243
+      },
+      "label": "normal"
+    },
+    {
+      "id": 327,
+      "y": 576,
+      "x": 352,
+      "score": 0.11211949586868286,
+      "probabilities": {
+        "normal": 0.8878805041313171,
+        "anomaly": 0.11211949586868286
+      },
+      "label": "normal"
+    },
+    {
+      "id": 328,
+      "y": 576,
+      "x": 384,
+      "score": 0.541544497013092,
+      "probabilities": {
+        "normal": 0.45845550298690796,
+        "anomaly": 0.541544497013092
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 329,
+      "y": 576,
+      "x": 416,
+      "score": 0.8398676514625549,
+      "probabilities": {
+        "normal": 0.16013234853744507,
+        "anomaly": 0.8398676514625549
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 330,
+      "y": 576,
+      "x": 448,
+      "score": 0.8764287233352661,
+      "probabilities": {
+        "normal": 0.12357127666473389,
+        "anomaly": 0.8764287233352661
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 331,
+      "y": 576,
+      "x": 480,
+      "score": 0.4843674898147583,
+      "probabilities": {
+        "normal": 0.5156325101852417,
+        "anomaly": 0.4843674898147583
+      },
+      "label": "normal"
+    },
+    {
+      "id": 332,
+      "y": 576,
+      "x": 512,
+      "score": 0.15176506340503693,
+      "probabilities": {
+        "normal": 0.8482349365949631,
+        "anomaly": 0.15176506340503693
+      },
+      "label": "normal"
+    },
+    {
+      "id": 333,
+      "y": 576,
+      "x": 544,
+      "score": 0.5503622889518738,
+      "probabilities": {
+        "normal": 0.4496377110481262,
+        "anomaly": 0.5503622889518738
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 334,
+      "y": 576,
+      "x": 704,
+      "score": 0.9337732195854187,
+      "probabilities": {
+        "normal": 0.0662267804145813,
+        "anomaly": 0.9337732195854187
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 335,
+      "y": 576,
+      "x": 736,
+      "score": 0.9693431258201599,
+      "probabilities": {
+        "normal": 0.030656874179840088,
+        "anomaly": 0.9693431258201599
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 336,
+      "y": 576,
+      "x": 768,
+      "score": 0.9471960663795471,
+      "probabilities": {
+        "normal": 0.05280393362045288,
+        "anomaly": 0.9471960663795471
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 337,
+      "y": 576,
+      "x": 800,
+      "score": 0.5911486148834229,
+      "probabilities": {
+        "normal": 0.40885138511657715,
+        "anomaly": 0.5911486148834229
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 338,
+      "y": 576,
+      "x": 832,
+      "score": 0.5500448942184448,
+      "probabilities": {
+        "normal": 0.4499551057815552,
+        "anomaly": 0.5500448942184448
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 339,
+      "y": 576,
+      "x": 864,
+      "score": 0.4389563202857971,
+      "probabilities": {
+        "normal": 0.5610436797142029,
+        "anomaly": 0.4389563202857971
+      },
+      "label": "normal"
+    },
+    {
+      "id": 340,
+      "y": 576,
+      "x": 896,
+      "score": 0.19377501308918,
+      "probabilities": {
+        "normal": 0.80622498691082,
+        "anomaly": 0.19377501308918
+      },
+      "label": "normal"
+    },
+    {
+      "id": 341,
+      "y": 576,
+      "x": 928,
+      "score": 0.25521308183670044,
+      "probabilities": {
+        "normal": 0.7447869181632996,
+        "anomaly": 0.25521308183670044
+      },
+      "label": "normal"
+    },
+    {
+      "id": 342,
+      "y": 608,
+      "x": 0,
+      "score": 0.05899031460285187,
+      "probabilities": {
+        "normal": 0.9410096853971481,
+        "anomaly": 0.05899031460285187
+      },
+      "label": "normal"
+    },
+    {
+      "id": 343,
+      "y": 608,
+      "x": 32,
+      "score": 0.11212503910064697,
+      "probabilities": {
+        "normal": 0.887874960899353,
+        "anomaly": 0.11212503910064697
+      },
+      "label": "normal"
+    },
+    {
+      "id": 344,
+      "y": 608,
+      "x": 128,
+      "score": 0.5295683145523071,
+      "probabilities": {
+        "normal": 0.47043168544769287,
+        "anomaly": 0.5295683145523071
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 345,
+      "y": 608,
+      "x": 160,
+      "score": 0.445475310087204,
+      "probabilities": {
+        "normal": 0.554524689912796,
+        "anomaly": 0.445475310087204
+      },
+      "label": "normal"
+    },
+    {
+      "id": 346,
+      "y": 608,
+      "x": 192,
+      "score": 0.351468026638031,
+      "probabilities": {
+        "normal": 0.648531973361969,
+        "anomaly": 0.351468026638031
+      },
+      "label": "normal"
+    },
+    {
+      "id": 347,
+      "y": 608,
+      "x": 224,
+      "score": 0.49170881509780884,
+      "probabilities": {
+        "normal": 0.5082911849021912,
+        "anomaly": 0.49170881509780884
+      },
+      "label": "normal"
+    },
+    {
+      "id": 348,
+      "y": 608,
+      "x": 256,
+      "score": 0.09450985491275787,
+      "probabilities": {
+        "normal": 0.9054901450872421,
+        "anomaly": 0.09450985491275787
+      },
+      "label": "normal"
+    },
+    {
+      "id": 349,
+      "y": 608,
+      "x": 288,
+      "score": 0.07359334826469421,
+      "probabilities": {
+        "normal": 0.9264066517353058,
+        "anomaly": 0.07359334826469421
+      },
+      "label": "normal"
+    },
+    {
+      "id": 350,
+      "y": 608,
+      "x": 352,
+      "score": 0.3057904541492462,
+      "probabilities": {
+        "normal": 0.6942095458507538,
+        "anomaly": 0.3057904541492462
+      },
+      "label": "normal"
+    },
+    {
+      "id": 351,
+      "y": 608,
+      "x": 384,
+      "score": 0.8628480434417725,
+      "probabilities": {
+        "normal": 0.13715195655822754,
+        "anomaly": 0.8628480434417725
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 352,
+      "y": 608,
+      "x": 416,
+      "score": 0.6793196201324463,
+      "probabilities": {
+        "normal": 0.3206803798675537,
+        "anomaly": 0.6793196201324463
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 353,
+      "y": 608,
+      "x": 448,
+      "score": 0.45148852467536926,
+      "probabilities": {
+        "normal": 0.5485114753246307,
+        "anomaly": 0.45148852467536926
+      },
+      "label": "normal"
+    },
+    {
+      "id": 354,
+      "y": 608,
+      "x": 704,
+      "score": 0.19389024376869202,
+      "probabilities": {
+        "normal": 0.806109756231308,
+        "anomaly": 0.19389024376869202
+      },
+      "label": "normal"
+    },
+    {
+      "id": 355,
+      "y": 608,
+      "x": 736,
+      "score": 0.7503868341445923,
+      "probabilities": {
+        "normal": 0.24961316585540771,
+        "anomaly": 0.7503868341445923
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 356,
+      "y": 608,
+      "x": 768,
+      "score": 0.6256637573242188,
+      "probabilities": {
+        "normal": 0.37433624267578125,
+        "anomaly": 0.6256637573242188
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 357,
+      "y": 608,
+      "x": 800,
+      "score": 0.7012836933135986,
+      "probabilities": {
+        "normal": 0.29871630668640137,
+        "anomaly": 0.7012836933135986
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 358,
+      "y": 608,
+      "x": 832,
+      "score": 0.9750890135765076,
+      "probabilities": {
+        "normal": 0.02491098642349243,
+        "anomaly": 0.9750890135765076
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 359,
+      "y": 608,
+      "x": 864,
+      "score": 0.9933385252952576,
+      "probabilities": {
+        "normal": 0.006661474704742432,
+        "anomaly": 0.9933385252952576
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 360,
+      "y": 608,
+      "x": 896,
+      "score": 0.9668155312538147,
+      "probabilities": {
+        "normal": 0.0331844687461853,
+        "anomaly": 0.9668155312538147
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 361,
+      "y": 608,
+      "x": 928,
+      "score": 0.9191328287124634,
+      "probabilities": {
+        "normal": 0.08086717128753662,
+        "anomaly": 0.9191328287124634
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 362,
+      "y": 640,
+      "x": 0,
+      "score": 0.540879487991333,
+      "probabilities": {
+        "normal": 0.459120512008667,
+        "anomaly": 0.540879487991333
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 363,
+      "y": 640,
+      "x": 32,
+      "score": 0.010541473515331745,
+      "probabilities": {
+        "normal": 0.9894585264846683,
+        "anomaly": 0.010541473515331745
+      },
+      "label": "normal"
+    },
+    {
+      "id": 364,
+      "y": 640,
+      "x": 64,
+      "score": 0.030634114518761635,
+      "probabilities": {
+        "normal": 0.9693658854812384,
+        "anomaly": 0.030634114518761635
+      },
+      "label": "normal"
+    },
+    {
+      "id": 365,
+      "y": 640,
+      "x": 96,
+      "score": 0.0778500884771347,
+      "probabilities": {
+        "normal": 0.9221499115228653,
+        "anomaly": 0.0778500884771347
+      },
+      "label": "normal"
+    },
+    {
+      "id": 366,
+      "y": 640,
+      "x": 128,
+      "score": 0.11328238993883133,
+      "probabilities": {
+        "normal": 0.8867176100611687,
+        "anomaly": 0.11328238993883133
+      },
+      "label": "normal"
+    },
+    {
+      "id": 367,
+      "y": 640,
+      "x": 160,
+      "score": 0.04320400208234787,
+      "probabilities": {
+        "normal": 0.9567959979176521,
+        "anomaly": 0.04320400208234787
+      },
+      "label": "normal"
+    },
+    {
+      "id": 368,
+      "y": 640,
+      "x": 192,
+      "score": 0.25933897495269775,
+      "probabilities": {
+        "normal": 0.7406610250473022,
+        "anomaly": 0.25933897495269775
+      },
+      "label": "normal"
+    },
+    {
+      "id": 369,
+      "y": 640,
+      "x": 224,
+      "score": 0.9523103833198547,
+      "probabilities": {
+        "normal": 0.047689616680145264,
+        "anomaly": 0.9523103833198547
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 370,
+      "y": 640,
+      "x": 256,
+      "score": 0.8005917072296143,
+      "probabilities": {
+        "normal": 0.19940829277038574,
+        "anomaly": 0.8005917072296143
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 371,
+      "y": 640,
+      "x": 352,
+      "score": 0.5482931733131409,
+      "probabilities": {
+        "normal": 0.45170682668685913,
+        "anomaly": 0.5482931733131409
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 372,
+      "y": 640,
+      "x": 384,
+      "score": 0.3400660455226898,
+      "probabilities": {
+        "normal": 0.6599339544773102,
+        "anomaly": 0.3400660455226898
+      },
+      "label": "normal"
+    },
+    {
+      "id": 373,
+      "y": 640,
+      "x": 416,
+      "score": 0.3670174777507782,
+      "probabilities": {
+        "normal": 0.6329825222492218,
+        "anomaly": 0.3670174777507782
+      },
+      "label": "normal"
+    },
+    {
+      "id": 374,
+      "y": 640,
+      "x": 448,
+      "score": 0.791789710521698,
+      "probabilities": {
+        "normal": 0.208210289478302,
+        "anomaly": 0.791789710521698
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 375,
+      "y": 640,
+      "x": 576,
+      "score": 0.7608175277709961,
+      "probabilities": {
+        "normal": 0.2391824722290039,
+        "anomaly": 0.7608175277709961
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 376,
+      "y": 640,
+      "x": 640,
+      "score": 0.8913066983222961,
+      "probabilities": {
+        "normal": 0.10869330167770386,
+        "anomaly": 0.8913066983222961
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 377,
+      "y": 640,
+      "x": 672,
+      "score": 0.3763878643512726,
+      "probabilities": {
+        "normal": 0.6236121356487274,
+        "anomaly": 0.3763878643512726
+      },
+      "label": "normal"
+    },
+    {
+      "id": 378,
+      "y": 640,
+      "x": 704,
+      "score": 0.04398200660943985,
+      "probabilities": {
+        "normal": 0.9560179933905602,
+        "anomaly": 0.04398200660943985
+      },
+      "label": "normal"
+    },
+    {
+      "id": 379,
+      "y": 640,
+      "x": 736,
+      "score": 0.5022112131118774,
+      "probabilities": {
+        "normal": 0.49778878688812256,
+        "anomaly": 0.5022112131118774
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 380,
+      "y": 640,
+      "x": 768,
+      "score": 0.9764822125434875,
+      "probabilities": {
+        "normal": 0.02351778745651245,
+        "anomaly": 0.9764822125434875
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 381,
+      "y": 640,
+      "x": 800,
+      "score": 0.9938775897026062,
+      "probabilities": {
+        "normal": 0.006122410297393799,
+        "anomaly": 0.9938775897026062
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 382,
+      "y": 640,
+      "x": 832,
+      "score": 0.9784289002418518,
+      "probabilities": {
+        "normal": 0.021571099758148193,
+        "anomaly": 0.9784289002418518
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 383,
+      "y": 640,
+      "x": 864,
+      "score": 0.7415571808815002,
+      "probabilities": {
+        "normal": 0.25844281911849976,
+        "anomaly": 0.7415571808815002
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 384,
+      "y": 640,
+      "x": 896,
+      "score": 0.07017888128757477,
+      "probabilities": {
+        "normal": 0.9298211187124252,
+        "anomaly": 0.07017888128757477
+      },
+      "label": "normal"
+    },
+    {
+      "id": 385,
+      "y": 640,
+      "x": 928,
+      "score": 0.5506470799446106,
+      "probabilities": {
+        "normal": 0.4493529200553894,
+        "anomaly": 0.5506470799446106
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 386,
+      "y": 672,
+      "x": 0,
+      "score": 0.2654774487018585,
+      "probabilities": {
+        "normal": 0.7345225512981415,
+        "anomaly": 0.2654774487018585
+      },
+      "label": "normal"
+    },
+    {
+      "id": 387,
+      "y": 672,
+      "x": 32,
+      "score": 0.018952006474137306,
+      "probabilities": {
+        "normal": 0.9810479935258627,
+        "anomaly": 0.018952006474137306
+      },
+      "label": "normal"
+    },
+    {
+      "id": 388,
+      "y": 672,
+      "x": 160,
+      "score": 0.2078879028558731,
+      "probabilities": {
+        "normal": 0.7921120971441269,
+        "anomaly": 0.2078879028558731
+      },
+      "label": "normal"
+    },
+    {
+      "id": 389,
+      "y": 672,
+      "x": 192,
+      "score": 0.06819745898246765,
+      "probabilities": {
+        "normal": 0.9318025410175323,
+        "anomaly": 0.06819745898246765
+      },
+      "label": "normal"
+    },
+    {
+      "id": 390,
+      "y": 672,
+      "x": 224,
+      "score": 0.29449760913848877,
+      "probabilities": {
+        "normal": 0.7055023908615112,
+        "anomaly": 0.29449760913848877
+      },
+      "label": "normal"
+    },
+    {
+      "id": 391,
+      "y": 672,
+      "x": 352,
+      "score": 0.12058400362730026,
+      "probabilities": {
+        "normal": 0.8794159963726997,
+        "anomaly": 0.12058400362730026
+      },
+      "label": "normal"
+    },
+    {
+      "id": 392,
+      "y": 672,
+      "x": 384,
+      "score": 0.005455457605421543,
+      "probabilities": {
+        "normal": 0.9945445423945785,
+        "anomaly": 0.005455457605421543
+      },
+      "label": "normal"
+    },
+    {
+      "id": 393,
+      "y": 672,
+      "x": 416,
+      "score": 0.10909771919250488,
+      "probabilities": {
+        "normal": 0.8909022808074951,
+        "anomaly": 0.10909771919250488
+      },
+      "label": "normal"
+    },
+    {
+      "id": 394,
+      "y": 672,
+      "x": 448,
+      "score": 0.795291543006897,
+      "probabilities": {
+        "normal": 0.20470845699310303,
+        "anomaly": 0.795291543006897
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 395,
+      "y": 672,
+      "x": 544,
+      "score": 0.3970144987106323,
+      "probabilities": {
+        "normal": 0.6029855012893677,
+        "anomaly": 0.3970144987106323
+      },
+      "label": "normal"
+    },
+    {
+      "id": 396,
+      "y": 672,
+      "x": 576,
+      "score": 0.0015451016370207071,
+      "probabilities": {
+        "normal": 0.9984548983629793,
+        "anomaly": 0.0015451016370207071
+      },
+      "label": "normal"
+    },
+    {
+      "id": 397,
+      "y": 672,
+      "x": 608,
+      "score": 0.005954195279628038,
+      "probabilities": {
+        "normal": 0.994045804720372,
+        "anomaly": 0.005954195279628038
+      },
+      "label": "normal"
+    },
+    {
+      "id": 398,
+      "y": 672,
+      "x": 640,
+      "score": 0.29681622982025146,
+      "probabilities": {
+        "normal": 0.7031837701797485,
+        "anomaly": 0.29681622982025146
+      },
+      "label": "normal"
+    },
+    {
+      "id": 399,
+      "y": 672,
+      "x": 672,
+      "score": 0.37329602241516113,
+      "probabilities": {
+        "normal": 0.6267039775848389,
+        "anomaly": 0.37329602241516113
+      },
+      "label": "normal"
+    },
+    {
+      "id": 400,
+      "y": 672,
+      "x": 704,
+      "score": 0.10406002402305603,
+      "probabilities": {
+        "normal": 0.895939975976944,
+        "anomaly": 0.10406002402305603
+      },
+      "label": "normal"
+    },
+    {
+      "id": 401,
+      "y": 672,
+      "x": 736,
+      "score": 0.09846041351556778,
+      "probabilities": {
+        "normal": 0.9015395864844322,
+        "anomaly": 0.09846041351556778
+      },
+      "label": "normal"
+    },
+    {
+      "id": 402,
+      "y": 672,
+      "x": 768,
+      "score": 0.8427802920341492,
+      "probabilities": {
+        "normal": 0.15721970796585083,
+        "anomaly": 0.8427802920341492
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 403,
+      "y": 672,
+      "x": 800,
+      "score": 0.9976829290390015,
+      "probabilities": {
+        "normal": 0.002317070960998535,
+        "anomaly": 0.9976829290390015
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 404,
+      "y": 672,
+      "x": 832,
+      "score": 0.9958350658416748,
+      "probabilities": {
+        "normal": 0.004164934158325195,
+        "anomaly": 0.9958350658416748
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 405,
+      "y": 672,
+      "x": 864,
+      "score": 0.8324836492538452,
+      "probabilities": {
+        "normal": 0.16751635074615479,
+        "anomaly": 0.8324836492538452
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 406,
+      "y": 672,
+      "x": 896,
+      "score": 0.15344245731830597,
+      "probabilities": {
+        "normal": 0.846557542681694,
+        "anomaly": 0.15344245731830597
+      },
+      "label": "normal"
+    },
+    {
+      "id": 407,
+      "y": 672,
+      "x": 928,
+      "score": 0.7706977725028992,
+      "probabilities": {
+        "normal": 0.22930222749710083,
+        "anomaly": 0.7706977725028992
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 408,
+      "y": 704,
+      "x": 0,
+      "score": 0.005166476126760244,
+      "probabilities": {
+        "normal": 0.9948335238732398,
+        "anomaly": 0.005166476126760244
+      },
+      "label": "normal"
+    },
+    {
+      "id": 409,
+      "y": 704,
+      "x": 32,
+      "score": 0.10437723249197006,
+      "probabilities": {
+        "normal": 0.8956227675080299,
+        "anomaly": 0.10437723249197006
+      },
+      "label": "normal"
+    },
+    {
+      "id": 410,
+      "y": 704,
+      "x": 352,
+      "score": 0.35725829005241394,
+      "probabilities": {
+        "normal": 0.6427417099475861,
+        "anomaly": 0.35725829005241394
+      },
+      "label": "normal"
+    },
+    {
+      "id": 411,
+      "y": 704,
+      "x": 384,
+      "score": 0.001778758130967617,
+      "probabilities": {
+        "normal": 0.9982212418690324,
+        "anomaly": 0.001778758130967617
+      },
+      "label": "normal"
+    },
+    {
+      "id": 412,
+      "y": 704,
+      "x": 416,
+      "score": 0.17362776398658752,
+      "probabilities": {
+        "normal": 0.8263722360134125,
+        "anomaly": 0.17362776398658752
+      },
+      "label": "normal"
+    },
+    {
+      "id": 413,
+      "y": 704,
+      "x": 448,
+      "score": 0.8970024585723877,
+      "probabilities": {
+        "normal": 0.1029975414276123,
+        "anomaly": 0.8970024585723877
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 414,
+      "y": 704,
+      "x": 544,
+      "score": 0.5411085486412048,
+      "probabilities": {
+        "normal": 0.45889145135879517,
+        "anomaly": 0.5411085486412048
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 415,
+      "y": 704,
+      "x": 576,
+      "score": 0.00034680814133025706,
+      "probabilities": {
+        "normal": 0.9996531918586697,
+        "anomaly": 0.00034680814133025706
+      },
+      "label": "normal"
+    },
+    {
+      "id": 416,
+      "y": 704,
+      "x": 608,
+      "score": 0.0055944593623280525,
+      "probabilities": {
+        "normal": 0.994405540637672,
+        "anomaly": 0.0055944593623280525
+      },
+      "label": "normal"
+    },
+    {
+      "id": 417,
+      "y": 704,
+      "x": 640,
+      "score": 0.4367101192474365,
+      "probabilities": {
+        "normal": 0.5632898807525635,
+        "anomaly": 0.4367101192474365
+      },
+      "label": "normal"
+    },
+    {
+      "id": 418,
+      "y": 704,
+      "x": 672,
+      "score": 0.5159281492233276,
+      "probabilities": {
+        "normal": 0.48407185077667236,
+        "anomaly": 0.5159281492233276
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 419,
+      "y": 704,
+      "x": 704,
+      "score": 0.5255391597747803,
+      "probabilities": {
+        "normal": 0.4744608402252197,
+        "anomaly": 0.5255391597747803
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 420,
+      "y": 704,
+      "x": 736,
+      "score": 0.12366145104169846,
+      "probabilities": {
+        "normal": 0.8763385489583015,
+        "anomaly": 0.12366145104169846
+      },
+      "label": "normal"
+    },
+    {
+      "id": 421,
+      "y": 704,
+      "x": 768,
+      "score": 0.05376384034752846,
+      "probabilities": {
+        "normal": 0.9462361596524715,
+        "anomaly": 0.05376384034752846
+      },
+      "label": "normal"
+    },
+    {
+      "id": 422,
+      "y": 704,
+      "x": 800,
+      "score": 0.6849652528762817,
+      "probabilities": {
+        "normal": 0.31503474712371826,
+        "anomaly": 0.6849652528762817
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 423,
+      "y": 704,
+      "x": 832,
+      "score": 0.9903256893157959,
+      "probabilities": {
+        "normal": 0.009674310684204102,
+        "anomaly": 0.9903256893157959
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 424,
+      "y": 704,
+      "x": 864,
+      "score": 0.9735115766525269,
+      "probabilities": {
+        "normal": 0.026488423347473145,
+        "anomaly": 0.9735115766525269
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 425,
+      "y": 704,
+      "x": 896,
+      "score": 0.9066680669784546,
+      "probabilities": {
+        "normal": 0.09333193302154541,
+        "anomaly": 0.9066680669784546
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 426,
+      "y": 704,
+      "x": 928,
+      "score": 0.895025908946991,
+      "probabilities": {
+        "normal": 0.10497409105300903,
+        "anomaly": 0.895025908946991
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 427,
+      "y": 736,
+      "x": 0,
+      "score": 0.00044690558570437133,
+      "probabilities": {
+        "normal": 0.9995530944142956,
+        "anomaly": 0.00044690558570437133
+      },
+      "label": "normal"
+    },
+    {
+      "id": 428,
+      "y": 736,
+      "x": 32,
+      "score": 0.03589419275522232,
+      "probabilities": {
+        "normal": 0.9641058072447777,
+        "anomaly": 0.03589419275522232
+      },
+      "label": "normal"
+    },
+    {
+      "id": 429,
+      "y": 736,
+      "x": 448,
+      "score": 0.5501806735992432,
+      "probabilities": {
+        "normal": 0.44981932640075684,
+        "anomaly": 0.5501806735992432
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 430,
+      "y": 736,
+      "x": 480,
+      "score": 0.021680928766727448,
+      "probabilities": {
+        "normal": 0.9783190712332726,
+        "anomaly": 0.021680928766727448
+      },
+      "label": "normal"
+    },
+    {
+      "id": 431,
+      "y": 736,
+      "x": 512,
+      "score": 0.04894297197461128,
+      "probabilities": {
+        "normal": 0.9510570280253887,
+        "anomaly": 0.04894297197461128
+      },
+      "label": "normal"
+    },
+    {
+      "id": 432,
+      "y": 736,
+      "x": 544,
+      "score": 0.08299030363559723,
+      "probabilities": {
+        "normal": 0.9170096963644028,
+        "anomaly": 0.08299030363559723
+      },
+      "label": "normal"
+    },
+    {
+      "id": 433,
+      "y": 736,
+      "x": 576,
+      "score": 0.010508420877158642,
+      "probabilities": {
+        "normal": 0.9894915791228414,
+        "anomaly": 0.010508420877158642
+      },
+      "label": "normal"
+    },
+    {
+      "id": 434,
+      "y": 736,
+      "x": 608,
+      "score": 0.08950792253017426,
+      "probabilities": {
+        "normal": 0.9104920774698257,
+        "anomaly": 0.08950792253017426
+      },
+      "label": "normal"
+    },
+    {
+      "id": 435,
+      "y": 736,
+      "x": 640,
+      "score": 0.7805024981498718,
+      "probabilities": {
+        "normal": 0.21949750185012817,
+        "anomaly": 0.7805024981498718
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 436,
+      "y": 736,
+      "x": 672,
+      "score": 0.9558277130126953,
+      "probabilities": {
+        "normal": 0.04417228698730469,
+        "anomaly": 0.9558277130126953
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 437,
+      "y": 736,
+      "x": 704,
+      "score": 0.911178469657898,
+      "probabilities": {
+        "normal": 0.08882153034210205,
+        "anomaly": 0.911178469657898
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 438,
+      "y": 736,
+      "x": 736,
+      "score": 0.5715828537940979,
+      "probabilities": {
+        "normal": 0.4284171462059021,
+        "anomaly": 0.5715828537940979
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 439,
+      "y": 736,
+      "x": 768,
+      "score": 0.29794397950172424,
+      "probabilities": {
+        "normal": 0.7020560204982758,
+        "anomaly": 0.29794397950172424
+      },
+      "label": "normal"
+    },
+    {
+      "id": 440,
+      "y": 736,
+      "x": 800,
+      "score": 0.37689197063446045,
+      "probabilities": {
+        "normal": 0.6231080293655396,
+        "anomaly": 0.37689197063446045
+      },
+      "label": "normal"
+    },
+    {
+      "id": 441,
+      "y": 736,
+      "x": 832,
+      "score": 0.8159664869308472,
+      "probabilities": {
+        "normal": 0.18403351306915283,
+        "anomaly": 0.8159664869308472
+      },
+      "label": "anomaly"
+    },
+    {
+      "id": 442,
+      "y": 736,
+      "x": 864,
+      "score": 0.32919883728027344,
+      "probabilities": {
+        "normal": 0.6708011627197266,
+        "anomaly": 0.32919883728027344
+      },
+      "label": "normal"
+    },
+    {
+      "id": 443,
+      "y": 736,
+      "x": 896,
+      "score": 0.0795556902885437,
+      "probabilities": {
+        "normal": 0.9204443097114563,
+        "anomaly": 0.0795556902885437
+      },
+      "label": "normal"
+    },
+    {
+      "id": 444,
+      "y": 736,
+      "x": 928,
+      "score": 0.27987968921661377,
+      "probabilities": {
+        "normal": 0.7201203107833862,
+        "anomaly": 0.27987968921661377
+      },
+      "label": "normal"
+    }
+  ],
+  "summary": {
+    "anomaly_ratio": 0.4652,
+    "message": "Inference OK. 445 patches evaluert (275 filtrert av vev-krav), 207 med score >= 0.5."
+  },
+  "run": {
+    "duration_ms": 5156
+  }
+}
