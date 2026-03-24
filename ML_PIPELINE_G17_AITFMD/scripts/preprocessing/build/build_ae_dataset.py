@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.preprocessing.autoencoder import ConvAutoencoder
+from src.preprocessing.masked_cube import prepare_cube_with_mask
 
 
 def _load_yaml(path: Path) -> dict:
@@ -101,6 +102,17 @@ def main() -> None:
     verbose = bool(runtime_cfg.get("verbose", False))
     overwrite = bool(cfg.get("build", {}).get("overwrite", False))
 
+    mask_cfg = cfg.get("mask") or {}
+    mask_root = None
+    if mask_cfg.get("root"):
+        mask_root = _resolve_path(config_path, str(mask_cfg["root"]))
+    require_mask = bool(mask_cfg.get("require", False))
+    apply_mask = bool(mask_cfg.get("apply_to_cube", True))
+    if mask_root:
+        print(
+            f"[ae build] mask: root={mask_root} require={require_mask} apply_to_cube={apply_mask}"
+        )
+
     split_df = pd.read_csv(split_csv)
     split_df = _build_input_table(split_df, input_root)
 
@@ -146,6 +158,14 @@ def main() -> None:
                 out_shape = ""
             else:
                 cube = np.load(input_path).astype(np.float32, copy=False)
+                cube, _ = prepare_cube_with_mask(
+                    cube,
+                    mask_root,
+                    patient_id,
+                    roi_name,
+                    require_mask=require_mask,
+                    apply_to_cube=apply_mask,
+                )
                 h, w, c = cube.shape
                 x = torch.from_numpy(cube).permute(2, 0, 1).unsqueeze(0).to(device)
                 z = model.encode(x)

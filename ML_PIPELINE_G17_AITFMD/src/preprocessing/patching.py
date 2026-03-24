@@ -49,6 +49,49 @@ def iter_patches(
             yield cube[y : y + patch_h, x : x + patch_w, :], y, x
 
 
+def count_patch_grid(
+    cube: np.ndarray,
+    patch_h: int,
+    patch_w: int,
+    stride_h: int,
+    stride_w: int,
+    mask: np.ndarray | None = None,
+    min_tissue_ratio: float = 0.0,
+) -> dict[str, int]:
+    """
+    Tell grid-posisjoner med samme logikk som iter_patches (uten å kutte ut data).
+
+    Returns:
+        total_possible: alle (y,x) som passer i kuben med gitt stride
+        filtered_by_tissue: hoppet pga. for lav vev-andel i patch-vindu
+        evaluated: total_possible - filtered_by_tissue (matcher antall yields fra iter_patches)
+    """
+    h, w, _ = cube.shape
+    if h < patch_h or w < patch_w:
+        return {"total_possible": 0, "filtered_by_tissue": 0, "evaluated": 0}
+
+    use_mask = mask is not None and min_tissue_ratio > 0
+    if use_mask and mask.shape[:2] != (h, w):
+        raise ValueError(f"Mask shape {mask.shape[:2]} must match cube spatial {h}x{w}")
+
+    total = 0
+    filtered = 0
+    for y in range(0, h - patch_h + 1, stride_h):
+        for x in range(0, w - patch_w + 1, stride_w):
+            total += 1
+            if use_mask:
+                patch_mask = mask[y : y + patch_h, x : x + patch_w]
+                tissue_frac = float(np.mean(patch_mask > 0))
+                if tissue_frac < min_tissue_ratio:
+                    filtered += 1
+
+    return {
+        "total_possible": total,
+        "filtered_by_tissue": filtered,
+        "evaluated": total - filtered,
+    }
+
+
 def load_numpy_cube(cube_path: Path) -> np.ndarray:
     """Load one .npy cube as float32 with shape (H, W, C)."""
     cube = np.load(cube_path)

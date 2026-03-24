@@ -3,7 +3,7 @@
 
 paths:
   input_root: "/Volumes/OnG_13_2TB/hsi_avg3_float16"
-  output_root: "../../data/processed/avg16"
+  output_root: "../../data/processed_V2/avg16"
   split_csv: "../../data/splits/patient_split.csv"
   manifest_csv: "../../data/interim/avg_baseline_manifest.csv"
 
@@ -14,9 +14,16 @@ band_reduce:
   # "uneven": 13 groups of 17 + 3 groups of 18 (no info loss)
   strategy: "crop"
 
+# Vevsmaske: må finnes før build hvis require=true (bygg masker med build_masks_from_avg3 / run_preprocessing)
+mask:
+  root: "../../data/interim/masks/final_mask"
+  require: true
+  apply_to_cube: true
+
 build:
   output_dtype: "float32"
-  overwrite: false
+  # true når du gjenbygger med maske (overskriv gamle avg16-kuber)
+  overwrite: true
 
 runtime:
   verbose: true

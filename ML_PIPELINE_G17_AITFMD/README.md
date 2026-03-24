@@ -37,6 +37,7 @@ hsi_3dcnn_project/
 
 ## Notes
 
+- **Gjenoppbygging av avg16 / PCA / wavelet / AE med vevsmaske:** se [`docs/DATASET_REBUILD.md`](docs/DATASET_REBUILD.md).
 - Keep your original dataset in `PKG - HistologyHSI-GB` unchanged.
 - Point the preprocessing config to that folder as input.
 - Write only derived artifacts into `hsi_3dcnn_project/data/*` and `outputs/*`.

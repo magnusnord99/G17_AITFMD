@@ -1,0 +1,49 @@
+# Preprocessing pipeline – én samlet config for alle steg.
+#
+# Brukes av: run_inference.py (via inference-configs preprocessing.pipeline_config).
+# For å fjerne et steg (f.eks. clipping): sett enabled: false under det steget.
+#
+# Rekkefølge: calibration → clip → avg3 → tissue_mask → spectral_reduction → patching
+
+pipeline:
+  calibration:
+    enabled: true
+    eps: 1.0e-8
+
+  clip:
+    enabled: true
+    clip_min: 0.0
+    clip_max: 1.0
+
+  avg3:
+    enabled: true
+    reduction_window: 3
+
+  tissue_mask:
+    enabled: true
+    method: "mean_std_percentile"
+    min_object_size: 500
+    min_hole_size: 1000
+    tissue_side: "dark"
+
+  spectral_reduction:
+    enabled: true
+    # pca | ae | wavelet
+    reducer: "pca"
+    pca_model: "models/pca_avg3_16.joblib"
+    ae_model: "models/ae_avg3_16.pt"
+    # wavelet (når reducer=wavelet):
+    wavelet:
+      target_bands: 16
+      feature_mode: "approx_padded"
+      wavelet: "db2"
+      mode: "periodization"
+
+  patching:
+    enabled: true
+    # Standardverdier – overstyres av model config (input.patch_h/patch_w) ved inferanse med PyTorch
+    patch_h: 64
+    patch_w: 64
+    stride_h: 32
+    stride_w: 32
+    min_tissue_ratio: 0.60

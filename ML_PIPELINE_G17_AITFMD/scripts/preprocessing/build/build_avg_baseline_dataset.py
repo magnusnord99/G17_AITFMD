@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.preprocessing.band_reduce import reduce_bands_by_avg
+from src.preprocessing.masked_cube import prepare_cube_with_mask
 
 
 def _load_yaml(path: Path) -> dict:
@@ -85,6 +86,17 @@ def main() -> None:
     overwrite = bool(cfg.get("build", {}).get("overwrite", False))
     verbose = bool(cfg.get("runtime", {}).get("verbose", True))
 
+    mask_cfg = cfg.get("mask") or {}
+    mask_root = None
+    if mask_cfg.get("root"):
+        mask_root = _resolve_path(config_path, str(mask_cfg["root"]))
+    require_mask = bool(mask_cfg.get("require", False))
+    apply_mask = bool(mask_cfg.get("apply_to_cube", True))
+    if mask_root:
+        print(
+            f"[avg_baseline] mask: root={mask_root} require={require_mask} apply_to_cube={apply_mask}"
+        )
+
     split_df = pd.read_csv(split_csv)
     split_df = _build_input_table(split_df, input_root)
 
@@ -122,6 +134,14 @@ def main() -> None:
             out_shape = ""
         else:
             cube = np.load(input_path).astype(np.float32, copy=False)
+            cube, _ = prepare_cube_with_mask(
+                cube,
+                mask_root,
+                patient_id,
+                roi_name,
+                require_mask=require_mask,
+                apply_to_cube=apply_mask,
+            )
             if cube.shape[2] != in_bands:
                 raise ValueError(
                     f"Cube {input_path} has {cube.shape[2]} bands, expected {in_bands}."

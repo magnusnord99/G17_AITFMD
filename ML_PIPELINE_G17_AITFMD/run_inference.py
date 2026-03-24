@@ -3,7 +3,8 @@ Offentlig grensesnitt for inferanse (nivå 1).
 
 GUI kaller dette scriptet med --input og --output-dir.
 Pipeline: kalibrering → clipping → avg3 → PCA16 → masking → patchifisering.
-Skriver prediction.json, metadata.json og heatmap.png til output-dir.
+Skriver primært prediction.json (patches med score 0–1, spatial, tissue_mask, run).
+Valgfritt (config): heatmap.png/.npy og reduced_cube.npy for debugging – GUI kan bygge overlay fra JSON.
 """
 
 from __future__ import annotations
@@ -42,11 +43,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--input", type=str, required=True,
                         help="Sti til ROI-mappe eller raw.hdr.")
     parser.add_argument("--output-dir", type=str, default=None,
-                        help="Mappe der prediction.json og metadata.json skrives.")
+                        help="Mappe der prediction.json skrives (og ev. valgfrie binærfiler).")
     parser.add_argument("--output", type=str, default=None,
                         help="(Alternativ) Sti til prediction.json – output-dir blir parent.")
     parser.add_argument("--config", type=str,
-                        default="configs/inference/default.yaml",
+                        default="configs/inference/pytorch.yaml",
                         help="Sti til inference-config.")
     return parser.parse_args()
 
@@ -68,6 +69,57 @@ def _resolve_config_path(args: argparse.Namespace) -> Path | None:
     if not config_path.exists():
         config_path = PROJECT_ROOT / args.config
     return config_path if config_path.exists() else None
+
+
+def _load_model_arch_info(
+    project_root: Path,
+    model_config_path: str | None,
+    cfg_class_names: list[str] | None,
+) -> tuple[int, list[str]]:
+    """num_classes og class_names for JSON (binær default: normal / anomaly)."""
+    default_names = ["normal", "anomaly"]
+    if cfg_class_names and len(cfg_class_names) >= 1:
+        names = [str(x) for x in cfg_class_names]
+        return len(names), names
+    if not model_config_path:
+        return 2, default_names
+    p = Path(model_config_path).expanduser()
+    if not p.is_absolute():
+        p = (project_root / p).resolve()
+    if not p.exists():
+        return 2, default_names
+    y = yaml.safe_load(p.read_text(encoding="utf-8"))
+    arch = y.get("architecture", {})
+    nc = int(arch.get("num_classes", 2))
+    names = y.get("class_names")
+    if isinstance(names, list) and len(names) == nc:
+        return nc, [str(x) for x in names]
+    if nc == 2:
+        return 2, default_names
+    return nc, [f"class_{i}" for i in range(nc)]
+
+
+def _score_semantics(backend_name: str) -> dict[str, object]:
+    if backend_name == "pytorch":
+        return {
+            "score_type": "softmax_probability",
+            "description": (
+                "Verdien er P(klasse=positiv | patch) etter softmax på modellens logits. "
+                "For binær modell er indeks 1 'anomaly' (se model_info.class_names)."
+            ),
+            "applies_to_class_index": 1,
+        }
+    if backend_name == "dummy":
+        return {
+            "score_type": "heuristic_unit_interval",
+            "description": "Syntetisk score for testing (ikke softmax fra trent klassifikator).",
+            "applies_to_class_index": None,
+        }
+    return {
+        "score_type": "unknown",
+        "description": "",
+        "applies_to_class_index": None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -109,11 +161,10 @@ def _run_model(patches: list, coords: list, cfg: dict, project_root: Path) -> tu
     return scores, backend_name
 
 
-def _build_heatmap(coords: list, scores: np.ndarray, reduced_cube: np.ndarray, cfg: dict) -> np.ndarray:
+def _build_heatmap(coords: list, scores: np.ndarray, reduced_cube: np.ndarray, metadata: dict) -> np.ndarray:
     h, w, _ = reduced_cube.shape
-    patching = cfg.get("preprocessing", {}).get("patching", {})
-    patch_h = int(patching.get("patch_h", 64))
-    patch_w = int(patching.get("patch_w", 64))
+    patch_h = int(metadata.get("patch_h", 64))
+    patch_w = int(metadata.get("patch_w", 64))
     return build_heatmap(coords, scores, patch_h, patch_w, h, w)
 
 
@@ -133,6 +184,7 @@ def _save_heatmap_png(heatmap: np.ndarray, path: Path, width: int, height: int) 
 def _write_error(output_dir: Path, error: str, prediction_file: Path | None = None) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     result = {
+        "schema_version": 2,
         "status": "error",
         "error": error,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -146,22 +198,23 @@ def _write_error(output_dir: Path, error: str, prediction_file: Path | None = No
 def _save_outputs(
     output_dir: Path,
     prediction: dict,
-    meta: dict,
-    heatmap: np.ndarray,
-    reduced_cube: np.ndarray,
+    heatmap: np.ndarray | None,
+    reduced_cube: np.ndarray | None,
+    *,
+    write_heatmap_assets: bool,
+    write_reduced_cube: bool,
 ) -> None:
-    """Skriv alle output-filer til output_dir."""
+    """Skriv prediction.json; binærfiler kun hvis flagg er True."""
     with (output_dir / "prediction.json").open("w", encoding="utf-8") as f:
         json.dump(prediction, f, indent=2, ensure_ascii=False)
 
-    with (output_dir / "metadata.json").open("w", encoding="utf-8") as f:
-        json.dump(meta, f, indent=2, ensure_ascii=False)
+    if write_reduced_cube and reduced_cube is not None:
+        np.save(output_dir / "reduced_cube.npy", reduced_cube)
 
-    np.save(output_dir / "heatmap.npy", heatmap)
-    np.save(output_dir / "reduced_cube.npy", reduced_cube)
-
-    h, w, _ = reduced_cube.shape
-    _save_heatmap_png(heatmap, output_dir / "heatmap.png", w, h)
+    if write_heatmap_assets and heatmap is not None and reduced_cube is not None:
+        np.save(output_dir / "heatmap.npy", heatmap)
+        h, w, _ = reduced_cube.shape
+        _save_heatmap_png(heatmap, output_dir / "heatmap.png", w, h)
 
 
 # ---------------------------------------------------------------------------
@@ -202,42 +255,150 @@ def main() -> int:
     # Inferanse
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     scores, backend_name = _run_model(patches, coords, cfg, PROJECT_ROOT)
-    heatmap = _build_heatmap(coords, scores, reduced_cube, cfg)
 
-    # Bygg resultat-dicts
+    write_heatmap_assets = bool(cfg.get("write_heatmap_assets", False))
+    write_reduced_cube = bool(cfg.get("write_reduced_cube", False))
+    heatmap: np.ndarray | None = None
+    if write_heatmap_assets:
+        heatmap = _build_heatmap(coords, scores, reduced_cube, metadata)
+
+    ps = metadata["patch_stats"]
+    if ps["evaluated"] != len(coords) or len(patches) != len(coords):
+        raise RuntimeError(
+            f"Internal patch count mismatch: patch_stats.evaluated={ps['evaluated']}, "
+            f"len(coords)={len(coords)}, len(patches)={len(patches)}"
+        )
+
     model_cfg = cfg.get("model", {})
-    predictions = [
-        {"y": int(y), "x": int(x), "score": float(s), "label": "anomaly" if s > 0.5 else "normal"}
-        for (y, x), s in zip(coords, scores)
-    ]
-    anomaly_count = int(np.sum(scores > 0.5))
+    decision_cfg = cfg.get("decision", {})
+    threshold = float(decision_cfg.get("anomaly_threshold", 0.5))
+
+    num_classes, class_names = _load_model_arch_info(
+        PROJECT_ROOT,
+        model_cfg.get("model_config_path"),
+        model_cfg.get("class_names"),
+    )
+    positive_class = str(decision_cfg.get("positive_class", "anomaly"))
+    if positive_class not in class_names and len(class_names) >= 2:
+        positive_class = class_names[1]
+
+    ckpt_raw = model_cfg.get("checkpoint_path")
+    ckpt_path = Path(ckpt_raw) if ckpt_raw else None
+    if ckpt_path and not ckpt_path.is_absolute():
+        ckpt_resolved = (PROJECT_ROOT / ckpt_path).resolve()
+    elif ckpt_path:
+        ckpt_resolved = ckpt_path.resolve()
+    else:
+        ckpt_resolved = None
+
+    predictions: list[dict] = []
+    for i, ((y, x), s) in enumerate(zip(coords, scores)):
+        s = float(s)
+        is_anom = s >= threshold
+        label = positive_class if is_anom else (class_names[0] if class_names else "normal")
+        if num_classes == 2 and len(class_names) >= 2:
+            probs = {class_names[0]: float(1.0 - s), class_names[1]: float(s)}
+        else:
+            probs = {positive_class: float(s)}
+        predictions.append(
+            {
+                "id": i,
+                "y": int(y),
+                "x": int(x),
+                "score": s,
+                "probabilities": probs,
+                "label": label,
+            }
+        )
+
+    anomaly_count = int(np.sum(scores >= threshold))
     duration_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
+    patch_stats = metadata["patch_stats"]
+    cube_shape = metadata["cube_shape"]
+    n_bands = int(cube_shape[2]) if len(cube_shape) >= 3 else 0
 
     prediction = {
+        "schema_version": 2,
         "status": "ok",
-        "input_path": args.input,
-        "timestamp": start.isoformat(),
+        "input": {
+            "path": args.input,
+            "timestamp": start.isoformat(),
+        },
+        "model_info": {
+            "name": str(model_cfg.get("name", "dummy_3dcnn")),
+            "backend": backend_name,
+            "checkpoint_path": str(ckpt_raw) if ckpt_raw else None,
+            "checkpoint_file": ckpt_resolved.name if ckpt_resolved and ckpt_resolved.exists() else None,
+            "model_config_path": model_cfg.get("model_config_path"),
+            "num_classes": num_classes,
+            "class_names": class_names,
+        },
+        "decision": {
+            "positive_class": positive_class,
+            "anomaly_threshold": threshold,
+            **_score_semantics(backend_name),
+        },
+        "spatial": {
+            "coordinate_space": "reduced_cube",
+            "coordinate_space_description": (
+                "Koordinater (y, x) er rad/kolonne i den spektralt reduserte kuben "
+                "(etter kalibrering, clip, avg3, tissue-mask på mellomkube, PCA/AE/wavelet). "
+                "Ikke rå HDR uten videre."
+            ),
+            "axes_order": ["y_lines", "x_samples", "spectral"],
+            "cube_shape": cube_shape,
+            "patch_h": metadata["patch_h"],
+            "patch_w": metadata["patch_w"],
+            "stride_h": metadata["stride_h"],
+            "stride_w": metadata["stride_w"],
+            "patch_anchor": "top_left",
+            "origin": "top_left",
+        },
+        "preprocessing": {
+            "pipeline_config": metadata.get("pipeline_config_relative"),
+            "steps": metadata.get("pipeline_steps", {}),
+            "spectral_reducer": metadata.get("spectral_reducer"),
+            "num_spectral_bands": n_bands,
+            "min_tissue_ratio_patch": metadata.get("min_tissue_ratio_patch"),
+        },
+        "tissue_mask": metadata["tissue_mask"],
+        "patch_stats": {
+            "total_possible": patch_stats["total_possible"],
+            "evaluated": patch_stats["evaluated"],
+            "filtered_by_tissue": patch_stats["filtered_by_tissue"],
+            "description": (
+                "total_possible: gyldige grid-posisjoner; filtered_by_tissue: hoppet pga. "
+                "min_tissue_ratio_patch i patch-vindu; evaluated: patches sendt til modell."
+            ),
+        },
         "predictions": predictions,
         "summary": {
-            "num_patches": metadata["num_patches"],
-            "cube_shape": metadata["cube_shape"],
             "anomaly_ratio": round(anomaly_count / max(1, len(predictions)), 4),
-            "message": f"Inference OK. {metadata['num_patches']} patches, {anomaly_count} med høy sannsynlighet.",
+            "message": (
+                f"Inference OK. {patch_stats['evaluated']} patches evaluert "
+                f"({patch_stats['filtered_by_tissue']} filtrert av vev-krav), "
+                f"{anomaly_count} med score >= {threshold}."
+            ),
         },
-        "heatmap_path": "heatmap.png",
-        "patch_coords_sample": coords[:5] if coords else [],
+        "run": {"duration_ms": duration_ms},
     }
 
-    meta = {
-        "model": model_cfg.get("name", "dummy_3dcnn"),
-        "backend": backend_name,
-        "duration_ms": duration_ms,
-        "num_patches": metadata["num_patches"],
-    }
+    _save_outputs(
+        output_dir,
+        prediction,
+        heatmap,
+        reduced_cube,
+        write_heatmap_assets=write_heatmap_assets,
+        write_reduced_cube=write_reduced_cube,
+    )
 
-    _save_outputs(output_dir, prediction, meta, heatmap, reduced_cube)
-
-    print(f"[run_inference] OK – {metadata['num_patches']} patches, heatmap skrevet til {output_dir}")
+    extra = []
+    if write_heatmap_assets:
+        extra.append("heatmap.png")
+    if write_reduced_cube:
+        extra.append("reduced_cube.npy")
+    suffix = f" + {', '.join(extra)}" if extra else ""
+    print(f"[run_inference] OK – {metadata['num_patches']} patches, prediction.json → {output_dir}{suffix}")
     return 0
 
 

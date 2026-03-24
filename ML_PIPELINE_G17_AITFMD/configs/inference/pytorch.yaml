@@ -5,8 +5,19 @@
 #     --input "/Volumes/DJI/G17_AITFMD /PKG - HistologyHSI-GB/P1/ROI_01_C01_T" \
 #     --output-dir "outputs/inference_test" \
 #     --config configs/inference/pytorch.yaml
+#
+# Preprocessing: configs/preprocessing/pipeline.yaml (eller overstyr paths under)
 
 seed: 42
+
+# GUI/klient bygger heatmap fra prediction.json (predictions + spatial).
+# Sett til true kun for debugging / gammel flyt som leser heatmap.png.
+write_heatmap_assets: false
+write_reduced_cube: false
+
+# Terskel for binær label (score >= threshold -> anomaly)
+decision:
+  anomaly_threshold: 0.5
 
 model:
   backend: "pytorch"
@@ -14,6 +25,7 @@ model:
   checkpoint_path: "outputs/checkpoints/baseline_3dcnn_20260317_102346_best.pt"
   model_config_path: "configs/models/baseline_3dcnn.yaml"
   batch_size: 32
+  # class_names: ["normal", "anomaly"]  # valgfritt; ellers fra model YAML / default
 
 paths:
   spectral_reducer: "pca"
@@ -21,20 +33,4 @@ paths:
   pca_model: "models/pca_avg3_16.joblib"
 
 preprocessing:
-  calibration:
-    eps: 1.0e-8
-    clip_min: 0.0
-    clip_max: 1.0
-  spectral:
-    reduction_window: 3
-  tissue_mask:
-    method: "mean_std_percentile"
-    min_object_size: 500
-    min_hole_size: 1000
-    tissue_side: "dark"
-  patching:
-    patch_h: 64
-    patch_w: 64
-    stride_h: 32
-    stride_w: 32
-    min_tissue_ratio: 0.60
+  pipeline_config: "configs/preprocessing/pipeline.yaml"

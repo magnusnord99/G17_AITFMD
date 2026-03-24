@@ -13,6 +13,12 @@ paths:
   # Manifest of AE outputs
   manifest_csv: "../../data/interim/ae_manifest.csv"
 
+# Vevsmaske: brukes i train_autoencoder (load) og build_ae_dataset (encode)
+mask:
+  root: "../../data/interim/masks/final_mask"
+  require: true
+  apply_to_cube: true
+
 autoencoder:
   # Spectral channels in input (avg3 after reduce_bands)
   in_channels: 275

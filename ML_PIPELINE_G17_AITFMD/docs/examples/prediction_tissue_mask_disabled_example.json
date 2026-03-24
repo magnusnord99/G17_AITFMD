@@ -1,0 +1,80 @@
+{
+  "schema_version": 2,
+  "status": "ok",
+  "input": {
+    "path": "/path/to/ROI/raw.hdr",
+    "timestamp": "2026-03-20T11:00:00.000000+00:00"
+  },
+  "model_info": {
+    "name": "baseline_3dcnn",
+    "backend": "pytorch",
+    "checkpoint_path": "outputs/checkpoints/model_best.pt",
+    "checkpoint_file": "model_best.pt",
+    "model_config_path": "configs/models/baseline_3dcnn.yaml",
+    "num_classes": 2,
+    "class_names": ["normal", "anomaly"]
+  },
+  "decision": {
+    "positive_class": "anomaly",
+    "anomaly_threshold": 0.5,
+    "score_type": "softmax_probability",
+    "description": "Verdien er P(klasse=positiv | patch) etter softmax på modellens logits. For binær modell er indeks 1 'anomaly' (se model_info.class_names).",
+    "applies_to_class_index": 1
+  },
+  "spatial": {
+    "coordinate_space": "reduced_cube",
+    "coordinate_space_description": "Koordinater (y, x) er rad/kolonne i den spektralt reduserte kuben (etter kalibrering, clip, avg3, tissue-mask på mellomkube, PCA/AE/wavelet). Ikke rå HDR uten videre.",
+    "axes_order": ["y_lines", "x_samples", "spectral"],
+    "cube_shape": [64, 64, 16],
+    "patch_h": 64,
+    "patch_w": 64,
+    "stride_h": 32,
+    "stride_w": 32,
+    "patch_anchor": "top_left",
+    "origin": "top_left"
+  },
+  "preprocessing": {
+    "pipeline_config": "configs/preprocessing/pipeline.yaml",
+    "steps": {
+      "calibration": { "enabled": true },
+      "clip": { "enabled": true },
+      "avg3": { "enabled": true },
+      "tissue_mask": { "enabled": false },
+      "spectral_reduction": { "enabled": true },
+      "patching": { "enabled": true }
+    },
+    "spectral_reducer": "pca",
+    "num_spectral_bands": 16,
+    "min_tissue_ratio_patch": 0.0
+  },
+  "tissue_mask": {
+    "enabled": false,
+    "method": null,
+    "tissue_fraction": 1.0,
+    "background_fraction": 0.0,
+    "tissue_percent": 100.0,
+    "background_percent": 0.0,
+    "note": "Tissue mask disabled; no pixels classified as background by mask."
+  },
+  "patch_stats": {
+    "total_possible": 1,
+    "evaluated": 1,
+    "filtered_by_tissue": 0,
+    "description": "total_possible: gyldige grid-posisjoner; filtered_by_tissue: hoppet pga. min_tissue_ratio_patch i patch-vindu; evaluated: patches sendt til modell."
+  },
+  "predictions": [
+    {
+      "id": 0,
+      "y": 0,
+      "x": 0,
+      "score": 0.45,
+      "probabilities": { "normal": 0.55, "anomaly": 0.45 },
+      "label": "normal"
+    }
+  ],
+  "summary": {
+    "anomaly_ratio": 0.0,
+    "message": "Inference OK. 1 patches evaluert (0 filtrert av vev-krav), 0 med score >= 0.5."
+  },
+  "run": { "duration_ms": 1200 }
+}

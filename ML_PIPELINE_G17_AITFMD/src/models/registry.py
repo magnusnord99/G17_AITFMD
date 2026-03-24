@@ -48,7 +48,11 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
     in_ch = int(arch.get("in_channels", 1))
     num_classes = int(arch.get("num_classes", 2))
     dropout = float(arch.get("dropout", 0.3))
-    kernel_size = int(arch.get("kernel_size", 3))
+    _ks = arch.get("kernel_size", 3)
+    if isinstance(_ks, (list, tuple)):
+        kernel_size = tuple(int(x) for x in _ks)
+    else:
+        kernel_size = int(_ks)
 
     cls = _REGISTRY[name]
 

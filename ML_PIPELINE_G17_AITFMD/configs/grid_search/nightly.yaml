@@ -1,0 +1,38 @@
+# Grid search for overnight runs (edit lists to taste).
+# Keys use dot notation into configs/train.yaml structure.
+#
+# Start with --dry-run to see all combinations:
+#   python scripts/grid_search_train.py --grid configs/grid_search/nightly.yaml --dry-run
+#
+# Default below: 3 × 2 = 6 runs (lr × weight_decay).
+# ~6 min/epoch × ~15 epochs ≈ 90 min/run → ~9 h total (rough guess — depends on MPS/data).
+
+base_config: "configs/train.yaml"
+
+# All outputs under outputs/grid_search/
+output_prefix: "outputs/grid_search"
+
+grid:
+  # Læringsrate — ofte viktigst; smal grid rundt det som fungerte
+  optimizer.lr:
+    - 1.0e-5
+    - 3.0e-5
+    - 5.0e-5
+
+  # L2-regularisering (Adam weight_decay)
+  optimizer.weight_decay:
+    - 5.0e-4
+    - 7.0e-4
+
+  # Utvid grid når du vet ca. område (øker antall kombinasjoner raskt):
+  # trainer.early_stopping_patience:
+  #   - 8
+  #   - 12
+  #
+  # data.patches_per_cube:
+  #   - 128
+  #   - 160
+  #
+  # scheduler.t_max_epochs:
+  #   - 40
+  #   - 50

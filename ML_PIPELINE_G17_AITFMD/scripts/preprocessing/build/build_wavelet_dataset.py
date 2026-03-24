@@ -15,6 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.preprocessing.masked_cube import prepare_cube_with_mask
 from src.preprocessing.wavelet import (
     reduce_cube_wavelet_1d,
     reduce_cube_wavelet_approx_detail_padded,
@@ -101,6 +102,17 @@ def main() -> None:
     verbose = bool(runtime_cfg.get("verbose", False))
     overwrite = bool(runtime_cfg.get("overwrite", False))
 
+    mask_cfg = cfg.get("mask") or {}
+    mask_root = None
+    if mask_cfg.get("root"):
+        mask_root = _resolve_path(config_path, str(mask_cfg["root"]))
+    require_mask = bool(mask_cfg.get("require", False))
+    apply_mask = bool(mask_cfg.get("apply_to_cube", True))
+    if mask_root:
+        print(
+            f"[wavelet] mask: root={mask_root} require={require_mask} apply_to_cube={apply_mask}"
+        )
+
     print(f"[wavelet] config: {config_path}")
     print(f"[wavelet] input_root: {input_root}")
     print(f"[wavelet] output_root: {output_root}")
@@ -132,6 +144,14 @@ def main() -> None:
             out_shape = ""
         else:
             cube = np.load(input_path).astype(compute_dtype, copy=False)
+            cube, _ = prepare_cube_with_mask(
+                cube,
+                mask_root,
+                patient_id,
+                roi_name,
+                require_mask=require_mask,
+                apply_to_cube=apply_mask,
+            )
             if feature_mode == "approx":
                 reduced = reduce_cube_wavelet_1d(
                     cube=cube.astype(np.float32, copy=False),
