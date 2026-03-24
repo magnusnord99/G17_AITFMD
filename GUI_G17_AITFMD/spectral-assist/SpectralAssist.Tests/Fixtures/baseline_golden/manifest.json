@@ -1,0 +1,22 @@
+{
+  "layout": "hwb_c_order",
+  "dtype": "float32",
+  "epsilon": 1e-08,
+  "clip_min": 0.0,
+  "clip_max": 1.0,
+  "neighbor_window": 3,
+  "small": {
+    "lines": 4,
+    "samples": 4,
+    "bands_in": 9,
+    "bands_after_avg3": 3
+  },
+  "chain275": {
+    "lines": 4,
+    "samples": 4,
+    "bands_in": 275,
+    "bands_after_avg3": 91,
+    "bands_out": 16,
+    "band_reduce_strategy": "crop"
+  }
+}
