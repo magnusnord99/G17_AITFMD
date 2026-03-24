@@ -5,7 +5,7 @@ model_config: "configs/models/baseline_3dcnn.yaml"
 
 data:
   cube_manifest_csv: "data/interim/pca_manifest.csv"
-  cube_root: "data/processed/unpatched/pca16"
+  cube_root: "data/processed/unpatched_V2/pca16"
   mask_root: "data/interim/masks/final_mask"
   # Obligatorisk for run_train.py (ingen standardverdier i kode): patch + stride
   patch_h: 32
@@ -14,7 +14,7 @@ data:
   stride_w: 16
   min_tissue_ratio: 0.3
   # patches_per_cube: antall tilfeldige patcher per kube PER EPOKE (når use_all_patches: false)
-  patches_per_cube: 128
+  patches_per_cube: 64
   # false = undertrykk overtilpasning + raskere epoker vs. alle rutenett-posisjoner
   use_all_patches: false
   fold_index: 0
@@ -26,8 +26,8 @@ data:
 
 optimizer:
   name: "adam"
-  lr: 5.0e-5
-  weight_decay: 5.0e-4
+  lr: 1.0e-5 
+  weight_decay: 7.0e-4
 
 scheduler:
   enabled: true
@@ -40,7 +40,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 5
+  early_stopping_patience: 10
   mixed_precision: true
   save_best_only: true
 

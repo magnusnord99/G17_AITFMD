@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -168,6 +170,151 @@ def _count_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
+def _to_yaml_friendly(obj: Any) -> Any:
+    """Gjør nested strukturer om til typer PyYAML safe_dump kan serialisere (unngår Version, numpy, osv.)."""
+    if obj is None:
+        return None
+    if isinstance(obj, (bool, int, float, str)):
+        return obj
+    if isinstance(obj, Path):
+        return str(obj.resolve())
+    if isinstance(obj, dict):
+        return {str(k): _to_yaml_friendly(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_yaml_friendly(v) for v in obj]
+    if isinstance(obj, (set, frozenset)):
+        return [_to_yaml_friendly(v) for v in obj]
+    try:
+        if isinstance(obj, np.ndarray):
+            return _to_yaml_friendly(obj.tolist())
+        if isinstance(obj, np.generic):
+            return _to_yaml_friendly(obj.item())
+    except TypeError:
+        pass
+    return str(obj)
+
+
+def _snapshot_fully_json_safe(obj: Any) -> Any:
+    """Siste sikring: alt som ikke er JSON-vennlig blir til streng (f.eks. packaging.version.Version)."""
+    try:
+        return json.loads(json.dumps(obj, default=str))
+    except (TypeError, ValueError, OverflowError):
+        return _to_yaml_friendly(obj)
+
+
+def _try_git_short_sha(cwd: Path) -> str | None:
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
+
+
+def _save_hyperparams_snapshot(
+    run_dir: Path,
+    *,
+    run_id: str,
+    config_path: Path,
+    model_config_path: Path,
+    manifest_path: Path,
+    mask_path: Path | None,
+    cube_root_path: Path | None,
+    cfg: dict[str, Any],
+    model_cfg: dict[str, Any],
+    args: argparse.Namespace,
+    lr: float,
+    weight_decay: float,
+    class_weighting: bool,
+    class_weights: list[float] | None,
+    use_scheduler: bool,
+    t_max_epochs: int | None,
+    max_epochs: int,
+    patience: int,
+    amp_requested: bool,
+    amp_enabled: bool,
+    batch_size: int,
+    num_workers: int,
+    device: torch.device,
+) -> Path:
+    """Skriv hyperparams.yaml i run_dir med alt som ble brukt i denne kjøringen."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    out_path = run_dir / "hyperparams.yaml"
+
+    train_yaml_source = config_path.read_text(encoding="utf-8")
+    model_yaml_source = model_config_path.read_text(encoding="utf-8")
+
+    snapshot: dict[str, Any] = {
+        "run_id": run_id,
+        "saved_at_utc": datetime.now(timezone.utc).isoformat(),
+        "environment": {
+            "python": platform.python_version(),
+            "torch": torch.__version__,
+            "platform": platform.platform(),
+            "device": device.type,
+            "git_short_sha": _try_git_short_sha(PROJECT_ROOT),
+        },
+        "cli": {
+            "argv": sys.argv,
+            "config": args.config,
+            "model": args.model,
+            "manifest": args.manifest,
+            "cube_manifest": args.cube_manifest,
+        },
+        "resolved_paths": {
+            "train_config": str(config_path.resolve()),
+            "model_config": str(model_config_path.resolve()),
+            "manifest": str(manifest_path.resolve()),
+            "mask_root": str(mask_path.resolve()) if mask_path else None,
+            "cube_root": str(cube_root_path.resolve()) if cube_root_path else None,
+        },
+        "effective_training": {
+            "optimizer": "Adam",
+            "lr": lr,
+            "weight_decay": weight_decay,
+            "class_weighting": class_weighting,
+            "class_weights": class_weights,
+            "scheduler_cosine": use_scheduler,
+            "scheduler_t_max_epochs": t_max_epochs,
+            "max_epochs": max_epochs,
+            "early_stopping_patience": patience,
+            "mixed_precision_requested": amp_requested,
+            "mixed_precision_active": amp_enabled,
+            "batch_size": batch_size,
+            "num_workers": num_workers,
+        },
+        "train_config_parsed": cfg,
+        "model_config_parsed": model_cfg,
+        "train_config_source_yaml": train_yaml_source,
+        "model_config_source_yaml": model_yaml_source,
+    }
+
+    snapshot_out = _snapshot_fully_json_safe(_to_yaml_friendly(snapshot))
+    try:
+        text = yaml.safe_dump(
+            snapshot_out,
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+            width=120,
+        )
+        out_path.write_text(text, encoding="utf-8")
+    except yaml.representer.RepresenterError:
+        # Sjelden: typer PyYAML fortsatt ikke tåler — skriv JSON med samme innhold
+        json_path = run_dir / "hyperparams.json"
+        json_path.write_text(json.dumps(snapshot_out, indent=2, ensure_ascii=False), encoding="utf-8")
+        out_path = json_path
+    return out_path
+
+
 def _save_training_logs(
     report: dict,
     history: list[dict],
@@ -268,6 +415,9 @@ def main() -> int:
 
     model_cfg_path = args.model or cfg.get("model_config", "configs/models/baseline_3dcnn.yaml")
     model_config_path = _resolve_path(config_path, model_cfg_path)
+    if not model_config_path.exists():
+        raise FileNotFoundError(f"Model config not found: {model_config_path}")
+    model_cfg: dict[str, Any] = yaml.safe_load(model_config_path.read_text(encoding="utf-8"))
 
     data_cfg = cfg.get("data", {})
     _geom = ("patch_h", "patch_w", "stride_h", "stride_w")
@@ -389,12 +539,14 @@ def main() -> int:
 
     loss_cfg = cfg.get("loss", {})
     class_weighting = bool(loss_cfg.get("class_weighting", False))
+    class_weights_list: list[float] | None = None
     if class_weighting:
         counts = train_rows["label_id"].value_counts().to_dict()
         n0 = float(counts.get(0, 1.0))
         n1 = float(counts.get(1, 1.0))
         total = n0 + n1
         weights = torch.tensor([total / (2.0 * n0), total / (2.0 * n1)], dtype=torch.float32, device=device)
+        class_weights_list = [float(weights[0].item()), float(weights[1].item())]
         criterion = nn.CrossEntropyLoss(weight=weights)
     else:
         criterion = nn.CrossEntropyLoss()
@@ -407,9 +559,11 @@ def main() -> int:
     sch_cfg = cfg.get("scheduler", {})
     use_scheduler = bool(sch_cfg.get("enabled", False)) and str(sch_cfg.get("name", "")).lower() == "cosine"
     scheduler = None
+    t_max_epochs: int | None = None
     if use_scheduler:
         t_max = int(sch_cfg.get("t_max_epochs", cfg.get("trainer", {}).get("max_epochs", 50)))
-        scheduler = CosineAnnealingLR(optimizer, T_max=max(1, t_max))
+        t_max_epochs = max(1, t_max)
+        scheduler = CosineAnnealingLR(optimizer, T_max=t_max_epochs)
 
     trainer_cfg = cfg.get("trainer", {})
     max_epochs = int(trainer_cfg.get("max_epochs", 50))
@@ -533,12 +687,38 @@ def main() -> int:
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     run_plots_dir = plots_dir / f"{model_name}_{run_id}"
+    hp_path = _save_hyperparams_snapshot(
+        run_plots_dir,
+        run_id=run_id,
+        config_path=config_path,
+        model_config_path=model_config_path,
+        manifest_path=manifest_path,
+        mask_path=mask_path,
+        cube_root_path=cube_root_path,
+        cfg=cfg,
+        model_cfg=model_cfg,
+        args=args,
+        lr=lr,
+        weight_decay=weight_decay,
+        class_weighting=class_weighting,
+        class_weights=class_weights_list,
+        use_scheduler=use_scheduler,
+        t_max_epochs=t_max_epochs,
+        max_epochs=max_epochs,
+        patience=patience,
+        amp_requested=amp_requested,
+        amp_enabled=amp_enabled,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        device=device,
+    )
     _save_training_logs(report, history, run_plots_dir, model_name)
 
     print(f"[train] best_epoch={best_epoch} best_val_loss={best_val_loss:.4f}")
     print(f"[train] best_ckpt={best_ckpt_path}")
     print(f"[train] report={report_path}")
-    print(f"[train] plots={run_plots_dir} (history.csv, training_curves.png, confusion_matrix.png, summary.txt)")
+    print(f"[train] plots={run_plots_dir} (hyperparams.yaml, history.csv, training_curves.png, confusion_matrix.png, summary.txt)")
+    print(f"[train] hyperparams={hp_path}")
     return 0
 
 
