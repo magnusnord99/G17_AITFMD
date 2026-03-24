@@ -11,3 +11,7 @@ PyWavelets
 # Deep learning
 torch
 torchvision
+
+# ONNX export (torch.onnx.export on PyTorch 2.x)
+onnx
+onnxscript

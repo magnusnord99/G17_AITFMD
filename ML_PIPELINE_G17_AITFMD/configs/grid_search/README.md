@@ -1,6 +1,13 @@
 # Grid search (overnight tuning)
 
-1. **Rediger** `nightly.yaml`: lister under `grid:` (dot-notasjon som i `train.yaml`).
+**Ferdige grids**
+
+| Fil | Formål |
+|-----|--------|
+| `nightly.yaml` | Smal grid (lr × wd) — kort referanse |
+| `low_lr_grid.yaml` | **12 runs**: lav `optimizer.lr` (1e-5…3e-4) × `weight_decay` — bruk når høy lr ikke fungerer |
+
+1. **Rediger** valgfri YAML under `configs/grid_search/`, eller bruk `low_lr_grid.yaml` som den er.
 2. **Sjekk antall kombinasjoner:**
    ```bash
    python scripts/grid_search_train.py --grid configs/grid_search/nightly.yaml --dry-run

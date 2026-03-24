@@ -1,0 +1,33 @@
+# Grid: lav læringsrate + L2 (typisk det som mangler når 1e-2 gir ustabilt/flat val)
+#
+# Hvorfor "lav LR":
+#   - Adam + cosine decay: for høy lr (f.eks. 1e-2) gir ofte svingende val-loss og dårlig generalisering
+#     på små/middels datasett med små patcher.
+#   - Området 1e-5 … 3e-4 er et vanlig utgangspunkt før du finjusterer.
+#
+# Denne griden: 4 × 3 = 12 kjøringer (lr × weight_decay).
+#
+# Tørrkjøring:
+#   python scripts/grid_search_train.py --grid configs/grid_search/low_lr_grid.yaml --dry-run
+# Test én kombinasjon:
+#   python scripts/grid_search_train.py --grid configs/grid_search/low_lr_grid.yaml --max-runs 1
+#
+# Etterpå: sorter outputs/grid_search/summary_*.csv på best_val_loss (eller val_f1 i train_report).
+
+base_config: "configs/train.yaml"
+
+output_prefix: "outputs/grid_search"
+
+grid:
+  # Logaritmisk spredning i "trygt" lavt område (justér inn etter første runde)
+  optimizer.lr:
+    - 1.0e-5
+    - 3.0e-5
+    - 1.0e-4
+    - 3.0e-4
+
+  # Svakere L2 med lav lr kan tillate litt mer kapasitet; sterkere L2 demper overtilpasning
+  optimizer.weight_decay:
+    - 1.0e-5
+    - 1.0e-4
+    - 5.0e-4

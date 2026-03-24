@@ -24,10 +24,11 @@ data:
   # 0 = én prosess, én delt kube-cache. >0 = egen cache per worker (ofte tregere med shuffle)
   num_workers: 0
 
+# Adam — eneste sted for L2 (weight_decay); modell-*.yaml inneholder ikke dette.
 optimizer:
   name: "adam"
-  lr: 1.0e-5 
-  weight_decay: 7.0e-4
+  lr: 1.0e-2 
+  weight_decay: 1.0e-4
 
 scheduler:
   enabled: true
@@ -40,7 +41,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 10
+  early_stopping_patience: 13
   mixed_precision: true
   save_best_only: true
 

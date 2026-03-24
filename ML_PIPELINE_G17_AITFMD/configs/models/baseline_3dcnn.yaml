@@ -8,10 +8,9 @@ model:
 architecture:
   in_channels: 1
   num_classes: 2
-  dropout: 0.4
+  dropout: 0.35
   channels: [16, 32]  # to blokker
   # Conv3d (spektral D, H, W): 4×3×3 — valid conv, dimensjoner synker per lag
   kernel_size: [4, 3, 3]
 
-regularization:
-  weight_decay: 5.0e-4
+# L2 (Adam weight_decay) settes i train.yaml → optimizer — ikke her.

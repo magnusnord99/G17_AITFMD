@@ -2,8 +2,11 @@
 """
 Write float32 golden tensors for C# preprocessing parity tests.
 
-Run from repo root:
-  python ML_PIPELINE_G17_AITFMD/scripts/export_baseline_golden.py
+Activate the ML venv first (same as training), then run from the ML pipeline root:
+
+  cd ML_PIPELINE_G17_AITFMD
+  source .venv/bin/activate
+  python scripts/export_baseline_golden.py
 
 Requires: numpy, and imports from src.preprocessing (same math as training pipeline).
 """
