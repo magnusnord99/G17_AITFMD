@@ -16,40 +16,48 @@ public enum DisplayMode { Rgb, Grayscale }
 public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     private readonly CancellationTokenSource _cts = new();
-    private readonly string  _hdrPath;
-    
+    private readonly string _hdrPath;
+    private readonly ModelLoader _loader = new();
+    private readonly OnnxClassifier _onnxClassifier = new();
+
     public ImageViewModel(string hdrPath = "")
     {
         _hdrPath = hdrPath;
         RunInferenceCommand = new AsyncRelayCommand(RunInferenceAsync);
         _ = LoadAsync();
     }
-    
+
     // -- States -- //
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoading))]
     [NotifyPropertyChangedFor(nameof(IsError))]
     [NotifyPropertyChangedFor(nameof(IsReady))]
     private LoadingState _loadingState = LoadingState.Idle;
-    
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MaxBandIndex))]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private HsiCube? _cube;
-    
+
     [ObservableProperty] private DisplayMode _currentDisplayMode = DisplayMode.Rgb;
-    
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private int _selectedBand;
-    
+
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private double _progress;
     [ObservableProperty] private WriteableBitmap? _currentBitmap;
+    
+    
+    // -- Classification -- //
     [ObservableProperty] private string _inferenceOutput = "";
-    [ObservableProperty] private Bitmap? _heatmapBitmap;
+    [ObservableProperty] private WriteableBitmap? _overlayBitmap;
+    [ObservableProperty] private double _overlayOpacity = 0.5;
+    [ObservableProperty] private bool _showOverlay = true;
+    [ObservableProperty] private ClassificationResult? _classificationResult;
     
     public bool IsLoading => LoadingState == LoadingState.Loading;
     public bool IsError => LoadingState == LoadingState.Error;
@@ -58,8 +66,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "Unit";
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
     partial void OnSelectedBandChanged(int value) => UpdateBitmap();
-    
-    
+
+
     public bool IsGrayscale
     {
         get => CurrentDisplayMode == DisplayMode.Grayscale;
@@ -69,14 +77,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             OnPropertyChanged();
         }
     }
-    
+
     partial void OnCurrentDisplayModeChanged(DisplayMode value)
     {
         OnPropertyChanged(nameof(IsGrayscale));
         UpdateBitmap();
     }
-    
-    
+
+
     private async Task LoadAsync()
     {
         try
@@ -84,12 +92,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             LoadingState = LoadingState.Loading;
             StatusMessage = "Reading header...";
             Progress = 0;
-            
-            // Step 1: instant - parse header and show info
+
+            // Step 1: Parse header and show info (should be fast)
             var header = HsiHeaderParser.Parse(_hdrPath);
             StatusMessage = $"{header.Samples}x{header.Lines}x{header.Bands} bands, {header.Interleave.ToUpper()}";
-            
-            // Step 2: heavy load - load and convert binary data into memory
+
+            // Step 2: Load and convert binary data into memory (heavy load)
             var progressReporter = new Progress<(float percent, int band)>(p =>
             {
                 Progress = p.percent;
@@ -97,7 +105,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             });
             Cube = await HsiCubeLoader.LoadAsync(header, progressReporter, _cts.Token);
 
-            // Step 3: calibrate if references exist
+            // Step 3: Calibrate if references exist
             StatusMessage = "Checking for calibration references...";
             var calibrated = await HsiCalibration.TryCalibrateAsync(_hdrPath, Cube);
 
@@ -110,18 +118,18 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             {
                 StatusMessage = "Calibration skipped...";
             }
-            
-            
-            // Step 4: Show image or something
+
+
+            // Step 4: Show image
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
             UpdateBitmap();
         }
-        
+
         catch (OperationCanceledException)
         {
             LoadingState = LoadingState.Idle;
-            StatusMessage = "Operation Canceled";
+            StatusMessage = "Operation Cancelled";
         }
         catch (Exception ex)
         {
@@ -129,54 +137,103 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             StatusMessage = $"Failed to load: {ex.Message}";
         }
     }
-    
+
     private void UpdateBitmap()
     {
         if (Cube == null) return;
-        
+
         CurrentBitmap = CurrentDisplayMode switch
         {
             DisplayMode.Grayscale => BitmapRenderer.BandToBitmap(Cube, SelectedBand),
-            
+
             DisplayMode.Rgb => BitmapRenderer.RgbToBitmap(
                 Cube,
                 Cube.Header.FindClosestBand(630f),
                 Cube.Header.FindClosestBand(530f),
                 Cube.Header.FindClosestBand(460f)),
             _ => CurrentBitmap
-                  
+
         };
     }
-    
+
+
     public IAsyncRelayCommand RunInferenceCommand { get; }
 
     private async Task RunInferenceAsync()
     {
-        InferenceOutput = "Running...";
-        HeatmapBitmap = null;
-        var (ok, outputDir, output) = await Task.Run(() => InferenceRunner.Run(_hdrPath));
-        if (!ok)
+        if (Cube == null)
         {
-            InferenceOutput = $"Error: {output}";
+            InferenceOutput = "No image loaded";
             return;
         }
-        InferenceOutput = output;
-        if (!string.IsNullOrEmpty(outputDir))
+
+        try
         {
-            var heatmapPath = Path.Combine(outputDir, "heatmap.png");
-            if (File.Exists(heatmapPath))
-            {
-                try
-                {
-                    HeatmapBitmap = new Bitmap(heatmapPath);
-                }
-                catch { /* ignore */ }
-            }
+            InferenceOutput = "Running classification...";
+            
+            // SETTINGS:
+            const string packagePath =
+                @"E:\Dev\Projects\Rider\G17_AITFMD\GUI_G17_AITFMD\spectral-assist\SpectralAssist\Assets\exported_model";
+            const string dummyJsonPath =
+                @"E:\Dev\Projects\Rider\G17_AITFMD\GUI_G17_AITFMD\spectral-assist\SpectralAssist\Assets\prediction.json";
+            const int dummyPatchW = 32;
+            const int dummyPatchH = 32;
+            const int dummyStride = 16;
+            
+            // PICK CLASSIFIER: 
+            var classifier = DummyClassifier.Random(dummyPatchW, dummyPatchH, dummyStride);
+            //var classifier = DummyClassifier.FromJson(dummyJsonPath);
+            //var classifier = new PythonClassifier(_hdrPath);
+            //var classifier = CreateOnnxClassifier(packagePath);
+
+            ClassificationResult = await Task.Run(() => classifier.ClassifyImageAsync(Cube));
+
+            InferenceOutput = FormatResultSummary(ClassificationResult);
+            ShowOverlay = true;
+            RebuildOverlay();
+        }
+        catch (Exception ex)
+        {
+            InferenceOutput = $"Error: {ex.Message}";
         }
     }
-    
+
+    private OnnxClassifier CreateOnnxClassifier(string packagePath)
+    {
+        var package = _loader.LoadPackage(packagePath);
+        _onnxClassifier.SetModel(package);
+        return _onnxClassifier;
+    }
+
+    private void RebuildOverlay()
+    {
+        if (ClassificationResult == null || Cube == null) return;
+
+        OverlayBitmap = BitmapRenderer.ClassificationOverlay(
+            Cube,
+            ClassificationResult,
+            ColorMaps.GreenRed);
+    }
+
+    private static string FormatResultSummary(ClassificationResult result)
+    {
+        var text = new System.Text.StringBuilder();
+        text.AppendLine($"Model: {result.ModelName}");
+        text.AppendLine($"Evaluated: {result.Evaluated} patches ({result.Skipped} skipped)");
+        text.AppendLine();
+
+        foreach (var pred in result.Predictions)
+        {
+            var className = result.Classes[pred.PredictedClass];
+            text.AppendLine($"  ({pred.X},{pred.Y}): {className} ({pred.Confidence:P1})");
+        }
+
+        return text.ToString();
+    }
+
     public void Dispose()
     {
+        _onnxClassifier.Dispose();
         _cts.Cancel();
         _cts.Dispose();
         CurrentBitmap = null;
