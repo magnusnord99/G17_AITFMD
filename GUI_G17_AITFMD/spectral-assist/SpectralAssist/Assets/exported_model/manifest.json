@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "generator": "export_full_pipeline.py",
+  "metadata": {
+    "name": "BandAvg + PCA + Baseline 3D CNN (dummy weights)",
+    "version": "0.1.0",
+    "created": "2026-03-21T02:50:19.429737+00:00",
+    "author": "G17 Pipeline",
+    "description": "Full pipeline: band averaging (826\u2192275), PCA (275\u219216), Baseline 3D CNN (16\u21922 classes)"
+  },
+  "training_config": {
+    "preprocessing": "band_avg + pca",
+    "model_type": "baseline_3dcnn",
+    "dataset": "none",
+    "samples": 0,
+    "epochs": 0,
+    "val_accuracy": 0.0,
+    "band_avg_window": 3,
+    "pca_components": 16,
+    "classes": [
+      "non-tumor",
+      "tumor"
+    ]
+  },
+  "input_spec": {
+    "expected_bands": 826,
+    "wavelength_range_nm": [
+      400,
+      1000
+    ],
+    "spatial_patch_size": [
+      64,
+      64
+    ],
+    "dtype": "float32"
+  },
+  "output_spec": {
+    "type": "classification",
+    "classes": [
+      "non-tumor",
+      "tumor"
+    ]
+  },
+  "artifacts": {
+    "pipeline_onnx": "pipeline.onnx"
+  }
+}
