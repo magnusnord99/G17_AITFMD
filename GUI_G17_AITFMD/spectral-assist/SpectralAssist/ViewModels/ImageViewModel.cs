@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Preprocessing;
 
 namespace SpectralAssist.ViewModels;
 
@@ -18,7 +19,13 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource _cts = new();
     private readonly string _hdrPath;
     private readonly ModelLoader _loader = new();
-    private readonly OnnxClassifier _onnxClassifier = new();
+    private readonly Onnx3DCnnClassifier _onnx3DCnn = new();
+    private string? _loadedModelPackageDir;
+
+    /// <summary>Rå scene + dark/white fra forrige Open — gjenbrukes ved inferens (ingen ny lasting fra disk).</summary>
+    private HsiCube? _pipelineRaw;
+    private HsiCube? _pipelineDark;
+    private HsiCube? _pipelineWhite;
 
     public ImageViewModel(string hdrPath = "")
     {
@@ -103,20 +110,39 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 Progress = p.percent;
                 StatusMessage = $"Loading image data... {p.percent:P0}";
             });
-            Cube = await HsiCubeLoader.LoadAsync(header, progressReporter, _cts.Token);
+            var scene = await HsiCubeLoader.LoadAsync(header, progressReporter, _cts.Token);
+            _pipelineRaw = null;
+            _pipelineDark = null;
+            _pipelineWhite = null;
 
-            // Step 3: Calibrate if references exist
-            StatusMessage = "Checking for calibration references...";
-            var calibrated = await HsiCalibration.TryCalibrateAsync(_hdrPath, Cube);
-
-            if (calibrated != null)
+            if (HsiCalibration.TryFindReferenceHdrPaths(_hdrPath, out var darkHdr, out var whiteHdr))
             {
-                Cube = calibrated;
+                StatusMessage = "Loading dark/white references...";
+                var darkTask = HsiCubeLoader.LoadAsync(HsiHeaderParser.Parse(darkHdr!), ct: _cts.Token);
+                var whiteTask = HsiCubeLoader.LoadAsync(HsiHeaderParser.Parse(whiteHdr!), ct: _cts.Token);
+                await Task.WhenAll(darkTask, whiteTask);
+                var dark = darkTask.Result;
+                var white = whiteTask.Result;
+
+                if (scene.Bands != dark.Bands || scene.Bands != white.Bands)
+                {
+                    LoadingState = LoadingState.Error;
+                    StatusMessage =
+                        $"Band mismatch: scene {scene.Bands}, dark {dark.Bands}, white {white.Bands}";
+                    Cube = scene;
+                    return;
+                }
+
+                _pipelineRaw = scene;
+                _pipelineDark = dark;
+                _pipelineWhite = white;
+                Cube = HsiCalibration.ApplyReflectance(scene, dark, white);
                 StatusMessage = "Calibration complete...";
             }
             else
             {
-                StatusMessage = "Calibration skipped...";
+                Cube = scene;
+                StatusMessage = "Calibration skipped (no dark/white in folder)...";
             }
 
 
@@ -161,7 +187,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     private async Task RunInferenceAsync()
     {
-        if (Cube == null)
+        if (Cube == null || string.IsNullOrEmpty(_hdrPath))
         {
             InferenceOutput = "No image loaded";
             return;
@@ -169,28 +195,59 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
-            InferenceOutput = "Running classification...";
-            
-            // SETTINGS:
-            const string packagePath =
-                @"E:\Dev\Projects\Rider\G17_AITFMD\GUI_G17_AITFMD\spectral-assist\SpectralAssist\Assets\exported_model";
-            const string dummyJsonPath =
-                @"E:\Dev\Projects\Rider\G17_AITFMD\GUI_G17_AITFMD\spectral-assist\SpectralAssist\Assets\prediction.json";
-            const int dummyPatchW = 32;
-            const int dummyPatchH = 32;
-            const int dummyStride = 16;
-            
-            // PICK CLASSIFIER: 
-            var classifier = DummyClassifier.Random(dummyPatchW, dummyPatchH, dummyStride);
-            //var classifier = DummyClassifier.FromJson(dummyJsonPath);
-            //var classifier = new PythonClassifier(_hdrPath);
-            //var classifier = CreateOnnxClassifier(packagePath);
+            InferenceOutput = "Forbereder pipeline (rå → kalibrering → avg3 → maske → 16 bånd)...";
 
-            ClassificationResult = await Task.Run(() => classifier.ClassifyImageAsync(Cube));
+            if (_pipelineRaw == null || _pipelineDark == null || _pipelineWhite == null)
+            {
+                InferenceOutput =
+                    "Pipeline trenger rå scene pluss dark og white lastet ved Open. " +
+                    "Legg dark/white .hdr i samme mappe og åpne scenen på nytt.";
+                return;
+            }
 
-            InferenceOutput = FormatResultSummary(ClassificationResult);
+            var packageDir = ResolveModelPackageDirectory();
+            if (!Directory.Exists(packageDir))
+            {
+                InferenceOutput =
+                    $"Model mappe ikke funnet:\n{packageDir}\n\nLegg manifest.json + model.onnx under Assets/models/... og bygg på nytt.";
+                return;
+            }
+
+            StatusMessage = "Spektral pipeline (kalibrering → clip → avg3 → vevsmaske → 16 bånd)...";
+            var pipelineResult = await Task.Run(() =>
+            {
+                var rf = HsiCubeToFloatCubeHWB.FromHsiCube(_pipelineRaw);
+                var df = HsiCubeToFloatCubeHWB.FromHsiCube(_pipelineDark);
+                var wf = HsiCubeToFloatCubeHWB.FromHsiCube(_pipelineWhite);
+                var spectral = new BaselinePreprocessingOptions(
+                    calibrationEpsilon: 1e-8f,
+                    clipMin: 0f,
+                    clipMax: 1f,
+                    neighborAverageWindow: 3,
+                    bandReduceOutBands: 16,
+                    bandReduceStrategy: "crop");
+                var tissue = new TissueMaskMeanStdOptions(
+                    qMean: 0.5f,
+                    qStd: 0.4f,
+                    minObjectSize: 500,
+                    minHoleSize: 1000);
+                return BaselineSpectralPipeline.RunThroughAvg16WithTissueMask(rf, df, wf, spectral, tissue);
+            }, _cts.Token);
+
+            var hsi16 = FloatCubeToHsiCube.ToHsiCube(pipelineResult.Cube16Bands);
+
+            StatusMessage = "ONNX 3D-CNN...";
+            var classifier = EnsureOnnx3DClassifier(packageDir);
+            ClassificationResult = await classifier.ClassifyImageAsync(hsi16);
+
+            InferenceOutput = FormatResultSummary(ClassificationResult, pcaTrainingMismatchNote: true);
             ShowOverlay = true;
             RebuildOverlay();
+            StatusMessage = "Inferens ferdig";
+        }
+        catch (OperationCanceledException)
+        {
+            InferenceOutput = "Avbrutt.";
         }
         catch (Exception ex)
         {
@@ -198,11 +255,26 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private OnnxClassifier CreateOnnxClassifier(string packagePath)
+    /// <summary>ONNX-pakke under output-katalog (Assets kopieres hit ved build).</summary>
+    private static string ResolveModelPackageDirectory()
     {
-        var package = _loader.LoadPackage(packagePath);
-        _onnxClassifier.SetModel(package);
-        return _onnxClassifier;
+        return Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "models",
+            "baseline_3dcnn_20260324_083658_last");
+    }
+
+    private Onnx3DCnnClassifier EnsureOnnx3DClassifier(string packageDir)
+    {
+        var fullPath = Path.GetFullPath(packageDir);
+        if (_loadedModelPackageDir == fullPath && _onnx3DCnn.Manifest != null)
+            return _onnx3DCnn;
+
+        var package = _loader.LoadPackage(fullPath);
+        _onnx3DCnn.SetModel(package);
+        _loadedModelPackageDir = fullPath;
+        return _onnx3DCnn;
     }
 
     private void RebuildOverlay()
@@ -215,9 +287,17 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             ColorMaps.GreenRed);
     }
 
-    private static string FormatResultSummary(ClassificationResult result)
+    private static string FormatResultSummary(ClassificationResult result, bool pcaTrainingMismatchNote = false)
     {
         var text = new System.Text.StringBuilder();
+        if (pcaTrainingMismatchNote)
+        {
+            text.AppendLine(
+                "Merk: Modellen er trent på PCA-16 (Python); GUI bruker band-gjennomsnitt til 16 — " +
+                "fordelingen kan avvike. For best match, tren på samme reduksjon som i app.");
+            text.AppendLine();
+        }
+
         text.AppendLine($"Model: {result.ModelName}");
         text.AppendLine($"Evaluated: {result.Evaluated} patches ({result.Skipped} skipped)");
         text.AppendLine();
@@ -233,11 +313,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
-        _onnxClassifier.Dispose();
+        _onnx3DCnn.Dispose();
+        _loader.Dispose();
         _cts.Cancel();
         _cts.Dispose();
         CurrentBitmap = null;
         Cube = null;
+        _pipelineRaw = null;
+        _pipelineDark = null;
+        _pipelineWhite = null;
         GC.SuppressFinalize(this);
     }
 }

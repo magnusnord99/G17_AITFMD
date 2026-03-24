@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
@@ -10,6 +10,13 @@
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
+        <!-- ONNX-pakker: ikke embed i DLL; kopier til output -->
+        <AvaloniaResource Remove="Assets\models\**\*"/>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="Assets\models\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
