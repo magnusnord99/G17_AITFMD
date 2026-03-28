@@ -8,6 +8,7 @@ Hvert steg kan slås av med enabled: false.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Iterable
 
 import numpy as np
 import torch
@@ -42,7 +43,16 @@ def _resolve_path(config_path: Path, raw_path: str, project_root: Path | None = 
     return (root / raw_path).resolve()
 
 
-def _roi_paths_from_input(input_path: str) -> tuple[Path, Path, Path, Path, Path]:
+def _total_file_bytes(paths: Iterable[Path]) -> int:
+    """Sum of on-disk file sizes (bytes); missing paths are skipped."""
+    total = 0
+    for p in paths:
+        if p.is_file():
+            total += int(p.stat().st_size)
+    return total
+
+
+def _roi_paths_from_input(input_path: str) -> tuple[Path, Path, Path, Path, Path, Path]:
     """
     Resolve ROI folder and raw/dark/white paths from input.
     Input can be: path to ROI folder, or path to raw.hdr.
@@ -238,6 +248,14 @@ def preprocess_single_roi(
             pca_model = load(pca_path)
             cube = transform_cube_with_pca(cube.astype(np.float32), pca_model)
     reduced_cube = cube
+    # On-disk ROI capture vs in-memory reduced cube (float32) after full preprocessing.
+    compression_input_bytes = _total_file_bytes((raw_hdr, raw_bin))
+    compression_output_bytes = int(reduced_cube.nbytes)
+    file_compression_ratio = (
+        float(compression_input_bytes) / float(compression_output_bytes)
+        if compression_output_bytes > 0
+        else None
+    )
 
     patch_cfg = pipe.get("patching", {})
     patch_h = int(patch_cfg.get("patch_h", 64))
@@ -284,6 +302,17 @@ def preprocess_single_roi(
         "cube_shape": list(reduced_cube.shape),
         "input_path": str(input_path),
         "spectral_reducer": reducer,
+        "compression_input_bytes": compression_input_bytes,
+        "compression_output_bytes": compression_output_bytes,
+        "file_compression_ratio": (
+            round(file_compression_ratio, 6) if file_compression_ratio is not None else None
+        ),
+        "compression_input_description": (
+            "Sum of on-disk sizes of raw.hdr and raw (ENVI) for this ROI."
+        ),
+        "compression_output_description": (
+            "Byte size of reduced_cube in memory (numpy nbytes, typically float32 H×W×bands)."
+        ),
         "patch_h": patch_h,
         "patch_w": patch_w,
         "stride_h": stride_h,

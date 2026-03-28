@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,6 +20,7 @@ import matplotlib
 matplotlib.use("Agg")  # Headless for PNG export
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -161,6 +163,14 @@ def _run_model(patches: list, coords: list, cfg: dict, project_root: Path) -> tu
     return scores, backend_name
 
 
+def _sync_accelerator_if_needed() -> None:
+    """Ensure queued GPU work is finished so wall-clock timing includes accelerator time."""
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        torch.mps.synchronize()
+
+
 def _build_heatmap(coords: list, scores: np.ndarray, reduced_cube: np.ndarray, metadata: dict) -> np.ndarray:
     h, w, _ = reduced_cube.shape
     patch_h = int(metadata.get("patch_h", 64))
@@ -239,6 +249,8 @@ def main() -> int:
     start = datetime.now(timezone.utc)
 
     # Preprocessing
+    t_cpu_preprocess_0 = time.process_time()
+    t_wall_preprocess_0 = time.perf_counter()
     try:
         patches, coords, reduced_cube, metadata = preprocess_single_roi(
             input_path=args.input,
@@ -251,10 +263,18 @@ def main() -> int:
     except Exception as e:
         _write_error(output_dir, str(e), prediction_file)
         return 1
+    preprocess_wall_ms = int((time.perf_counter() - t_wall_preprocess_0) * 1000)
+    preprocess_cpu_ms = int((time.process_time() - t_cpu_preprocess_0) * 1000)
 
     # Inferanse
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    _sync_accelerator_if_needed()
+    t_cpu_model_0 = time.process_time()
+    t_wall_model_0 = time.perf_counter()
     scores, backend_name = _run_model(patches, coords, cfg, PROJECT_ROOT)
+    _sync_accelerator_if_needed()
+    model_wall_ms = int((time.perf_counter() - t_wall_model_0) * 1000)
+    model_cpu_ms = int((time.process_time() - t_cpu_model_0) * 1000)
 
     write_heatmap_assets = bool(cfg.get("write_heatmap_assets", False))
     write_reduced_cube = bool(cfg.get("write_reduced_cube", False))
@@ -360,6 +380,11 @@ def main() -> int:
             "spectral_reducer": metadata.get("spectral_reducer"),
             "num_spectral_bands": n_bands,
             "min_tissue_ratio_patch": metadata.get("min_tissue_ratio_patch"),
+            "compression_input_bytes": metadata.get("compression_input_bytes"),
+            "compression_output_bytes": metadata.get("compression_output_bytes"),
+            "file_compression_ratio": metadata.get("file_compression_ratio"),
+            "compression_input_description": metadata.get("compression_input_description"),
+            "compression_output_description": metadata.get("compression_output_description"),
         },
         "tissue_mask": metadata["tissue_mask"],
         "patch_stats": {
@@ -380,7 +405,21 @@ def main() -> int:
                 f"{anomaly_count} med score >= {threshold}."
             ),
         },
-        "run": {"duration_ms": duration_ms},
+        "run": {
+            "duration_ms": duration_ms,
+            "preprocess_wall_ms": preprocess_wall_ms,
+            "model_wall_ms": model_wall_ms,
+            "preprocess_cpu_ms": preprocess_cpu_ms,
+            "model_cpu_ms": model_cpu_ms,
+            "timing_note": (
+                "Wall times use perf_counter (includes I/O wait). preprocess_cpu_ms / "
+                "model_cpu_ms are process CPU time deltas (time.process_time); they do not "
+                "map to hardware cycle counts. With CUDA, model_wall_ms uses "
+                "cuda.synchronize() / mps.synchronize() so accelerator work is included. "
+                "For true CPU cycles or GPU "
+                "kernels, use OS/profiler tools (e.g. Intel VTune, NVIDIA Nsight)."
+            ),
+        },
     }
 
     _save_outputs(
@@ -398,7 +437,12 @@ def main() -> int:
     if write_reduced_cube:
         extra.append("reduced_cube.npy")
     suffix = f" + {', '.join(extra)}" if extra else ""
-    print(f"[run_inference] OK – {metadata['num_patches']} patches, prediction.json → {output_dir}{suffix}")
+    cr = metadata.get("file_compression_ratio")
+    cr_s = f", file compression≈{cr:.2f}×" if isinstance(cr, (int, float)) else ""
+    print(
+        f"[run_inference] OK – {metadata['num_patches']} patches{cr_s}, "
+        f"preprocess {preprocess_wall_ms} ms, model {model_wall_ms} ms → {output_dir}{suffix}"
+    )
     return 0
 
 
