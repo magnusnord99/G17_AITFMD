@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SpectralAssist.Models;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Hsi;
 
 /// <summary>
 /// Converts raw HSI intensity values into reflectance using dark and white reference captures.
@@ -92,7 +92,7 @@ public static class HsiCalibration
 
         var result = new float[bands * pixels];
 
-        // Each band is calibrated independently — Parallel.For distributes bands across cores
+        // Each band is calibrated independently
         Parallel.For(0, bands, b =>
         {
             var rawBand = raw.GetBand(b);

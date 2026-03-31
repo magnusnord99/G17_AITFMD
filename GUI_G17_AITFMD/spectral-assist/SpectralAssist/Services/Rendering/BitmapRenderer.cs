@@ -4,7 +4,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using SpectralAssist.Models;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Rendering;
 
 /// <summary>
 /// Converts HSI cube bands into displayable bitmaps.
@@ -33,7 +33,7 @@ public static class BitmapRenderer
                 ptr[i * 4 + 0] = value; // B
                 ptr[i * 4 + 1] = value; // G
                 ptr[i * 4 + 2] = value; // R
-                ptr[i * 4 + 3] = 255;   // A (fully opaque)
+                ptr[i * 4 + 3] = 255;   // A 
             }
         }
         return bitmap;
@@ -48,9 +48,7 @@ public static class BitmapRenderer
         var r = cube.GetBand(redBand);
         var g = cube.GetBand(greenBand);
         var b = cube.GetBand(blueBand);
-
-        // Each channel is normalized independently so one bright band
-        // doesn't wash out the others
+        
         MinMax(r, out var rMin, out var rRange);
         MinMax(g, out var gMin, out var gRange);
         MinMax(b, out var bMin, out var bRange);
@@ -59,7 +57,7 @@ public static class BitmapRenderer
         using var fb = bitmap.Lock();
         unsafe
         {
-            // Pixel layout is BGRA (blue first) to match Bgra8888 format
+            // Pixel layout is BGRA to match Bgra8888 format
             var ptr = (byte*)fb.Address;
             for (var i = 0; i < r.Length; i++)
             {
@@ -106,21 +104,54 @@ public static class BitmapRenderer
         if (range < 1e-6f) range = 1f; // Prevent division by zero
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    /// <summary>
+    /// Renders a horizontal gradient bar showing the active colormap
+    /// from threshold to 1.0. Used as a legend for the classification overlay.
+    /// </summary>
+    public static WriteableBitmap ColorBarLegend(
+        Func<float, Color> colourMap,
+        int width = 256,
+        int height = 20,
+        float threshold = 0f)
+    {
+        var bitmap = new WriteableBitmap(
+            new PixelSize(width, height),
+            new Vector(96, 96),
+            Avalonia.Platform.PixelFormat.Bgra8888,
+            AlphaFormat.Unpremul);
+
+        using var buffer = bitmap.Lock();
+        unsafe
+        {
+            var ptr = (byte*)buffer.Address;
+            var stride = buffer.RowBytes;
+
+            for (var x = 0; x < width; x++)
+            {
+                // Map pixel position to probability range [threshold, 1.0]
+                var prob = threshold + (float)x / (width - 1) * (1f - threshold);
+                var colour = colourMap(prob);
+
+                for (var y = 0; y < height; y++)
+                {
+                    var offset = y * stride + x * 4;
+                    ptr[offset + 0] = colour.B;  // B
+                    ptr[offset + 1] = colour.G;  // G
+                    ptr[offset + 2] = colour.R;  // R
+                    ptr[offset + 3] = 255;       // A
+                }
+            }
+        }
+
+        return bitmap;
+    }
+
     public static WriteableBitmap ClassificationOverlay(
         HsiCube cube,
         ClassificationResult result,
         Func<float, Color> colourMap,
-        int targetClassIndex = 1)
+        int targetClassIndex = 1,
+        float threshold = 0f)
     {
         var bitmap = CreateBitmap(cube);
 
@@ -133,6 +164,7 @@ public static class BitmapRenderer
             foreach (var pred in result.Predictions)
             {
                 var prob = pred.Probabilities[targetClassIndex];
+                if (prob < threshold) continue;
                 var colour = colourMap(prob);
 
                 for (var y = 0; y < result.PatchH; y++)
@@ -147,10 +179,10 @@ public static class BitmapRenderer
 
                         var offset = py * stride + px * 4;
 
-                        ptr[offset + 0] = colour.B;
-                        ptr[offset + 1] = colour.G;
-                        ptr[offset + 2] = colour.R;
-                        ptr[offset + 3] = 255;
+                        ptr[offset + 0] = colour.B; // B
+                        ptr[offset + 1] = colour.G; // G
+                        ptr[offset + 2] = colour.R; // R
+                        ptr[offset + 3] = 255;      // A
                     }
                 }
             }

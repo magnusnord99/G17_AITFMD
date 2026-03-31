@@ -12,10 +12,10 @@
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainViewModel/>
+        <vm:MainViewModel />
     </Design.DataContext>
-    
-    
+
+
     <Grid>
         <!-- Main Layout -->
         <Grid ColumnDefinitions="Auto,*">
@@ -27,16 +27,17 @@
                     BorderThickness="0,0,1,0"
                     Padding="8,12">
                 <DockPanel LastChildFill="False">
-            
+
+                    <!-- Top: Navigation -->
                     <StackPanel DockPanel.Dock="Top" Spacing="4">
                         <TextBlock Text="SpectralAssist"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="#CCCCCC"
-                                   Margin="4,0,4,8"/>
-                
-                        <Border Height="1" Background="#2D2D2D" Margin="0,0,0,4"/>
-                
+                                   Margin="4,0,4,8" />
+
+                        <Border Height="1" Background="#2D2D2D" Margin="0,0,0,4" />
+
                         <Button Content="Open HSI"
                                 Click="OpenHSIButton_Clicked"
                                 Background="Transparent"
@@ -44,7 +45,7 @@
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
                                 Padding="8,6"
-                                CornerRadius="4"/>
+                                CornerRadius="4" />
 
                         <Button Content="Home"
                                 Command="{Binding NavigateToHomeCommand}"
@@ -53,17 +54,29 @@
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
                                 Padding="8,6"
-                                CornerRadius="4"/>
+                                CornerRadius="4" />
+
+                        <Border Height="1" Background="#2D2D2D" Margin="0,8,0,4" />
+
+                        <Button Content="Run Inference"
+                                Command="{Binding RunInferenceCommand}"
+                                Background="#2D2D2D"
+                                Foreground="#CCCCCC"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,6"
+                                CornerRadius="4"
+                                IsEnabled="{Binding HasImageView}" />
                     </StackPanel>
-            
+
                 </DockPanel>
             </Border>
 
             <!-- RIGHT: Dynamic Content -->
-            <ContentControl Grid.Column="1" Content="{Binding CurrentView}"/>
+            <ContentControl Grid.Column="1" Content="{Binding CurrentView}" />
         </Grid>
 
-        
+
         <!-- Drag and Drop Overlay -->
         <Border IsVisible="{Binding IsDragging}"
                 IsHitTestVisible="False"
@@ -76,16 +89,16 @@
                         Spacing="12">
                 <TextBlock Text="{Binding DragIcon}"
                            FontSize="48"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Center" />
                 <TextBlock Text="{Binding DragMessage}"
                            FontSize="20"
                            FontWeight="SemiBold"
                            Foreground="White"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Center" />
             </StackPanel>
 
         </Border>
-            
+
     </Grid>
-    
+
 </Window>

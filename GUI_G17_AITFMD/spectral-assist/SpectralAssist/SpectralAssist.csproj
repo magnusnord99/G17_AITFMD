@@ -10,11 +10,10 @@
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
-        <!-- ONNX-pakker: ikke embed i DLL; kopier til output -->
-        <AvaloniaResource Remove="Assets\models\**\*"/>
     </ItemGroup>
+
     <ItemGroup>
-        <None Include="Assets\models\**\*">
+        <None Include="ModelPackages\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
@@ -31,14 +30,18 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
-        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.3" />
         <PackageReference Include="PanAndZoom" Version="11.3.9.1" />
     </ItemGroup>
 
+    <!-- Windows/Linux: add CUDA support on top of base package -->
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) Or $([MSBuild]::IsOSPlatform('Linux'))">
+        <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1" />
+    </ItemGroup>
+
     <ItemGroup>
-      <Compile Update="Views\ImageViewBackup.axaml.cs">
-        <DependentUpon>ImageViewBackup.axaml</DependentUpon>
-        <SubType>Code</SubType>
-      </Compile>
+        <Compile Update="Views\ImageViewBackup.axaml.cs">
+            <DependentUpon>ImageViewBackup.axaml</DependentUpon>
+            <SubType>Code</SubType>
+        </Compile>
     </ItemGroup>
 </Project>

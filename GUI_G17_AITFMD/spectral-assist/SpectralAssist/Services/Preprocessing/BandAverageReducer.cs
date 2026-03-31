@@ -1,49 +1,63 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using SpectralAssist.Models;
 
 namespace SpectralAssist.Services.Preprocessing;
 
 /// <summary>
-/// Reduce band count by averaging groups — matches <c>reduce_bands_by_avg</c> in <c>band_reduce.py</c>.
+/// Reduces band count by averaging variable-sized bins (crop or uneven strategy).
+/// Matches Python <c>band_reduce._compute_bin_sizes</c>.
 /// </summary>
 public static class BandAverageReducer
 {
-    public static FloatCubeHWB Apply(FloatCubeHWB cube, int nOutBands, string strategy)
+    public static HsiCube Apply(HsiCube cube, int nOutBands, string strategy)
     {
         var bins = ComputeBinSizes(cube.Bands, nOutBands, strategy);
-        var h = cube.Lines;
-        var w = cube.Samples;
-        var src = cube.Data;
-        var o = new float[h * w * nOutBands];
+        var plane = cube.PixelsPerBand;
+        var result = new float[nOutBands * plane];
 
-        for (var y = 0; y < h; y++)
+        // Precompute source band offsets so the outer loop can run in parallel
+        var srcBandStarts = new int[nOutBands];
+        var cumulative = 0;
+        for (var i = 0; i < nOutBands; i++)
         {
-            for (var x = 0; x < w; x++)
-            {
-                var start = 0;
-                for (var outB = 0; outB < nOutBands; outB++)
-                {
-                    var size = bins[outB];
-                    double sum = 0;
-                    for (var k = 0; k < size; k++)
-                    {
-                        var bi = start + k;
-                        var idx = FloatCubeHWB.FlatIndex(y, x, bi, w, cube.Bands);
-                        sum += src[idx];
-                    }
-
-                    var oIdx = FloatCubeHWB.FlatIndex(y, x, outB, w, nOutBands);
-                    o[oIdx] = (float)(sum / size);
-                    start += size;
-                }
-            }
+            srcBandStarts[i] = cumulative;
+            cumulative += bins[i];
         }
 
-        return new FloatCubeHWB(h, w, nOutBands, o);
+        Parallel.For(0, nOutBands, outB =>
+        {
+            var size = bins[outB];
+            var outOffset = outB * plane;
+            var srcBandStart = srcBandStarts[outB];
+
+            // Accumulate 'size' contiguous band planes
+            for (var k = 0; k < size; k++)
+            {
+                var srcBand = cube.GetBand(srcBandStart + k);
+                for (var i = 0; i < plane; i++)
+                    result[outOffset + i] += srcBand[i];
+            }
+
+            // Divide by bin size
+            var invSize = 1f / size;
+            for (var i = 0; i < plane; i++)
+                result[outOffset + i] *= invSize;
+        });
+
+        var header = new HsiHeader
+        {
+            Lines = cube.Lines,
+            Samples = cube.Samples,
+            Bands = nOutBands,
+            Interleave = "bsq",
+        };
+        return new HsiCube(header, result);
     }
 
     /// <summary>Same logic as Python <c>_compute_bin_sizes</c>.</summary>
-    public static IReadOnlyList<int> ComputeBinSizes(int nIn, int nOut, string strategy)
+    private static int[] ComputeBinSizes(int nIn, int nOut, string strategy)
     {
         if (strategy == "crop")
         {
