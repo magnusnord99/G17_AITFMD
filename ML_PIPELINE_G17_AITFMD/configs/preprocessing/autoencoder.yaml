@@ -7,7 +7,7 @@ paths:
   model_dir: "../../data/interim/ae_models"
   model_filename: "ae_avg3_16.pt"
   # Output root for AE-transformed cubes (build/build_ae_dataset.py)
-  output_root: "../../data/processed/ae16"
+  output_root: "../../data/processed_V2/ae16"
   # Patient-level split file
   split_csv: "../../data/splits/patient_split.csv"
   # Manifest of AE outputs
@@ -45,5 +45,5 @@ build:
   overwrite: false
 
 runtime:
-  device: "cuda"  # "cuda", "mps" (Apple Silicon), or "cpu"
+  device: "mps"  # "cuda", "mps" (Apple Silicon), or "cpu"
   verbose: true

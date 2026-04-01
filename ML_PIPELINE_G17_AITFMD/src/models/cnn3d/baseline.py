@@ -18,19 +18,30 @@ class Baseline3DCNN(nn.Module):
         channels: tuple[int, ...] = (32, 64),
         kernel_size: Kernel3D = 3,
         dropout: float = 0.3,
+        max_pool_layers: int | None = None,
     ):
         super().__init__()
+        n_blocks = len(channels)
+        if max_pool_layers is None:
+            max_pool_layers = n_blocks
+        if not (1 <= max_pool_layers <= n_blocks):
+            raise ValueError(
+                f"max_pool_layers must be in [1, {n_blocks}] (got {max_pool_layers})"
+            )
         layers = []
         prev = in_channels
         ks = normalize_conv3d_kernel_size(kernel_size)
-        for c in channels:
+        for i, c in enumerate(channels):
             layers += [
                 # Valid conv (padding=0): D,H,W reduseres utover i nettet
                 nn.Conv3d(prev, c, kernel_size=ks, stride=1, padding=0),
                 nn.GroupNorm(8, c),
                 nn.ReLU(inplace=True),
-                nn.MaxPool3d(kernel_size=(1,2,2), stride=(1,2,2)),
             ]
+            if i < max_pool_layers:
+                layers.append(
+                    nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+                )
             prev = c
         self.features = nn.Sequential(*layers)
         self.pool = nn.AdaptiveAvgPool3d(1)

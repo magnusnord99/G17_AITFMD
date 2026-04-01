@@ -1,0 +1,26 @@
+# Patch-størrelse-sweep: stride = halvparten av side (h/w likt).
+# baseline_3dcnn (Conv [4,3,3] + MaxPool 1×2×2 × 2 blokker) tåler ikke 8×8 — min. ca. 10×10;
+# vi bruker 10 i stedet for 8. Tre eksplisitte runs (grid_runs).
+#
+# Tørrkjøring:
+#   python scripts/grid_search_train.py --grid configs/grid_search/patch_size_grid.yaml --dry-run
+
+base_config: "configs/train.yaml"
+
+output_prefix: "outputs/grid_search"
+
+grid_runs:
+  - data.patch_h: 10
+    data.patch_w: 10
+    data.stride_h: 5
+    data.stride_w: 5
+
+  - data.patch_h: 16
+    data.patch_w: 16
+    data.stride_h: 8
+    data.stride_w: 8
+
+  - data.patch_h: 64
+    data.patch_w: 64
+    data.stride_h: 32
+    data.stride_w: 32

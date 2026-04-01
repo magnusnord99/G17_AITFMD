@@ -1,0 +1,29 @@
+# Squeeze-and-Excite 3D CNN — kanal-attention variant av baseline.
+#
+# Arkitektur:
+#   Per blokk: Conv3d(valid) → GroupNorm → ReLU → SEModule3D → [MaxPool(1,2,2)]
+#   Hode     : AdaptiveAvgPool3d(1) → Dropout → Linear
+#
+# SE-modulen (Hu et al., 2018):
+#   Squeeze : global avg pool → kanalvektor (B, C)
+#   Excite  : Linear(C → C//r) → ReLU → Linear(C//r → C) → Sigmoid
+#   Scale   : gang sigmoid-vekter per kanal inn i feature-map
+#
+# Vs. baseline_3dcnn: identisk bortsett fra SEModule3D etter ReLU.
+# se_reduction (r=4) gir C//4 i flaskehalsen. Typisk < 2% ekstra parametere.
+
+model:
+  name: "se_cnn3d"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  dropout: 0.42
+  channels: [16, 32]   # samme som baseline for direkte sammenligning
+  kernel_size: [4, 3, 3]
+  max_pool_layers: 1
+  # SE-komprimering: C → C//se_reduction → C (lavere = mer kapasitet, mer beregning)
+  se_reduction: 4
+
+# L2 (weight_decay) settes i train.yaml → optimizer.

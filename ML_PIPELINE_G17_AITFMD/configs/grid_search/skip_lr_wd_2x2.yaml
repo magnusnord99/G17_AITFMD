@@ -1,0 +1,31 @@
+# Grid search: skip_cnn3d — 2 lr × 2 wd = 4 kjøringer
+#
+# Arver alt fra configs/train.yaml (patch 64×64, data, scheduler, epoker, osv.).
+# Overstyrer modell-config og optimizer-parametere.
+#
+# Lr-valg: én lik beste baseline (5e-5) og én litt høyere (1e-4)
+# Wd-valg: svak (1e-4) og moderat (3e-4) L2-regularisering
+#
+# Tørrkjøring:
+#   python scripts/grid_search_train.py --grid configs/grid_search/skip_lr_wd_2x2.yaml --dry-run
+# Én kjøring for test:
+#   python scripts/grid_search_train.py --grid configs/grid_search/skip_lr_wd_2x2.yaml --max-runs 1
+# Full grid:
+#   python scripts/grid_search_train.py --grid configs/grid_search/skip_lr_wd_2x2.yaml
+
+base_config: "configs/train.yaml"
+
+output_prefix: "outputs/grid_search"
+
+# fixed_overrides appliseres på alle runs men inngår ikke i filnavn-taggen.
+# model_config inneholder '/' og kan ikke brukes som grid-nøkkel (brekker filstier).
+fixed_overrides:
+  model_config: "configs/models/skip_cnn3d.yaml"
+
+grid:
+  optimizer.lr:
+    - 1.0e-4
+    - 5.0e-5
+  optimizer.weight_decay:
+    - 1.0e-4
+    - 3.0e-4

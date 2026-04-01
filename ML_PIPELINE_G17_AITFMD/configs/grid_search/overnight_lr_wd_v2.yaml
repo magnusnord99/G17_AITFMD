@@ -1,0 +1,28 @@
+# Overnatts-grid: optimizer.lr × optimizer.weight_decay
+# 3 × 3 = 9 kjøringer (kartesisk produkt).
+#
+# Tanken: spre lr rundt 5e-5 … 3e-4 og samtidig teste sterkere L2 (mot overtilpasning).
+# Alt annet arves fra configs/train.yaml (patch, modell, epoker, osv.).
+#
+# Tørrkjøring:
+#   python scripts/grid_search_train.py --grid configs/grid_search/overnight_lr_wd_v2.yaml --dry-run
+# Test én kombinasjon:
+#   python scripts/grid_search_train.py --grid configs/grid_search/overnight_lr_wd_v2.yaml --max-runs 1
+# Natten:
+#   cd ML_PIPELINE_G17_AITFMD
+#   python scripts/grid_search_train.py --grid configs/grid_search/overnight_lr_wd_v2.yaml
+
+base_config: "configs/train.yaml"
+
+output_prefix: "outputs/grid_search"
+
+grid:
+  optimizer.lr:
+    - 5.0e-6
+    - 1.0e-6
+    - 3.0e-3
+
+  optimizer.weight_decay:
+    - 1.0e-4
+    - 3.0e-4
+    - 5.0e-4

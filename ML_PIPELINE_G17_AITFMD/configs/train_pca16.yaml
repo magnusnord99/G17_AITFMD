@@ -1,33 +1,26 @@
 seed: 42
 
-# Modell: velg fra configs/models/*.yaml
 model_config: "configs/models/baseline_3dcnn.yaml"
 
 data:
   cube_manifest_csv: "data/interim/pca_manifest.csv"
-  cube_root: "data/processed/unpatched_V2/pca16"
+  cube_root: "data/processed_V2/pca16"
   mask_root: "data/interim/masks/final_mask"
-  # Obligatorisk for run_train.py (ingen standardverdier i kode): patch + stride
   patch_h: 64
   patch_w: 64
   stride_h: 32
   stride_w: 32
   min_tissue_ratio: 0.3
-  # patches_per_cube: antall tilfeldige patcher per kube PER EPOKE (når use_all_patches: false)
   patches_per_cube: 64
-  # false = undertrykk overtilpasning + raskere epoker vs. alle rutenett-posisjoner
   use_all_patches: false
   fold_index: 0
   batch_size: 16
-  # LRU-cache av .npy-kuber i RAM (mye raskere ved tilfeldige patcher + shuffle)
   max_cached_cubes: 12
-  # 0 = én prosess, én delt kube-cache. >0 = egen cache per worker (ofte tregere med shuffle)
   num_workers: 0
 
-# Adam — eneste sted for L2 (weight_decay); modell-*.yaml inneholder ikke dette.
 optimizer:
   name: "adam"
-  lr: 5.0e-5 
+  lr: 5.0e-5
   weight_decay: 1.0e-4
 
 scheduler:
@@ -41,7 +34,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 7
+  early_stopping_patience: 13
   mixed_precision: true
   save_best_only: true
 
@@ -55,4 +48,3 @@ splits:
   train_ratio: 0.70
   val_ratio: 0.15
   test_ratio: 0.15
-
