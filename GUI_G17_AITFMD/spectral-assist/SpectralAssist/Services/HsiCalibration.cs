@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,40 +23,51 @@ namespace SpectralAssist.Services;
 public static class HsiCalibration
 {
     /// <summary>
+    /// Finner dark/white referanse-.hdr i samme mappe som scenen (samme navnekonvensjon som ved lasting).
+    /// </summary>
+    public static bool TryFindReferenceHdrPaths(
+        string sceneHdrPath,
+        out string? darkHdrPath,
+        out string? whiteHdrPath)
+    {
+        darkHdrPath = null;
+        whiteHdrPath = null;
+        var dir = Path.GetDirectoryName(sceneHdrPath);
+        if (string.IsNullOrEmpty(dir))
+            return false;
+
+        foreach (var file in Directory.GetFiles(dir, "*.hdr"))
+        {
+            var name = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
+            if (name.Contains("dark"))
+                darkHdrPath = file;
+            else if (name.Contains("white"))
+                whiteHdrPath = file;
+        }
+
+        return darkHdrPath != null && whiteHdrPath != null;
+    }
+
+    /// <summary>
     /// Scans the scene's directory for "dark" and "white" reference .hdr files.
     /// If both are found, loads them and applies reflectance calibration.
     /// Returns null if either reference is missing (calibration is skipped).
     /// </summary>
     public static async Task<HsiCube?> TryCalibrateAsync(string sceneHdrPath, HsiCube scene, CancellationToken ct = default)
     {
-        var dir = Path.GetDirectoryName(sceneHdrPath)!;
-        string? darkPath = null;
-        string? whitePath = null;
-
-        foreach (var file in Directory.GetFiles(dir, "*.hdr"))
-        {
-            var name = Path.GetFileNameWithoutExtension(file)
-                .ToLowerInvariant();
-
-            if (name.Contains("dark"))
-                darkPath = file;
-            else if (name.Contains("white"))
-                whitePath = file;
-        }
-
-        if (darkPath == null || whitePath == null)
+        if (!TryFindReferenceHdrPaths(sceneHdrPath, out var darkPath, out var whitePath))
             return null;
 
         // Load both references in parallel
         var darkTask = HsiCubeLoader.LoadAsync(
-            HsiHeaderParser.Parse(darkPath), ct: ct);
+            HsiHeaderParser.Parse(darkPath!), ct: ct);
         var whiteTask = HsiCubeLoader.LoadAsync(
-            HsiHeaderParser.Parse(whitePath), ct: ct);
+            HsiHeaderParser.Parse(whitePath!), ct: ct);
         await Task.WhenAll(darkTask, whiteTask);
         var dark = darkTask.Result;
         var white = whiteTask.Result;
 
-        return Calibrate(scene, dark, white);
+        return ApplyReflectance(scene, dark, white);
     }
 
     /// <summary>
@@ -70,7 +81,7 @@ public static class HsiCalibration
     ///     shared across all rows). This is common when the reference is captured as a
     ///     single scan line from a push-broom sensor.
     /// </summary>
-    private static HsiCube Calibrate(HsiCube raw, HsiCube dark, HsiCube white)
+    public static HsiCube ApplyReflectance(HsiCube raw, HsiCube dark, HsiCube white)
     {
         var header = raw.Header;
         var bands = header.Bands;

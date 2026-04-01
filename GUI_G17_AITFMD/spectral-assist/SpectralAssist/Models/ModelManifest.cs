@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace SpectralAssist.Models;
@@ -71,6 +71,21 @@ public class TrainingConfig
 
 public class InputSpec
 {
+    /// <summary>4 = NCHW (eldre 2D-flyt); 5 = NCDHW for 3D-CNN (1,1,C,H,W).</summary>
+    [JsonPropertyName("input_rank")]
+    public int? InputRank { get; set; }
+
+    [JsonPropertyName("tensor_layout")]
+    public string TensorLayout { get; set; } = "";
+
+    /// <summary>Eks.: [1, 1, 16, 64, 64] for statisk 3D-CNN-eksport.</summary>
+    [JsonPropertyName("input_shape")]
+    public List<int>? InputShape { get; set; }
+
+    /// <summary>Alias for spektral dybde ved 3D-CNN (kan være lik <see cref="ExpectedBands"/>).</summary>
+    [JsonPropertyName("spectral_bands")]
+    public int? SpectralBands { get; set; }
+
     [JsonPropertyName("expected_bands")]
     public int ExpectedBands { get; set; }
 

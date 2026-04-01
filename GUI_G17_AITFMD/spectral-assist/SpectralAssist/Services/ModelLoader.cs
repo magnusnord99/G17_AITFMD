@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using Microsoft.ML.OnnxRuntime;
@@ -8,8 +8,7 @@ namespace SpectralAssist.Services;
 
 public class ModelLoader : IDisposable
 {
-    private ModelPackage? _loadedModel;
-
+    /// <summary>Laster manifest + ONNX-session. Disponeres av <see cref="Onnx3DCnnClassifier.SetModel"/> / tilsvarende.</summary>
     public ModelPackage LoadPackage(string packageDir)
     {
         // Read manifest
@@ -23,18 +22,15 @@ public class ModelLoader : IDisposable
         options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
         var session = new InferenceSession(onnxPath, options);
 
-        _loadedModel = new ModelPackage
+        return new ModelPackage
         {
             Manifest = manifest,
             Session = session
         };
-
-        return _loadedModel;
     }
-    
+
     public void Dispose()
     {
-        _loadedModel?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

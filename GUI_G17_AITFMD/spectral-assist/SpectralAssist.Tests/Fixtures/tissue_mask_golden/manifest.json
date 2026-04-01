@@ -1,0 +1,13 @@
+{
+  "layout": "hwb_c_order",
+  "lines": 16,
+  "samples": 16,
+  "bands": 16,
+  "method": "mean_std_percentile",
+  "q_mean": 0.5,
+  "q_std": 0.4,
+  "min_object_size": 4,
+  "min_hole_size": 4,
+  "t_mean": 0.5054826140403748,
+  "t_std": 0.271035373210907
+}

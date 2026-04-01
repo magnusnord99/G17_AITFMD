@@ -1,0 +1,27 @@
+# Skip-connection 3D CNN.
+#
+# Arkitektur:
+#   Entry : valid Conv3d(kernel=[4,3,3]) → GroupNorm → ReLU → MaxPool(1,2,2)
+#   Stages: N × SkipBlock3D (same-padding conv + skip-connection)
+#           + MaxPool(1,2,2) mellom de første `max_pool_layers` stagene
+#   Hode  : AdaptiveAvgPool3d(1) → Dropout → Linear
+#
+# Vs. baseline_3dcnn: dypere kanalstack, residual blokker med same-padding
+# Vs. resnet_3dcnn  : GroupNorm (ikke BN), spatial pooling (1,2,2), valid entry conv
+
+model:
+  name: "skip_cnn3d"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  dropout: 0.35
+  # channels[0] = entry conv, resten = residualstages
+  channels: [16, 32, 64]
+  # Valid conv-kernel for entry (spektral D × H × W)
+  kernel_size: [4, 3, 3]
+  # Antall MaxPool(1,2,2) som legges inn mellom residualblokker (etter entry-pool)
+  max_pool_layers: 1
+
+# L2 (weight_decay) settes i train.yaml → optimizer.

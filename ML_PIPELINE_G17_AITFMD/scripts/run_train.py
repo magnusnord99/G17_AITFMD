@@ -62,6 +62,59 @@ def _pick_device() -> torch.device:
     return torch.device("cpu")
 
 
+def _print_model_architecture_summary(
+    model: nn.Module,
+    model_yaml: dict[str, Any],
+    model_config_path: Path,
+) -> None:
+    """Skriv YAML-referanse og faktisk nn.Module (Conv3d-kjerner, kanaler, parametre) til stdout."""
+    print("[train] --- modell / arkitektur ---", flush=True)
+    print(f"[train] model_config: {model_config_path.resolve()}", flush=True)
+    arch = None
+    if isinstance(model_yaml.get("model"), dict):
+        arch = model_yaml["model"].get("architecture")
+    if arch is None:
+        arch = model_yaml.get("architecture")
+    if isinstance(arch, dict) and arch:
+        keys = (
+            "in_channels",
+            "num_classes",
+            "channels",
+            "kernel_size",
+            "dropout",
+            "base_channels",
+            "num_blocks",
+        )
+        bits = [f"{k}={arch[k]!r}" for k in keys if k in arch]
+        if bits:
+            print(f"[train] YAML architecture: {', '.join(bits)}", flush=True)
+
+    n_params = sum(p.numel() for p in model.parameters())
+    n_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(
+        f"[train] Instans: {model.__class__.__name__} | parametre: {n_params:,} (trenbare: {n_train:,})",
+        flush=True,
+    )
+    for name, m in model.named_modules():
+        if isinstance(m, nn.Conv3d):
+            print(
+                f"[train]   Conv3d {name}: in={m.in_channels} out={m.out_channels} "
+                f"kernel={tuple(m.kernel_size)}",
+                flush=True,
+            )
+        elif isinstance(m, nn.MaxPool3d):
+            print(
+                f"[train]   MaxPool3d {name}: kernel={tuple(m.kernel_size)} stride={tuple(m.stride)}",
+                flush=True,
+            )
+        elif isinstance(m, nn.Linear):
+            print(
+                f"[train]   Linear {name}: in={m.in_features} out={m.out_features}",
+                flush=True,
+            )
+    print("[train] --- (slutt arkitektur) ---", flush=True)
+
+
 def _binary_metrics(logits: torch.Tensor, targets: torch.Tensor) -> dict[str, float]:
     preds = torch.argmax(logits, dim=1)
     tp = int(((preds == 1) & (targets == 1)).sum().item())
@@ -402,6 +455,32 @@ def _save_training_logs(
             f.write(f"  F1:        {best_row.get('val_f1', 0):.4f}\n")
 
 
+def _derive_dataset_name(
+    data_cfg: dict,
+    manifest_path: Path,
+    cube_root_raw: str | None,
+) -> str:
+    """Return a short, consistent dataset tag for use in the plot directory path.
+
+    Priority:
+    1. Explicit ``data.dataset_name`` in the train config.
+    2. Last path component of ``data.cube_root`` (the raw string, so it works
+       even if the path doesn't exist on disk yet).
+    3. Manifest filename stem with ``_manifest`` and ``_baseline`` stripped.
+    """
+    explicit = str(data_cfg.get("dataset_name", "")).strip()
+    if explicit:
+        return explicit
+
+    if cube_root_raw:
+        name = Path(cube_root_raw).name
+        if name:
+            return name
+
+    stem = manifest_path.stem
+    return stem.replace("_manifest", "").replace("_baseline", "") or "unknown"
+
+
 def main() -> int:
     args = _parse_args()
 
@@ -536,6 +615,7 @@ def main() -> int:
     )
 
     model = build_model_from_config(model_config_path).to(device)
+    _print_model_architecture_summary(model, model_cfg, model_config_path)
 
     loss_cfg = cfg.get("loss", {})
     class_weighting = bool(loss_cfg.get("class_weighting", False))
@@ -587,6 +667,19 @@ def main() -> int:
     print(f"[train] device={device.type} model={model_name}")
     print(f"[train] manifest={manifest_path}")
     print(f"[train] train={len(train_ds)} val={len(val_ds)}")
+
+    try:
+        x0, _ = train_ds[0]
+        x0 = x0.unsqueeze(0).to(device)
+        with torch.no_grad():
+            model(x0)
+    except RuntimeError as e:
+        print(
+            "[train] ERROR: første batch feilet i forward (typisk patch for liten for Conv3d-stacken / "
+            f"baseline_3dcnn). Original: {e}",
+            flush=True,
+        )
+        raise SystemExit(1) from e
 
     history: list[dict[str, float | int]] = []
     best_val_loss = float("inf")
@@ -686,7 +779,8 @@ def main() -> int:
     report_path = reports_dir / f"train_report_{model_name}_{run_id}.json"
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
-    run_plots_dir = plots_dir / f"{model_name}_{run_id}"
+    dataset_name = _derive_dataset_name(data_cfg, manifest_path, cube_root_raw)
+    run_plots_dir = plots_dir / model_name / dataset_name / run_id
     hp_path = _save_hyperparams_snapshot(
         run_plots_dir,
         run_id=run_id,

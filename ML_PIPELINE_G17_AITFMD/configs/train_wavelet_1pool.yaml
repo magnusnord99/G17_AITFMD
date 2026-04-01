@@ -1,0 +1,50 @@
+seed: 42
+
+model_config: "configs/models/baseline_3dcnn_1pool.yaml"
+
+data:
+  cube_manifest_csv: "data/interim/wavelet_manifest.csv"
+  cube_root: "data/processed_V2/wavelet16"
+  mask_root: "data/interim/masks/final_mask"
+  patch_h: 64
+  patch_w: 64
+  stride_h: 32
+  stride_w: 32
+  min_tissue_ratio: 0.3
+  patches_per_cube: 64
+  use_all_patches: false
+  fold_index: 0
+  batch_size: 16
+  max_cached_cubes: 12
+  num_workers: 0
+
+optimizer:
+  name: "adam"
+  lr: 5.0e-5
+  weight_decay: 1.0e-4
+
+scheduler:
+  enabled: true
+  name: "cosine"
+  t_max_epochs: 50
+
+loss:
+  name: "cross_entropy"
+  class_weighting: true
+
+trainer:
+  max_epochs: 50
+  early_stopping_patience: 13
+  mixed_precision: true
+  save_best_only: true
+
+paths:
+  checkpoints_dir: "outputs/checkpoints"
+  logs_dir: "outputs/logs"
+  reports_dir: "outputs/reports"
+  plots_dir: "outputs/plots"
+
+splits:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15

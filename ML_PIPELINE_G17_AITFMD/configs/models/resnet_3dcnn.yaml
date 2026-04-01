@@ -16,7 +16,5 @@ architecture:
 input:
   patch_h: 64
   patch_w: 64
-  spectral_bands: 16
 
-regularization:
-  weight_decay: 1.0e-4
+# L2: train.yaml → optimizer.weight_decay

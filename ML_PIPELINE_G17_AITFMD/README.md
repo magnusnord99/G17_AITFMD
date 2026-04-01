@@ -35,6 +35,19 @@ hsi_3dcnn_project/
     utils/
 ```
 
+## Python (maskinlæring)
+
+**Aktiver alltid prosjektets virtuelle miljø** før du kjører `python`, `pip` eller skript under `scripts/` i denne mappen:
+
+```bash
+cd ML_PIPELINE_G17_AITFMD   # rot for ML-pipelinen
+source .venv/bin/activate   # macOS/Linux
+```
+
+Uten aktivt `.venv` mangler ofte `numpy`, `scikit-image` osv., og stier til `src/` feiler.
+
+**3D-CNN → ONNX → SpectralAssist:** se [`docs/CNN3D_ONNX_WORKFLOW.md`](docs/CNN3D_ONNX_WORKFLOW.md) og `scripts/export_cnn3d_onnx.py`.
+
 ## Notes
 
 - **Gjenoppbygging av avg16 / PCA / wavelet / AE med vevsmaske:** se [`docs/DATASET_REBUILD.md`](docs/DATASET_REBUILD.md).

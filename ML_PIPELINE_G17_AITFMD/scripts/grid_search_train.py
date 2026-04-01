@@ -8,6 +8,8 @@ Bruk:
   python scripts/grid_search_train.py --grid configs/grid_search/nightly.yaml --max-runs 2
 
 Krever at run_train.py fullfører (hyperparams.yaml / hyperparams.json skrives ved suksess).
+
+Grid-fil: bruk `grid:` (kartesisk produkt) eller `grid_runs:` (liste med fullstendige override-sett per run).
 """
 
 from __future__ import annotations
@@ -44,9 +46,43 @@ def _set_nested(cfg: dict[str, Any], dotted: str, value: Any) -> None:
 
 def _load_grid_spec(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or "grid" not in data:
-        raise ValueError("Grid file must contain a top-level 'grid:' mapping")
+    if not isinstance(data, dict):
+        raise ValueError("Grid file must be a top-level mapping")
+    if not data.get("grid") and not data.get("grid_runs"):
+        raise ValueError("Grid file must contain non-empty 'grid:' or 'grid_runs:'")
     return data
+
+
+def _expand_grid_spec(spec: dict[str, Any]) -> tuple[list[str], list[dict[str, Any]]]:
+    """
+    Bygg liste med override-dict per kjøring.
+
+    - `grid`: kartesisk produkt (som før).
+    - `grid_runs`: eksplisitt liste — én dict per run (f.eks. koblede patch/stride).
+    """
+    if spec.get("grid_runs"):
+        runs = spec["grid_runs"]
+        if not isinstance(runs, list) or not runs:
+            raise ValueError("grid_runs must be a non-empty list")
+        overrides_list: list[dict[str, Any]] = []
+        all_keys: set[str] = set()
+        for item in runs:
+            if not isinstance(item, dict) or not item:
+                raise ValueError("each grid_runs entry must be a non-empty dict")
+            o = dict(item)
+            overrides_list.append(o)
+            all_keys.update(o.keys())
+        keys_sorted = sorted(all_keys)
+        return keys_sorted, overrides_list
+
+    grid = spec["grid"]
+    if not isinstance(grid, dict) or not grid:
+        raise ValueError("grid is empty")
+    keys = list(grid.keys())
+    value_lists = [grid[k] if isinstance(grid[k], list) else [grid[k]] for k in keys]
+    combinations = list(itertools.product(*value_lists))
+    overrides_list = [dict(zip(keys, combo)) for combo in combinations]
+    return keys, overrides_list
 
 
 def _short_tag(overrides: dict[str, Any]) -> str:
@@ -122,14 +158,16 @@ def main() -> int:
         print(f"[grid] ERROR: base config not found: {base_path}", flush=True)
         return 1
 
-    grid: dict[str, list[Any]] = spec["grid"]
-    if not grid:
-        print("[grid] ERROR: grid is empty", flush=True)
+    # fixed_overrides: appliseres på alle runs, men inngår IKKE i filnavn-taggen.
+    # Bruk dette for verdier med '/' (f.eks. model_config) som ellers brekker filstier.
+    fixed_overrides: dict[str, Any] = spec.get("fixed_overrides") or {}
+
+    try:
+        keys, combinations = _expand_grid_spec(spec)
+    except ValueError as e:
+        print(f"[grid] ERROR: {e}", flush=True)
         return 1
 
-    keys = list(grid.keys())
-    value_lists = [grid[k] if isinstance(grid[k], list) else [grid[k]] for k in keys]
-    combinations = list(itertools.product(*value_lists))
     if args.max_runs is not None:
         combinations = combinations[: max(0, args.max_runs)]
 
@@ -146,10 +184,14 @@ def main() -> int:
     print(f"[grid] session_dir={session_dir}", flush=True)
     print(f"[grid] summary_csv={summary_csv}", flush=True)
 
+    if fixed_overrides:
+        print(f"[grid] fixed_overrides={fixed_overrides}", flush=True)
+
     if args.dry_run:
-        for i, combo in enumerate(combinations):
-            overrides = dict(zip(keys, combo))
+        for i, overrides in enumerate(combinations):
             print(f"  {i+1:3d}  {overrides}", flush=True)
+        if fixed_overrides:
+            print(f"  (+ fixed_overrides applied to all runs: {fixed_overrides})")
         return 0
 
     fieldnames = [
@@ -167,10 +209,13 @@ def main() -> int:
         writer = csv.DictWriter(fcsv, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
 
-        for i, combo in enumerate(combinations):
-            overrides = dict(zip(keys, combo))
+        for i, overrides in enumerate(combinations):
             tag = _short_tag(overrides)
             cfg_copy = copy.deepcopy(yaml.safe_load(base_path.read_text(encoding="utf-8")))
+            # Appliser faste overrides først (vises ikke i filnavn)
+            for k, v in fixed_overrides.items():
+                _set_nested(cfg_copy, k, v)
+            # Deretter grid-kombinasjonen for denne kjøringen
             for k, v in overrides.items():
                 _set_nested(cfg_copy, k, v)
 
@@ -222,7 +267,7 @@ def main() -> int:
                 row["error"] = "run_train exited non-zero; see terminal output above"
 
             for k in keys:
-                row[k] = overrides[k]
+                row[k] = overrides.get(k, "")
 
             writer.writerow(row)
             fcsv.flush()

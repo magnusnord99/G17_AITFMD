@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.1",
+  "generator": "export_cnn3d_onnx.py",
+  "metadata": {
+    "name": "cnn3d_export",
+    "version": "1.0.0",
+    "created": "2026-03-24T11:37:01.505989+00:00",
+    "author": "ML pipeline",
+    "description": "3D CNN (NCDHW); matches pytorch_backend (N,H,W,C) -> (N,1,C,H,W)"
+  },
+  "training_config": {
+    "checkpoint": "/Volumes/DJI/G17_AITFMD /ML_PIPELINE_G17_AITFMD/outputs/checkpoints/baseline_3dcnn_20260324_083658_last.pt",
+    "model_config": "/Volumes/DJI/G17_AITFMD /ML_PIPELINE_G17_AITFMD/configs/models/baseline_3dcnn.yaml"
+  },
+  "input_spec": {
+    "input_rank": 5,
+    "tensor_layout": "NCDHW",
+    "input_shape": [
+      1,
+      1,
+      16,
+      32,
+      32
+    ],
+    "spectral_bands": 16,
+    "expected_bands": 16,
+    "spatial_patch_size": [
+      32,
+      32
+    ],
+    "dtype": "float32"
+  },
+  "output_spec": {
+    "type": "logits",
+    "classes": [
+      "class_0",
+      "class_1"
+    ]
+  },
+  "artifacts": {
+    "pipeline_onnx": "model.onnx"
+  }
+}

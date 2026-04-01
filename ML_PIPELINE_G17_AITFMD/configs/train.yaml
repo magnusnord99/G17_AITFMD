@@ -8,10 +8,10 @@ data:
   cube_root: "data/processed/unpatched_V2/pca16"
   mask_root: "data/interim/masks/final_mask"
   # Obligatorisk for run_train.py (ingen standardverdier i kode): patch + stride
-  patch_h: 32
-  patch_w: 32
-  stride_h: 16
-  stride_w: 16
+  patch_h: 64
+  patch_w: 64
+  stride_h: 32
+  stride_w: 32
   min_tissue_ratio: 0.3
   # patches_per_cube: antall tilfeldige patcher per kube PER EPOKE (når use_all_patches: false)
   patches_per_cube: 64
@@ -24,10 +24,11 @@ data:
   # 0 = én prosess, én delt kube-cache. >0 = egen cache per worker (ofte tregere med shuffle)
   num_workers: 0
 
+# Adam — eneste sted for L2 (weight_decay); modell-*.yaml inneholder ikke dette.
 optimizer:
   name: "adam"
-  lr: 1.0e-5 
-  weight_decay: 7.0e-4
+  lr: 5.0e-5 
+  weight_decay: 1.0e-4
 
 scheduler:
   enabled: true
@@ -40,7 +41,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 10
+  early_stopping_patience: 7
   mixed_precision: true
   save_best_only: true
 

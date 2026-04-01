@@ -18,13 +18,19 @@ import yaml
 from src.models.cnn3d.baseline import Baseline3DCNN
 from src.models.cnn3d.deeper import Deeper3DCNN
 from src.models.cnn3d.lightweight import Lightweight3DCNN
+from src.models.cnn3d.multikernel import MultiKernelCNN3D
 from src.models.cnn3d.resnet_style import ResNet3DCNN
+from src.models.cnn3d.se import SECNN3D
+from src.models.cnn3d.skip import SkipCNN3D
 
 _REGISTRY: dict[str, type[nn.Module]] = {
     "baseline_3dcnn": Baseline3DCNN,
     "lightweight_3dcnn": Lightweight3DCNN,
     "resnet_3dcnn": ResNet3DCNN,
     "deeper_3dcnn": Deeper3DCNN,
+    "skip_cnn3d": SkipCNN3D,
+    "multikernel_cnn3d": MultiKernelCNN3D,
+    "se_cnn3d": SECNN3D,
 }
 
 
@@ -43,7 +49,8 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
         raise ValueError(f"Unknown model: {name}. Available: {list(_REGISTRY)}")
 
     model_cfg = cfg.get("model", cfg)
-    arch = model_cfg.get("architecture", model_cfg)
+    # configs/models/*.yaml har ofte `architecture:` på rot (ved siden av `model:`), ikke under `model`.
+    arch = model_cfg.get("architecture") or cfg.get("architecture") or model_cfg
 
     in_ch = int(arch.get("in_channels", 1))
     num_classes = int(arch.get("num_classes", 2))
@@ -57,12 +64,15 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
     cls = _REGISTRY[name]
 
     if name == "baseline_3dcnn":
+        mpl = arch.get("max_pool_layers")
+        mpl_kw = {} if mpl is None else {"max_pool_layers": int(mpl)}
         return cls(
             in_channels=in_ch,
             num_classes=num_classes,
             channels=list(arch.get("channels", [32, 64, 128])),
             kernel_size=kernel_size,
             dropout=dropout,
+            **mpl_kw,
         )
     if name == "lightweight_3dcnn":
         return cls(
@@ -88,6 +98,48 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
             num_blocks=list(arch.get("num_blocks", [2, 2, 2])),
             kernel_size=kernel_size,
             dropout=dropout,
+        )
+
+    if name == "skip_cnn3d":
+        return cls(
+            in_channels=in_ch,
+            num_classes=num_classes,
+            channels=list(arch.get("channels", [16, 32, 64])),
+            kernel_size=kernel_size,
+            max_pool_layers=int(arch.get("max_pool_layers", 1)),
+            dropout=dropout,
+        )
+
+    if name == "multikernel_cnn3d":
+        def _to_k3(v: object, default: list[int]) -> tuple[int, int, int]:
+            if isinstance(v, (list, tuple)):
+                return tuple(int(x) for x in v)  # type: ignore[return-value]
+            return tuple(default)  # type: ignore[return-value]
+
+        ka = _to_k3(arch.get("kernel_a"), [3, 3, 3])
+        kb = _to_k3(arch.get("kernel_b"), [1, 3, 3])
+        return cls(
+            in_channels=in_ch,
+            num_classes=num_classes,
+            channels=list(arch.get("channels", [16, 32, 64])),
+            kernel_size=kernel_size,
+            kernel_a=ka,
+            kernel_b=kb,
+            max_pool_layers=int(arch.get("max_pool_layers", 1)),
+            dropout=dropout,
+        )
+
+    if name == "se_cnn3d":
+        mpl = arch.get("max_pool_layers")
+        mpl_kw: dict = {} if mpl is None else {"max_pool_layers": int(mpl)}
+        return cls(
+            in_channels=in_ch,
+            num_classes=num_classes,
+            channels=list(arch.get("channels", [16, 32])),
+            kernel_size=kernel_size,
+            dropout=dropout,
+            se_reduction=int(arch.get("se_reduction", 4)),
+            **mpl_kw,
         )
 
     raise ValueError(f"No builder for model: {name}")
