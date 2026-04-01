@@ -31,8 +31,9 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
         <PackageReference Include="PanAndZoom" Version="11.3.9.1" />
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     </ItemGroup>
-
+    
     <!-- macOS: CPU + CoreML -->
     <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
         <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
