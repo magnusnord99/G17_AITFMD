@@ -91,10 +91,14 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
             dropout=dropout,
         )
     if name == "resnet_3dcnn":
+        stage_channels = arch.get("stage_channels")
+        if stage_channels is None:
+            base_channels = int(arch.get("base_channels", 16))
+            stage_channels = [base_channels, base_channels * 2, base_channels * 4]
         return cls(
             in_channels=in_ch,
             num_classes=num_classes,
-            base_channels=int(arch.get("base_channels", 32)),
+            stage_channels=list(stage_channels),
             num_blocks=list(arch.get("num_blocks", [2, 2, 2])),
             kernel_size=kernel_size,
             dropout=dropout,

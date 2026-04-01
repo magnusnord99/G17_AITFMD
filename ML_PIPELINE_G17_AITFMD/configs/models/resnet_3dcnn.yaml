@@ -9,7 +9,7 @@ architecture:
   in_channels: 1
   num_classes: 2
   dropout: 0.30
-  base_channels: 32
+  stage_channels: [16, 32, 64]
   num_blocks: [2, 2, 2]  # blocks per stage
   kernel_size: 3
 
