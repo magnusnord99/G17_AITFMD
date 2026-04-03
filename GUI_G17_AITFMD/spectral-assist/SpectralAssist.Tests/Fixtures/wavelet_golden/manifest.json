@@ -1,0 +1,11 @@
+{
+  "layout": "hwb_c_order",
+  "lines": 4,
+  "samples": 4,
+  "bands_in": 275,
+  "bands_out": 16,
+  "feature_mode": "approx_padded",
+  "wavelet": "db2",
+  "mode": "periodization",
+  "pad_mode": "edge"
+}
