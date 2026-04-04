@@ -17,4 +17,7 @@ public class ClassificationResult
     public int TotalPossible { get; init; }
     public int Evaluated { get; init; }
     public int Skipped { get; init; }
+    
+    // ToDo: Remove this before deployment
+    public string ExecutionProvider { get; init; } = "Unknown";
 }

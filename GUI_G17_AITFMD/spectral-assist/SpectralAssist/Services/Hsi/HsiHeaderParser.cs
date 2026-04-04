@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using SpectralAssist.Models;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Hsi;
 
 public static class HsiHeaderParser
 {

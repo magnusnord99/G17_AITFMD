@@ -1,25 +1,24 @@
-using System;
+using System.Threading.Tasks;
+using SpectralAssist.Models;
 
 namespace SpectralAssist.Services.Preprocessing;
 
 /// <summary>
-/// Matches Python <c>np.clip(cube, clip_min, clip_max)</c> in <c>calibrateClip.clip_cube</c>.
+/// Clips reflectance values in-place to [clipMin, clipMax], parallelized by band.
+/// Each band is a contiguous memory slice so threads don't contend on the same cache lines.
 /// </summary>
 public static class ReflectanceClip
 {
-    public static FloatCubeHWB Apply(FloatCubeHWB cube, float clipMin, float clipMax)
+    public static void ApplyInPlace(HsiCube cube, float clipMin, float clipMax)
     {
-        var n = cube.Data.Length;
-        var o = new float[n];
-        var src = cube.Data;
-        for (var i = 0; i < n; i++)
+        Parallel.For(0, cube.Bands, b =>
         {
-            var v = src[i];
-            if (v < clipMin) v = clipMin;
-            else if (v > clipMax) v = clipMax;
-            o[i] = v;
-        }
-
-        return new FloatCubeHWB(cube.Lines, cube.Samples, cube.Bands, o);
+            var band = cube.GetBand(b);
+            for (var i = 0; i < band.Length; i++)
+            {
+                if (band[i] < clipMin) band[i] = clipMin;
+                else if (band[i] > clipMax) band[i] = clipMax;
+            }
+        });
     }
 }

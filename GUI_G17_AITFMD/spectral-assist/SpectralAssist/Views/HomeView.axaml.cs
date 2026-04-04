@@ -1,5 +1,4 @@
-﻿
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using SpectralAssist.ViewModels;
 
 namespace SpectralAssist.Views;

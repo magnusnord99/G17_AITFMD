@@ -1,10 +1,13 @@
+using SpectralAssist.Models;
+using SpectralAssist.Services;
 using SpectralAssist.Services.Preprocessing;
 using Xunit;
 
 namespace SpectralAssist.Tests;
 
 /// <summary>
-/// Parity with Python pipeline (see ML_PIPELINE_G17_AITFMD/scripts/export_baseline_golden.py).
+/// Parity with Python pipeline using golden files (see ML_PIPELINE_G17_AITFMD/scripts/export_baseline_golden.py).
+/// Tests run the BSQ pipeline and compare against Python-generated expected outputs.
 /// Regenerate golden files after changing preprocessing math.
 /// </summary>
 public class BaselinePreprocessingParityTests
@@ -14,40 +17,48 @@ public class BaselinePreprocessingParityTests
     [Fact]
     public void Small_chain_through_avg3_matches_python_golden()
     {
-        var opts = new BaselinePreprocessingOptions(
-            calibrationEpsilon: 1e-8f,
-            clipMin: 0f,
-            clipMax: 1f,
-            neighborAverageWindow: 3);
+        var config = new PreprocessingConfig
+        {
+            CalibrationEpsilon = 1e-8f,
+            ClipMin = 0f,
+            ClipMax = 1f,
+            NeighborAverageWindow = 3,
+            // Steps: calibrate → clip → avg3 (no tissue mask, no band_average)
+            Steps = ["calibrate", "clip", "neighbor_average"],
+        };
 
         var raw = GoldenFloatLoader.LoadCube(4, 4, 9, "small_raw.bin");
         var dark = GoldenFloatLoader.LoadCube(4, 4, 9, "small_dark.bin");
         var white = GoldenFloatLoader.LoadCube(4, 4, 9, "small_white.bin");
         var expected = GoldenFloatLoader.LoadCube(4, 4, 3, "small_expect_after_avg3.bin");
 
-        var actual = BaselineSpectralPipeline.RunThroughAvg3(raw, dark, white, opts);
-        var diff = GoldenFloatLoader.MaxAbsDiff(actual, expected);
+        var result = PreprocessingService.Run(raw, dark, white, config);
+        var diff = GoldenFloatLoader.MaxAbsDiff(result.Cube, expected);
         Assert.True(diff < Tolerance, $"max abs diff {diff} >= {Tolerance}");
     }
 
     [Fact]
     public void Chain275_through_avg16_matches_python_golden()
     {
-        var opts = new BaselinePreprocessingOptions(
-            calibrationEpsilon: 1e-8f,
-            clipMin: 0f,
-            clipMax: 1f,
-            neighborAverageWindow: 3,
-            bandReduceOutBands: 16,
-            bandReduceStrategy: "crop");
+        var config = new PreprocessingConfig
+        {
+            CalibrationEpsilon = 1e-8f,
+            ClipMin = 0f,
+            ClipMax = 1f,
+            NeighborAverageWindow = 3,
+            BandReduceOutBands = 16,
+            BandReduceStrategy = "crop",
+            // Steps: calibrate → clip → avg3 → band_average (no tissue mask)
+            Steps = ["calibrate", "clip", "neighbor_average", "band_average"],
+        };
 
         var raw = GoldenFloatLoader.LoadCube(4, 4, 275, "chain275_raw.bin");
         var dark = GoldenFloatLoader.LoadCube(4, 4, 275, "chain275_dark.bin");
         var white = GoldenFloatLoader.LoadCube(4, 4, 275, "chain275_white.bin");
         var expected = GoldenFloatLoader.LoadCube(4, 4, 16, "chain275_expect_avg16.bin");
 
-        var actual = BaselineSpectralPipeline.RunThroughAvg16(raw, dark, white, opts);
-        var diff = GoldenFloatLoader.MaxAbsDiff(actual, expected);
+        var result = PreprocessingService.Run(raw, dark, white, config);
+        var diff = GoldenFloatLoader.MaxAbsDiff(result.Cube, expected);
         Assert.True(diff < Tolerance, $"max abs diff {diff} >= {Tolerance}");
     }
 }

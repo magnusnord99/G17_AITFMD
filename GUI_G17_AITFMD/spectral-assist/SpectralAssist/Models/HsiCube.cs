@@ -15,6 +15,12 @@ public class HsiCube(HsiHeader header, float[] data)
     {
         return data.AsSpan(band * PixelsPerBand, PixelsPerBand);
     }
+
+    /// <summary>Returns a deep copy of this cube with its own data buffer.</summary>
+    public HsiCube Clone()
+    {
+        return new HsiCube(Header, (float[])data.Clone());
+    }
     
     /// <summary>
     /// Extracts a spatial patch from the cube at the given position.
