@@ -119,16 +119,21 @@ public static class WaveletReducer
             throw new ArgumentException("Signal length must be an even integer >= 2.", nameof(signal));
 
         var output = new float[signal.Length / 2];
+        var filterLength = Db2DecLo.Length;
 
         for (var outIndex = 0; outIndex < output.Length; outIndex++)
         {
-            var start = 2 * outIndex;
+            // PyWavelets periodization for db2 aligns the low-pass filter
+            // as a reversed filter with a -1 phase shift relative to the naive formulation.
+            var start = (2 * outIndex) - 1;
             double sum = 0.0;
 
-            for (var k = 0; k < Db2DecLo.Length; k++)
+            for (var k = 0; k < filterLength; k++)
             {
                 var wrapped = (start + k) % signal.Length;
-                sum += signal[wrapped] * Db2DecLo[k];
+                if (wrapped < 0)
+                    wrapped += signal.Length;
+                sum += signal[wrapped] * Db2DecLo[filterLength - 1 - k];
             }
 
             output[outIndex] = (float)sum;
