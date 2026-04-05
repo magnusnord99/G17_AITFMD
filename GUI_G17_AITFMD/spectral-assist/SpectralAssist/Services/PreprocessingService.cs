@@ -56,7 +56,7 @@ public static class PreprocessingService
     /// Run from an already-calibrated cube. The "calibrate" step is skipped even if
     /// present in the step list (calibration already happened at load time).
     /// </summary>
-    public static PreprocessingResult RunFromCalibrated(HsiCube calibrated, PreprocessingConfig config) 
+    public static PreprocessingResult RunFromCalibrated(HsiCube calibrated, PreprocessingConfig config)
     {
         var steps = config.Steps is { Count: > 0 } ? config.Steps : DefaultSteps;
 
@@ -88,7 +88,7 @@ public static class PreprocessingService
                     throw new NotSupportedException($"Unknown preprocessing step: '{step}'");
             }
         }
-        
+
         return new PreprocessingResult(current, mask);
     }
 }

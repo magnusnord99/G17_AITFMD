@@ -20,10 +20,12 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
 
     /// <summary>Cached input/output names from the ONNX model metadata.</summary>
     private string? _inputName;
+
     private string? _outputName;
 
     /// <summary>Whether the session has a GPU execution provider (CUDA/DirectML/etc).</summary>
     private bool _useGpu;
+
     private ExecutionProvider _executionProvider;
 
     public ModelManifest? Manifest => _package?.Manifest;
@@ -80,8 +82,8 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             ExecutionProvider = _executionProvider.ToString(),
         });
     }
-    
-    
+
+
     /// <summary>
     /// Uses IOBinding to keep the output tensor on GPU between patches.
     /// Input is pinned CPU memory (OrtMemoryInfo.DefaultInstance) which ORT copies to GPU once.
@@ -158,7 +160,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
 
         return predictions;
     }
-    
+
 
     /// <summary>
     /// CPU fallback using standard session.Run().
@@ -228,7 +230,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
 
         return predictions;
     }
-    
+
     /// <summary>
     /// Extracts a BSQ patch from the cube into a pre-allocated buffer.
     /// Same layout as <see cref="HsiCube.ExtractPatch"/> but avoids allocation.
@@ -247,7 +249,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             }
         }
     }
-    
+
     /// <summary>
     /// Returns true if any pixel in the patch region is marked as tissue (true) in the mask.
     /// If mask is null, always returns true (classify everything).
@@ -282,7 +284,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             exp[i] /= sum;
         return exp;
     }
-    
+
     private static void ValidateManifest(ModelManifest manifest)
     {
         var spec = manifest.InputSpec;

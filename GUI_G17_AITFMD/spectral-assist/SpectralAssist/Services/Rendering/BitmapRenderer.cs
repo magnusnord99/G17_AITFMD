@@ -33,9 +33,10 @@ public static class BitmapRenderer
                 ptr[i * 4 + 0] = value; // B
                 ptr[i * 4 + 1] = value; // G
                 ptr[i * 4 + 2] = value; // R
-                ptr[i * 4 + 3] = 255;   // A 
+                ptr[i * 4 + 3] = 255; // A 
             }
         }
+
         return bitmap;
     }
 
@@ -48,7 +49,7 @@ public static class BitmapRenderer
         var r = cube.GetBand(redBand);
         var g = cube.GetBand(greenBand);
         var b = cube.GetBand(blueBand);
-        
+
         MinMax(r, out var rMin, out var rRange);
         MinMax(g, out var gMin, out var gRange);
         MinMax(b, out var bMin, out var bRange);
@@ -64,9 +65,10 @@ public static class BitmapRenderer
                 ptr[i * 4 + 0] = Norm(b[i], bMin, bRange); // B
                 ptr[i * 4 + 1] = Norm(g[i], gMin, gRange); // G
                 ptr[i * 4 + 2] = Norm(r[i], rMin, rRange); // R
-                ptr[i * 4 + 3] = 255;                      // A
+                ptr[i * 4 + 3] = 255; // A
             }
         }
+
         return bitmap;
     }
 
@@ -99,11 +101,12 @@ public static class BitmapRenderer
             if (band[i] < low) low = band[i];
             if (band[i] > high) high = band[i];
         }
+
         min = low;
         range = high - low;
         if (range < 1e-6f) range = 1f; // Prevent division by zero
     }
-    
+
     /// <summary>
     /// Renders a horizontal gradient bar showing the active colormap
     /// from threshold to 1.0. Used as a legend for the classification overlay.
@@ -135,10 +138,10 @@ public static class BitmapRenderer
                 for (var y = 0; y < height; y++)
                 {
                     var offset = y * stride + x * 4;
-                    ptr[offset + 0] = colour.B;  // B
-                    ptr[offset + 1] = colour.G;  // G
-                    ptr[offset + 2] = colour.R;  // R
-                    ptr[offset + 3] = 255;       // A
+                    ptr[offset + 0] = colour.B; // B
+                    ptr[offset + 1] = colour.G; // G
+                    ptr[offset + 2] = colour.R; // R
+                    ptr[offset + 3] = 255; // A
                 }
             }
         }
@@ -182,7 +185,7 @@ public static class BitmapRenderer
                         ptr[offset + 0] = colour.B; // B
                         ptr[offset + 1] = colour.G; // G
                         ptr[offset + 2] = colour.R; // R
-                        ptr[offset + 3] = 255;      // A
+                        ptr[offset + 3] = 255; // A
                     }
                 }
             }

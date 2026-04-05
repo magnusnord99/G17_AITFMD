@@ -14,7 +14,7 @@ public enum ExecutionProvider
 
     /// <summary>DirectML via DirectX 12: Any Windows GPU (NVIDIA/AMD/Intel), zero setup required.</summary>
     DirectML,
-    
+
     /// <summary>CoreML: Apple's performant machine learning framework.</summary>
     CoreML,
 }

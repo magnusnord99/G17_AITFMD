@@ -39,6 +39,7 @@ public static class TissueMask
                     locals.localSum[i] += v;
                     locals.localSumSq[i] += v * v;
                 }
+
                 return locals;
             },
             locals =>
@@ -74,7 +75,7 @@ public static class TissueMask
         // Morphological cleanup
         return CleanMask(raw, cube.Lines, cube.Samples, options.MinObjectSize, options.MinHoleSize);
     }
-    
+
 
     /// <summary>Matches Python <c>tissue_mask._clean_mask</c> with skimage fallback API.</summary>
     private static bool[] CleanMask(bool[] rawMask, int height, int width, int minObjectSize, int minHoleSize)
@@ -96,7 +97,7 @@ public static class TissueMask
         var result = (bool[])mask.Clone();
         var visited = new bool[n];
         var stack = new Stack<int>();
-        var comp = new List<int>();  // Reused across components to avoid repeated allocation
+        var comp = new List<int>(); // Reused across components to avoid repeated allocation
 
         for (var idx = 0; idx < n; idx++)
         {
@@ -154,8 +155,8 @@ public static class TissueMask
             inv[i] = !inv[i];
         return inv;
     }
-    
-    
+
+
     /// <summary>Default <c>np.quantile(..., method="linear")</c> (NumPy 2.x).</summary>
     private static float LinearQuantile(float[] values, float q)
     {
@@ -174,7 +175,6 @@ public static class TissueMask
             return sorted[low];
         return sorted[low] + (vi - low) * (sorted[high] - sorted[low]);
     }
-    
 }
 
 /// <summary>Options aligned with Python <c>build_tissue_mask(..., method="mean_std_percentile")</c>.</summary>

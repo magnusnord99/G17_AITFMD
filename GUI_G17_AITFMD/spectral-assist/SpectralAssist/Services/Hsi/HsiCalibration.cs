@@ -53,7 +53,8 @@ public static class HsiCalibration
     /// If both are found, loads them and applies reflectance calibration.
     /// Returns null if either reference is missing (calibration is skipped).
     /// </summary>
-    public static async Task<HsiCube?> TryCalibrateAsync(string sceneHdrPath, HsiCube scene, CancellationToken ct = default)
+    public static async Task<HsiCube?> TryCalibrateAsync(string sceneHdrPath, HsiCube scene,
+        CancellationToken ct = default)
     {
         if (!TryFindReferenceHdrPaths(sceneHdrPath, out var darkPath, out var whitePath))
             return null;

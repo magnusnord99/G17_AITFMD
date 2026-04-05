@@ -135,8 +135,8 @@ public class PreprocessingServiceTests
         for (var i = 0; i < originalBand0.Length; i++)
             Assert.Equal(originalBand0[i], afterBand0[i]);
     }
-    
-    
+
+
     // -- Helpers -- //
 
     private static HsiCube MakeBsqCube(int h, int w, int b, int seed)

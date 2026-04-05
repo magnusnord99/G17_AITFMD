@@ -1,43 +1,68 @@
 {
-  "schema_version": "1.1",
-  "generator": "export_cnn3d_onnx.py",
+  "schema_version": "1.2",
+
   "metadata": {
-    "name": "cnn3d_export",
+    "name": "baseline_3dcnn_bandavg",
     "version": "1.0.0",
     "created": "2026-03-24T11:37:01.505989+00:00",
-    "author": "ML pipeline",
-    "description": "3D CNN (NCDHW); matches pytorch_backend (N,H,W,C) -> (N,1,C,H,W)"
+    "author": "G17 AITFMD",
+    "description": "Baseline 3D-CNN with band-average spectral reduction, trained on HSI dataset v1",
+    "tags": ["3dcnn", "band-average", "binary-classification"]
   },
-  "training_config": {
-    "checkpoint": "/Volumes/DJI/G17_AITFMD /ML_PIPELINE_G17_AITFMD/outputs/checkpoints/baseline_3dcnn_20260324_083658_last.pt",
-    "model_config": "/Volumes/DJI/G17_AITFMD /ML_PIPELINE_G17_AITFMD/configs/models/baseline_3dcnn.yaml"
+
+  "pipeline": {
+    "preprocessing": {
+      "steps": ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"],
+      "params": {
+        "calibration_epsilon": 1e-8,
+        "clip_min": 0.0,
+        "clip_max": 1.0,
+        "neighbor_average_window": 3,
+        "band_reduce_out_bands": 16,
+        "band_reduce_strategy": "crop",
+        "tissue_mask_method": "mean_std_percentile",
+        "tissue_mask_q_mean": 0.5,
+        "tissue_mask_q_std": 0.4,
+        "tissue_mask_min_object_size": 1000,
+        "tissue_mask_min_hole_size": 1000
+      }
+    },
+    "spectral_reducer": {
+      "method": "band_average",
+      "embedded_in_onnx": false,
+      "input_bands": 275,
+      "output_bands": 16
+    },
+    "classifier": {
+      "architecture": "baseline_3dcnn",
+      "patch_size": [32, 32]
+    }
   },
+
   "input_spec": {
     "input_rank": 5,
     "tensor_layout": "NCDHW",
-    "input_shape": [
-      1,
-      1,
-      16,
-      32,
-      32
-    ],
+    "input_shape": [1, 1, 16, 32, 32],
     "spectral_bands": 16,
     "expected_bands": 16,
-    "spatial_patch_size": [
-      32,
-      32
-    ],
+    "spatial_patch_size": [32, 32],
     "dtype": "float32"
   },
+
   "output_spec": {
     "type": "logits",
-    "classes": [
-      "class_0",
-      "class_1"
-    ]
+    "num_classes": 2,
+    "classes": ["normal", "anomaly"]
   },
+
   "artifacts": {
-    "pipeline_onnx": "model.onnx"
+    "model_onnx": "model.onnx"
+  },
+
+  "training": {
+    "dataset": "hsi_dataset_v1",
+    "samples": 3210,
+    "epochs": 50,
+    "val_accuracy": 0.938
   }
 }

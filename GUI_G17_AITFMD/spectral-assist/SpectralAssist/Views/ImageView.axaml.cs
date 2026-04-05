@@ -6,7 +6,7 @@ namespace SpectralAssist.Views;
 public partial class ImageView : UserControl
 {
     private ImageViewModel Vm => (ImageViewModel)DataContext!;
-    
+
     public ImageView()
     {
         InitializeComponent();
