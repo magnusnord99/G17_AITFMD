@@ -15,6 +15,7 @@ from typing import Any
 import torch.nn as nn
 import yaml
 
+from src.models.cnn3d.ad_hybrid_sn import ADHybridSN3DCNN
 from src.models.cnn3d.baseline import Baseline3DCNN
 from src.models.cnn3d.deeper import Deeper3DCNN
 from src.models.cnn3d.lightweight import Lightweight3DCNN
@@ -31,6 +32,7 @@ _REGISTRY: dict[str, type[nn.Module]] = {
     "skip_cnn3d": SkipCNN3D,
     "multikernel_cnn3d": MultiKernelCNN3D,
     "se_cnn3d": SECNN3D,
+    "ad_hybrid_sn_3dcnn": ADHybridSN3DCNN,
 }
 
 
@@ -144,6 +146,27 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
             dropout=dropout,
             se_reduction=int(arch.get("se_reduction", 4)),
             **mpl_kw,
+        )
+
+    if name == "ad_hybrid_sn_3dcnn":
+        ch3 = arch.get("channels_3d", [32, 64])
+        ch2 = arch.get("channels_2d", [128, 128])
+        k3 = int(arch.get("kernel_size_3d", kernel_size if isinstance(kernel_size, int) else 3))
+        k2 = int(arch.get("kernel_size_2d", 3))
+        return cls(
+            in_channels=in_ch,
+            num_classes=num_classes,
+            stem_channels=int(arch.get("stem_channels", 16)),
+            channels_3d=tuple(int(x) for x in ch3),
+            kernel_size_3d=k3,
+            transition_3d_out=int(arch.get("transition_3d_out", 32)),
+            spectral_bands=int(arch.get("spectral_bands", 16)),
+            channels_2d=tuple(int(x) for x in ch2),
+            kernel_size_2d=k2,
+            spatial_attn_kernel=int(arch.get("spatial_attn_kernel", 7)),
+            se_reduction=int(arch.get("se_reduction", 4)),
+            pool_after_stem=bool(arch.get("pool_after_stem", True)),
+            dropout=dropout,
         )
 
     raise ValueError(f"No builder for model: {name}")
