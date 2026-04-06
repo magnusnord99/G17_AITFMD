@@ -8,7 +8,7 @@ Kjør etter valgt checkpoint (se docs/CNN3D_ONNX_WORKFLOW.md).
 Eksempel:
   cd ML_PIPELINE_G17_AITFMD
   source .venv/bin/activate
-  python scripts/export_cnn3d_onnx.py \\
+  python scripts/export/export_cnn3d_onnx.py \\
     --checkpoint outputs/checkpoints/best.pt \\
     --model-config configs/models/baseline_3dcnn.yaml \\
     --spectral-bands 16 --patch-h 64 --patch-w 64 \\
@@ -25,7 +25,7 @@ from pathlib import Path
 
 import torch
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 

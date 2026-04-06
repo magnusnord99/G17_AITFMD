@@ -6,7 +6,7 @@ Activate the ML venv first (same as training), then run from the ML pipeline roo
 
   cd ML_PIPELINE_G17_AITFMD
   source .venv/bin/activate
-  python scripts/export_baseline_golden.py
+  python scripts/export/export_baseline_golden.py
 
 Requires: numpy, and imports from src.preprocessing (same math as training pipeline).
 """
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 

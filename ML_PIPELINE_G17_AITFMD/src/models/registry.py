@@ -18,21 +18,21 @@ import yaml
 from src.models.cnn3d.ad_hybrid_sn import ADHybridSN3DCNN
 from src.models.cnn3d.baseline import Baseline3DCNN
 from src.models.cnn3d.deeper import Deeper3DCNN
-from src.models.cnn3d.lightweight import Lightweight3DCNN
 from src.models.cnn3d.multikernel import MultiKernelCNN3D
+from src.models.cnn3d.msd_dense import MSDDenseCNN3D
 from src.models.cnn3d.resnet_style import ResNet3DCNN
 from src.models.cnn3d.se import SECNN3D
 from src.models.cnn3d.skip import SkipCNN3D
 
 _REGISTRY: dict[str, type[nn.Module]] = {
     "baseline_3dcnn": Baseline3DCNN,
-    "lightweight_3dcnn": Lightweight3DCNN,
     "resnet_3dcnn": ResNet3DCNN,
     "deeper_3dcnn": Deeper3DCNN,
     "skip_cnn3d": SkipCNN3D,
     "multikernel_cnn3d": MultiKernelCNN3D,
     "se_cnn3d": SECNN3D,
     "ad_hybrid_sn_3dcnn": ADHybridSN3DCNN,
+    "msd_dense_3dcnn": MSDDenseCNN3D,
 }
 
 
@@ -75,14 +75,6 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
             kernel_size=kernel_size,
             dropout=dropout,
             **mpl_kw,
-        )
-    if name == "lightweight_3dcnn":
-        return cls(
-            in_channels=in_ch,
-            num_classes=num_classes,
-            channels=list(arch.get("channels", [16, 32, 64])),
-            kernel_size=kernel_size,
-            dropout=dropout,
         )
     if name == "deeper_3dcnn":
         return cls(
@@ -146,6 +138,38 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
             dropout=dropout,
             se_reduction=int(arch.get("se_reduction", 4)),
             **mpl_kw,
+        )
+
+    if name == "msd_dense_3dcnn":
+        def _to_k3(v: object, default: tuple[int, int, int]) -> tuple[int, int, int]:
+            if isinstance(v, (list, tuple)):
+                return tuple(int(x) for x in v)  # type: ignore[return-value]
+            return default
+
+        kb_raw = arch.get("kernel_branches")
+        if kb_raw is None:
+            kernel_branches = ((1, 3, 3), (3, 3, 3), (3, 5, 5))
+        else:
+            kernel_branches = tuple(_to_k3(row, (3, 3, 3)) for row in kb_raw)  # type: ignore[arg-type]
+        pk_raw = arch.get("post_kernel", (3, 3, 3))
+        post_kernel = _to_k3(pk_raw, (3, 3, 3))
+        sk = arch.get("stem_kernel_size", 3)
+        if isinstance(sk, (list, tuple)):
+            stem_kernel_size = tuple(int(x) for x in sk)  # type: ignore[assignment]
+        else:
+            stem_kernel_size = int(sk)
+        return cls(
+            in_channels=in_ch,
+            num_classes=num_classes,
+            stem_channels=int(arch.get("stem_channels", 16)),
+            stem_kernel_size=stem_kernel_size,
+            kernel_branches=kernel_branches,
+            num_layers_per_branch=int(arch.get("num_layers_per_branch", 2)),
+            growth_rate=int(arch.get("growth_rate", 8)),
+            bottleneck_factor=int(arch.get("bottleneck_factor", 4)),
+            post_fusion_channels=int(arch.get("post_fusion_channels", 96)),
+            post_kernel=post_kernel,
+            dropout=dropout,
         )
 
     if name == "ad_hybrid_sn_3dcnn":

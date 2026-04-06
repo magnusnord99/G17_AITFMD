@@ -1,0 +1,26 @@
+# MSD Dense 3D-CNN — tre parallelle dense-grener, fusjon, post-conv, GAP, FC.
+# Samme patch-innstillinger som resnet_3dcnn for wavelet16.
+
+model:
+  name: "msd_dense_3dcnn"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  stem_channels: 16
+  stem_kernel_size: 3
+  kernel_branches:
+    - [1, 3, 3]
+    - [3, 3, 3]
+    - [3, 5, 5]
+  num_layers_per_branch: 2
+  growth_rate: 8
+  bottleneck_factor: 4
+  post_fusion_channels: 96
+  post_kernel: [3, 3, 3]
+  dropout: 0.30
+
+input:
+  patch_h: 64
+  patch_w: 64

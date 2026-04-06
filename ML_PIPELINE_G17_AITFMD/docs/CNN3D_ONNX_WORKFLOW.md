@@ -35,7 +35,7 @@ Aktiver venv, kjør fra `ML_PIPELINE_G17_AITFMD`:
 
 ```bash
 source .venv/bin/activate
-python scripts/export_cnn3d_onnx.py \
+python scripts/export/export_cnn3d_onnx.py \
   --checkpoint path/til/best.pt \
   --model-config configs/models/baseline_3dcnn.yaml \
   --spectral-bands 16 \
