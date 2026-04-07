@@ -1,12 +1,13 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.2",
 
   "metadata": {
     "name": "baseline_3dcnn_bandavg",
     "version": "1.0.0",
     "created": "2026-03-24T11:37:01.505989+00:00",
     "author": "G17 AITFMD",
-    "description": "Baseline 3D-CNN with band-average spectral reduction, trained on HSI dataset v1"
+    "description": "Baseline 3D-CNN with band-average spectral reduction, trained on HSI dataset v1",
+    "tags": ["3dcnn", "band-average", "binary-classification"]
   },
 
   "pipeline": {
@@ -32,17 +33,9 @@
       "input_bands": 275,
       "output_bands": 16
     },
-    "model": {
+    "classifier": {
       "architecture": "baseline_3dcnn",
-      "task": "classification",
-      "total_parameters": 284930,
-      "trainable_parameters": 284930,
-      "layers": {
-        "Conv3d": 4,
-        "BatchNorm3d": 4,
-        "Linear": 2,
-        "Dropout": 2
-      }
+      "patch_size": [32, 32]
     }
   },
 
@@ -51,6 +44,7 @@
     "tensor_layout": "NCDHW",
     "input_shape": [1, 1, 16, 32, 32],
     "spectral_bands": 16,
+    "expected_bands": 16,
     "spatial_patch_size": [32, 32],
     "dtype": "float32"
   },
@@ -61,26 +55,14 @@
     "classes": ["normal", "anomaly"]
   },
 
+  "artifacts": {
+    "model_onnx": "model.onnx"
+  },
+
   "training": {
     "dataset": "hsi_dataset_v1",
     "samples": 3210,
     "epochs": 50,
-    "metrics": {
-      "accuracy": 0.938,
-      "precision": 0.0,
-      "recall": 0.0,
-      "f1": 0.0
-    }
-  },
-
-  "artifacts": {
-    "model_onnx": "model.onnx",
-    "validation_expected_json": "validation_sample_expected.json",
-    "validation_patch_raw_bin": "validation_sample_patch_raw_hwc_f32.bin"
-  },
-
-  "validation": {
-    "status": "pending",
-    "result": null
+    "val_accuracy": 0.938
   }
 }

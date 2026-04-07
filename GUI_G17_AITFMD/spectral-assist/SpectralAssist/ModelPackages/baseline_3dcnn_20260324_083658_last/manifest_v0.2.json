@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.2",
+
+  "metadata": {
+    "name": "resnet_3dcnn",
+    "version": "1.0.0",
+    "created": "2026-04-05T07:08:53Z",
+    "author": "ML Pipeline",
+    "description": "ResNet 3D CNN (NCDHW) for hyperspectral tissue classification",
+    "tags": ["hyperspectral", "medical", "3d-cnn"]
+  },
+
+  "pipeline": {
+    "preprocessing": {
+      "steps": [
+        "calibrate",
+        "clip",
+        "neighbor_average",
+        "tissue_mask",
+        "band_average"
+      ],
+      "params": {
+        "calibration_epsilon": 1e-10,
+        "clip_min": 0.0,
+        "clip_max": 1.0,
+        "neighbor_average_window": 3,
+        "band_reduce_out_bands": 16,
+        "band_reduce_strategy": "crop",
+        "tissue_mask_method": "mean_std_percentile",
+        "tissue_mask_q_mean": 0.5,
+        "tissue_mask_q_std": 0.4,
+        "tissue_mask_min_object_size": 1000,
+        "tissue_mask_min_hole_size": 1000
+      }
+    },
+    "spectral_reducer": {
+      "method": "band_average",
+      "embedded_in_onnx": false,
+      "input_bands": 826,
+      "output_bands": 16
+    },
+    "classifier": {
+      "architecture": "resnet_3dcnn_legacy",
+      "patch_size": [64, 64]
+    }
+  },
+
+  "input_spec": {
+    "input_rank": 5,
+    "tensor_layout": "NCDHW",
+    "input_shape": [1, 1, 16, 64, 64],
+    "spectral_bands": 16,
+    "spatial_patch_size": [64, 64],
+    "dtype": "float32"
+  },
+
+  "output_spec": {
+    "type": "logits",
+    "num_classes": 2,
+    "classes": ["class_0", "class_1"]
+  },
+
+  "network": {
+    "total_parameters": 516290,
+    "trainable_parameters": 516290,
+    "layers": {
+      "Conv3d": 15,
+      "GroupNorm": 15,
+      "ResBlock3D": 6,
+      "MaxPool3d": 4,
+      "Linear": 1,
+      "Dropout": 1,
+      "AdaptiveAvgPool3d": 1,
+      "ReLU": 1
+    }
+  },
+
+  "training": {
+    "dataset": "HistologyHSI-GB",
+    "samples": 3840,
+    "epochs": 50,
+    "metrics": {
+      "accuracy": 0.843,
+      "precision": 0.735,
+      "recall": 0.951,
+      "f1": 0.829
+    }
+  },
+
+  "artifacts": {
+    "model_onnx": "model.onnx",
+    "architecture_diagram": null,
+    "validation": {
+      "expected_json": "validation_sample_expected.json",
+      "patch_raw_bin": "validation_sample_patch_raw_hwc_f32.bin",
+      "patch_preprocessed_bin": "validation_sample_patch_preprocessed_hwc_f32.bin"
+    }
+  },
+
+  "validation": {
+    "status": "pending",
+    "result": null
+  }
+}

@@ -4,19 +4,51 @@ using SpectralAssist.Services.Preprocessing;
 
 namespace SpectralAssist.Models;
 
+/// <summary>
+/// Root DTO for the model package manifest, <c>manifest.json</c>.
+/// Mirrors the JSON contract between the Python export pipeline and the C# application.
+/// The added <see cref="Id"/> and <see cref="DirectoryPath"/> properties are added
+/// by <see cref="Services.ModelPackageService"/> for runtime use.
+/// </summary>
 public class ModelManifest
 {
-    [JsonPropertyName("schema_version")]
-    public string SchemaVersion { get; set; } = "";
+    /// <summary>Unique identifier within ModelPackages/.</summary>
+    [JsonIgnore] public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("generator")]
-    public string Generator { get; set; } = "";
+    /// <summary>Absolute path to the model package directory.</summary>
+    [JsonIgnore] public string DirectoryPath { get; set; } = string.Empty;
+    
+    // --- Display Helpers --- //
+    
+    [JsonIgnore] public string DisplayName =>
+        string.IsNullOrWhiteSpace(Metadata.Name) ? Id : $"{Metadata.Name} v{Metadata.Version}";
+
+    [JsonIgnore] public string ClassesDisplay =>
+        OutputSpec.Classes.Count > 0 ? string.Join(", ", OutputSpec.Classes) : "—";
+
+    [JsonIgnore] public string PatchSizeDisplay =>
+        InputSpec.SpatialPatchSize.Count >= 2
+            ? $"{InputSpec.SpatialPatchSize[0]} × {InputSpec.SpatialPatchSize[1]}"
+            : "—";
+
+    [JsonIgnore] public string ParametersDisplay =>
+        Pipeline.Model.TotalParameters > 0
+            ? $"{Pipeline.Model.TotalParameters:N0}"
+            : "—";
+
+    public override string ToString() => DisplayName;
+    
+    
+    // --- JSON Properties --- //
+    
+    [JsonPropertyName("schema_version")]
+    public string SchemaVersion { get; set; } = string.Empty;
 
     [JsonPropertyName("metadata")]
-    public ModelPackageMetadata Metadata { get; set; } = new();
+    public ManifestMetadata Metadata { get; set; } = new();
 
-    [JsonPropertyName("training_config")]
-    public TrainingConfig TrainingConfig { get; set; } = new();
+    [JsonPropertyName("pipeline")]
+    public PipelineInfo Pipeline { get; set; } = new();
 
     [JsonPropertyName("input_spec")]
     public InputSpec InputSpec { get; set; } = new();
@@ -24,44 +56,143 @@ public class ModelManifest
     [JsonPropertyName("output_spec")]
     public OutputSpec OutputSpec { get; set; } = new();
 
+    [JsonPropertyName("training")]
+    public TrainingInfo Training { get; set; } = new();
+
     [JsonPropertyName("artifacts")]
     public ArtifactPaths Artifacts { get; set; } = new();
 
-    [JsonPropertyName("preprocessing_config")]
-    public PreprocessingConfig? PreprocessingConfig { get; set; }
-
     [JsonPropertyName("validation")]
-    public ValidationSpec? Validation { get; set; }
+    public ValidationStatus Validation { get; set; } = new();
 }
 
-public class ModelPackageMetadata
+/// <summary>Display metadata: name, version, creation date, author, and description.</summary>
+public class ManifestMetadata
 {
     [JsonPropertyName("name")]
-    public string Name { get; set; } = "";
+    public string Name { get; set; } = string.Empty;
 
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "";
+    public string Version { get; set; } = string.Empty;
 
     [JsonPropertyName("created")]
-    public string Created { get; set; } = "";
+    public string Created { get; set; } = string.Empty;
 
     [JsonPropertyName("author")]
-    public string Author { get; set; } = "";
+    public string Author { get; set; } = string.Empty;
 
     [JsonPropertyName("description")]
-    public string Description { get; set; } = "";
+    public string Description { get; set; } = string.Empty;
 }
 
-public class TrainingConfig
+/// <summary>The three stages of the inference pipeline: preprocess → reduce → model.</summary>
+public class PipelineInfo
 {
     [JsonPropertyName("preprocessing")]
-    public string Preprocessing { get; set; } = "";
+    public PreprocessingInfo Preprocessing { get; set; } = new();
 
-    [JsonPropertyName("model_type")]
-    public string ModelType { get; set; } = "";
+    [JsonPropertyName("spectral_reducer")]
+    public SpectralReducerInfo SpectralReducer { get; set; } = new();
 
+    [JsonPropertyName("model")]
+    public ModelInfo Model { get; set; } = new();
+}
+
+/// <summary>Ordered preprocessing steps and their parameters.
+/// Executed by PreprocessingService to replicate the Python training pipeline.</summary>
+public class PreprocessingInfo
+{
+    [JsonPropertyName("steps")]
+    public List<string> Steps { get; set; } = [];
+
+    [JsonPropertyName("params")]
+    public PreprocessingConfig Params { get; set; } = new();
+}
+
+/// <summary>Spectral band reduction stage. May run in C# (band_average)
+/// or be embedded in the ONNX graph (PCA, autoencoder).</summary>
+public class SpectralReducerInfo
+{
+    [JsonPropertyName("method")]
+    public string Method { get; set; } = string.Empty;
+
+    [JsonPropertyName("embedded_in_onnx")]
+    public bool EmbeddedInOnnx { get; set; }
+
+    /// <summary>Bands entering the reducer (e.g. 826 or 275).
+    /// Equals input_spec.spectral_bands when <c>embedded_in_onnx</c> is true.</summary>
+    [JsonPropertyName("input_bands")]
+    public int InputBands { get; set; }
+
+    /// <summary>Bands after reduction (e.g. 16).
+    /// Equals input_spec.spectral_bands when <c>embedded_in_onnx</c> is false.</summary>
+    [JsonPropertyName("output_bands")]
+    public int OutputBands { get; set; }
+}
+
+/// <summary>The neural network stage of the pipeline: architecture name, task type,
+/// parameter counts, and a breakdown of layer types.</summary>
+public class ModelInfo
+{
+    [JsonPropertyName("architecture")]
+    public string Architecture { get; set; } = string.Empty;
+
+    /// <summary>The model's inference task, e.g. "classification" or "segmentation".
+    /// Determines how the app interprets and displays the output.</summary>
+    [JsonPropertyName("task")]
+    public string Task { get; set; } = string.Empty;
+
+    [JsonPropertyName("total_parameters")]
+    public long TotalParameters { get; set; }
+
+    [JsonPropertyName("trainable_parameters")]
+    public long TrainableParameters { get; set; }
+
+    /// <summary>Layer type to count, e.g. { "Conv3d": 15, "Linear": 1 }.</summary>
+    [JsonPropertyName("layers")]
+    public Dictionary<string, int> Layers { get; set; } = new();
+}
+
+/// <summary>The ONNX model's expected input tensor shape, layout, and data type.</summary>
+public class InputSpec
+{
+    [JsonPropertyName("input_rank")]
+    public int InputRank { get; set; }
+
+    [JsonPropertyName("tensor_layout")]
+    public string TensorLayout { get; set; } = string.Empty;
+
+    [JsonPropertyName("input_shape")]
+    public List<int> InputShape { get; set; } = [];
+
+    [JsonPropertyName("spectral_bands")]
+    public int SpectralBands { get; set; }
+
+    [JsonPropertyName("spatial_patch_size")]
+    public List<int> SpatialPatchSize { get; set; } = [];
+
+    [JsonPropertyName("dtype")]
+    public string Dtype { get; set; } = string.Empty;
+}
+
+/// <summary>The ONNX model's output: type (logits/softmax), class count, and class names.</summary>
+public class OutputSpec
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonPropertyName("num_classes")]
+    public int NumClasses { get; set; }
+
+    [JsonPropertyName("classes")]
+    public List<string> Classes { get; set; } = [];
+}
+
+/// <summary>Training context: dataset, sample count, epoch count, and evaluation metrics.</summary>
+public class TrainingInfo
+{
     [JsonPropertyName("dataset")]
-    public string Dataset { get; set; } = "";
+    public string Dataset { get; set; } = string.Empty;
 
     [JsonPropertyName("samples")]
     public int Samples { get; set; }
@@ -69,58 +200,73 @@ public class TrainingConfig
     [JsonPropertyName("epochs")]
     public int Epochs { get; set; }
 
-    [JsonPropertyName("val_accuracy")]
-    public double ValAccuracy { get; set; }
-
-    [JsonPropertyName("classes")]
-    public List<string> Classes { get; set; } = [];
+    [JsonPropertyName("metrics")]
+    public TrainingMetrics Metrics { get; set; } = new();
 }
 
-public class InputSpec
+/// <summary>Evaluation metrics from the training validation set.</summary>
+public class TrainingMetrics
 {
-    /// <summary>4 = NCHW (eldre 2D-flyt); 5 = NCDHW for 3D-CNN (1,1,C,H,W).</summary>
-    [JsonPropertyName("input_rank")]
-    public int? InputRank { get; set; }
+    [JsonPropertyName("accuracy")]
+    public double Accuracy { get; set; }
 
-    [JsonPropertyName("tensor_layout")]
-    public string TensorLayout { get; set; } = "";
+    [JsonPropertyName("precision")]
+    public double Precision { get; set; }
 
-    /// <summary>Eks.: [1, 1, 16, 64, 64] for statisk 3D-CNN-eksport.</summary>
-    [JsonPropertyName("input_shape")]
-    public List<int>? InputShape { get; set; }
+    [JsonPropertyName("recall")]
+    public double Recall { get; set; }
 
-    /// <summary>Alias for spektral dybde ved 3D-CNN (kan være lik <see cref="ExpectedBands"/>).</summary>
-    [JsonPropertyName("spectral_bands")]
-    public int? SpectralBands { get; set; }
-
-    [JsonPropertyName("expected_bands")]
-    public int ExpectedBands { get; set; }
-
-    [JsonPropertyName("wavelength_range_nm")]
-    public List<double> WavelengthRangeNm { get; set; } = [];
-
-    [JsonPropertyName("spatial_patch_size")]
-    public List<int> SpatialPatchSize { get; set; } = [];
-
-    [JsonPropertyName("dtype")]
-    public string Dtype { get; set; } = "float32";
+    [JsonPropertyName("f1")]
+    public double F1 { get; set; }
 }
 
-public class OutputSpec
-{
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = "";
-
-    [JsonPropertyName("classes")]
-    public List<string> Classes { get; set; } = [];
-}
-
+/// <summary>File paths within the model package folder: ONNX model,
+/// optional architecture diagram, and optional validation artifacts.</summary>
 public class ArtifactPaths
 {
-    [JsonPropertyName("pipeline_onnx")]
-    public string PipelineOnnx { get; set; } = "";
+    [JsonPropertyName("model_onnx")]
+    public string ModelOnnx { get; set; } = string.Empty;
+
+    [JsonPropertyName("architecture_diagram")]
+    public string? ArchitectureDiagram { get; set; }
+
+    [JsonPropertyName("validation_expected_json")]
+    public string? ValidationExpectedJson { get; set; }
+
+    [JsonPropertyName("validation_patch_raw_bin")]
+    public string? ValidationPatchRawBin { get; set; }
 }
 
+/// <summary>Smoke test status. Python exports set status to "pending".
+/// The C# app updates it to "passed", "failed", or "skipped" after import.</summary>
+public class ValidationStatus
+{
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = "pending";
+
+    /// <summary>Null until the C# app runs the smoke test during import.</summary>
+    [JsonPropertyName("result")]
+    public ValidationResult? Result { get; set; }
+}
+
+/// <summary>Smoke test result written by the C# app after validation.</summary>
+public class ValidationResult
+{
+    [JsonPropertyName("timestamp")]
+    public string Timestamp { get; set; } = string.Empty;
+
+    [JsonPropertyName("preprocessing_max_diff")]
+    public float PreprocessingMaxDiff { get; set; }
+
+    [JsonPropertyName("inference_max_diff")]
+    public float InferenceMaxDiff { get; set; }
+
+    [JsonPropertyName("summary")]
+    public string Summary { get; set; } = string.Empty;
+}
+
+/// <summary>Preprocessing hyperparameters matching the Python training pipeline.
+/// Used directly by PreprocessingService to reproduce identical preprocessing.</summary>
 public class PreprocessingConfig
 {
     [JsonPropertyName("calibration_epsilon")]
@@ -130,71 +276,35 @@ public class PreprocessingConfig
     public float ClipMin { get; set; }
 
     [JsonPropertyName("clip_max")]
-    public float ClipMax { get; set; } = 1f;
+    public float ClipMax { get; set; }
 
     [JsonPropertyName("neighbor_average_window")]
-    public int NeighborAverageWindow { get; set; } = 3;
+    public int NeighborAverageWindow { get; set; }
 
     [JsonPropertyName("band_reduce_out_bands")]
-    public int BandReduceOutBands { get; set; } = 16;
+    public int BandReduceOutBands { get; set; }
 
     [JsonPropertyName("band_reduce_strategy")]
-    public string BandReduceStrategy { get; set; } = "crop";
+    public string BandReduceStrategy { get; set; } = string.Empty;
 
     [JsonPropertyName("tissue_mask_method")]
-    public string TissueMaskMethod { get; set; } = "mean_std_percentile";
+    public string TissueMaskMethod { get; set; } = string.Empty;
 
     [JsonPropertyName("tissue_mask_q_mean")]
-    public float TissueMaskQMean { get; set; } = 0.5f;
+    public float TissueMaskQMean { get; set; }
 
     [JsonPropertyName("tissue_mask_q_std")]
-    public float TissueMaskQStd { get; set; } = 0.4f;
+    public float TissueMaskQStd { get; set; }
 
     [JsonPropertyName("tissue_mask_min_object_size")]
-    public int TissueMaskMinObjectSize { get; set; } = 1000;
+    public int TissueMaskMinObjectSize { get; set; }
 
     [JsonPropertyName("tissue_mask_min_hole_size")]
-    public int TissueMaskMinHoleSize { get; set; } = 1000;
+    public int TissueMaskMinHoleSize { get; set; }
 
-    /// <summary>
-    /// Ordered list of preprocessing steps to execute.
-    /// If null/empty, the runner uses default steps:
-    /// ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"].
-    /// </summary>
-    [JsonPropertyName("steps")]
-    public List<string>? Steps { get; set; }
-
-    /// <summary>Converts tissue mask parameters to a <see cref="TissueMaskOptions"/>.</summary>
     public TissueMaskOptions ToTissueOptions() => new(
         qMean: TissueMaskQMean,
         qStd: TissueMaskQStd,
         minObjectSize: TissueMaskMinObjectSize,
         minHoleSize: TissueMaskMinHoleSize);
-}
-
-public class ValidationSpec
-{
-    [JsonPropertyName("ref_cube_shape")]
-    public List<int> RefCubeShape { get; set; } = [];
-
-    [JsonPropertyName("expected_output_shape")]
-    public List<int> ExpectedOutputShape { get; set; } = [];
-
-    [JsonPropertyName("preprocessing_tolerance")]
-    public float PreprocessingTolerance { get; set; } = 1e-5f;
-
-    [JsonPropertyName("inference_tolerance")]
-    public float InferenceTolerance { get; set; } = 1e-4f;
-
-    [JsonPropertyName("layout")]
-    public string Layout { get; set; } = "hwb_c_order";
-
-    [JsonPropertyName("dtype")]
-    public string Dtype { get; set; } = "float32";
-
-    [JsonPropertyName("num_patches")]
-    public int NumPatches { get; set; } = 1;
-
-    [JsonPropertyName("patch_probs_shape")]
-    public List<int> PatchProbsShape { get; set; } = [];
 }

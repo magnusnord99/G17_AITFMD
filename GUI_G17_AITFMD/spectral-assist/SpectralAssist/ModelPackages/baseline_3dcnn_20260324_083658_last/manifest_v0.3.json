@@ -1,19 +1,25 @@
 {
   "schema_version": "1.0",
-
+  
   "metadata": {
-    "name": "baseline_3dcnn_bandavg",
+    "name": "resnet_3dcnn",
     "version": "1.0.0",
-    "created": "2026-03-24T11:37:01.505989+00:00",
-    "author": "G17 AITFMD",
-    "description": "Baseline 3D-CNN with band-average spectral reduction, trained on HSI dataset v1"
+    "created": "2026-04-05T07:08:53Z",
+    "author": "ML Pipeline",
+    "description": "ResNet 3D CNN (NCDHW) for hyperspectral tissue classification"
   },
-
+  
   "pipeline": {
     "preprocessing": {
-      "steps": ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"],
+      "steps": [
+        "calibrate",
+        "clip",
+        "neighbor_average",
+        "tissue_mask",
+        "band_average"
+      ],
       "params": {
-        "calibration_epsilon": 1e-8,
+        "calibration_epsilon": 1e-10,
         "clip_min": 0.0,
         "clip_max": 1.0,
         "neighbor_average_window": 3,
@@ -29,56 +35,61 @@
     "spectral_reducer": {
       "method": "band_average",
       "embedded_in_onnx": false,
-      "input_bands": 275,
+      "input_bands": 826,
       "output_bands": 16
     },
     "model": {
-      "architecture": "baseline_3dcnn",
+      "architecture": "resnet_3dcnn_legacy",
       "task": "classification",
-      "total_parameters": 284930,
-      "trainable_parameters": 284930,
+      "total_parameters": 516290,
+      "trainable_parameters": 516290,
       "layers": {
-        "Conv3d": 4,
-        "BatchNorm3d": 4,
-        "Linear": 2,
-        "Dropout": 2
+        "Conv3d": 15,
+        "GroupNorm": 15,
+        "ResBlock3D": 6,
+        "MaxPool3d": 4,
+        "Linear": 1,
+        "Dropout": 1,
+        "AdaptiveAvgPool3d": 1,
+        "ReLU": 1
       }
     }
   },
-
+  
   "input_spec": {
     "input_rank": 5,
     "tensor_layout": "NCDHW",
-    "input_shape": [1, 1, 16, 32, 32],
+    "input_shape": [1, 1, 16, 64, 64],
     "spectral_bands": 16,
-    "spatial_patch_size": [32, 32],
+    "spatial_patch_size": [64, 64],
     "dtype": "float32"
   },
-
+  
   "output_spec": {
     "type": "logits",
     "num_classes": 2,
-    "classes": ["normal", "anomaly"]
+    "classes": ["class_0", "class_1"]
   },
-
+  
   "training": {
-    "dataset": "hsi_dataset_v1",
-    "samples": 3210,
+    "dataset": "HistologyHSI-GB",
+    "samples": 3840,
     "epochs": 50,
     "metrics": {
-      "accuracy": 0.938,
-      "precision": 0.0,
-      "recall": 0.0,
-      "f1": 0.0
+      "accuracy": 0.843,
+      "precision": 0.735,
+      "recall": 0.951,
+      "f1": 0.829
     }
   },
-
+  
   "artifacts": {
     "model_onnx": "model.onnx",
+    "architecture_diagram": null,
     "validation_expected_json": "validation_sample_expected.json",
     "validation_patch_raw_bin": "validation_sample_patch_raw_hwc_f32.bin"
   },
-
+  
   "validation": {
     "status": "pending",
     "result": null
