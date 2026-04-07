@@ -84,7 +84,19 @@ public static class PreprocessingService
             case "band_average":
                 return (BandAverageReducer.Apply(
                     cube, config.BandReduceOutBands, config.BandReduceStrategy), mask);
-
+            
+            case "wavelet":
+                var hwb = HsiCubeToFloatCubeHWB.FromHsiCube(cube);
+                var reduced = WaveletReducer.ApplyApproxPaddedDb2(
+                    hwb, config.BandReduceOutBands);
+                return (FloatCubeToHsiCube.ToHsiCube(reduced), mask);
+            
+            
+            /* ToDO: Convert from HWB to BSQ straight?
+             case "wavelet":
+             return (WaveletReducer.Apply(cube, config.BandReduceOutBands), mask);
+             */
+            
             default:
                 throw new NotSupportedException($"Unknown preprocessing step: '{step}'");
         }
