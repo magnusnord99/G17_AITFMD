@@ -8,9 +8,10 @@ public static class ServiceCollectionExtensions
 {
     public static void AddCommonServices(this IServiceCollection collection)
     {
-        // Services (singleton — reused across image reloads)
+        // Services
         collection.AddSingleton<ImageLoadingService>();
         collection.AddSingleton<InferenceService>();
+        collection.AddSingleton<ModelPackageService>();
 
         // ViewModels
         collection.AddSingleton<MainViewModel>();
