@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using SpectralAssist.Services.Preprocessing;
 using Xunit;
 
@@ -40,6 +38,7 @@ public class TissueMaskParityTests
         var bytes = File.ReadAllBytes(path);
         if (bytes.Length != n)
             throw new InvalidDataException($"Expected {n} bytes in {fileName}, got {bytes.Length}.");
+        
         return bytes;
     }
 }

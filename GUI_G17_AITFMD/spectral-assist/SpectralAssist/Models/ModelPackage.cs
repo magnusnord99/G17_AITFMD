@@ -8,13 +8,13 @@ public enum ExecutionProvider
 {
     /// <summary>CPU only: works on all platforms.</summary>
     Cpu,
-
+    
     /// <summary>NVIDIA CUDA: Requires CUDA 12.x + cuDNN 9.x installed.</summary>
     Cuda,
-
+    
     /// <summary>DirectML via DirectX 12: Any Windows GPU (NVIDIA/AMD/Intel), zero setup required.</summary>
     DirectML,
-
+    
     /// <summary>CoreML: Apple's performant machine learning framework.</summary>
     CoreML,
 }

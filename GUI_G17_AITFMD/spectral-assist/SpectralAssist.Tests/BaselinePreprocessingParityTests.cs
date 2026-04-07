@@ -1,6 +1,5 @@
 using SpectralAssist.Models;
 using SpectralAssist.Services;
-using SpectralAssist.Services.Preprocessing;
 using Xunit;
 
 namespace SpectralAssist.Tests;
@@ -17,14 +16,17 @@ public class BaselinePreprocessingParityTests
     [Fact]
     public void Small_chain_through_avg3_matches_python_golden()
     {
-        var config = new PreprocessingConfig
+        // Steps: calibrate → clip → avg3 (no tissue mask, no band_average)
+        var preprocessing = new PreprocessingInfo
         {
-            CalibrationEpsilon = 1e-8f,
-            ClipMin = 0f,
-            ClipMax = 1f,
-            NeighborAverageWindow = 3,
-            // Steps: calibrate → clip → avg3 (no tissue mask, no band_average)
             Steps = ["calibrate", "clip", "neighbor_average"],
+            Params = new PreprocessingConfig
+            {
+                CalibrationEpsilon = 1e-8f,
+                ClipMin = 0f,
+                ClipMax = 1f,
+                NeighborAverageWindow = 3,
+            }
         };
 
         var raw = GoldenFloatLoader.LoadCube(4, 4, 9, "small_raw.bin");
@@ -32,7 +34,7 @@ public class BaselinePreprocessingParityTests
         var white = GoldenFloatLoader.LoadCube(4, 4, 9, "small_white.bin");
         var expected = GoldenFloatLoader.LoadCube(4, 4, 3, "small_expect_after_avg3.bin");
 
-        var result = PreprocessingService.Run(raw, dark, white, config);
+        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
         var diff = GoldenFloatLoader.MaxAbsDiff(result.Cube, expected);
         Assert.True(diff < Tolerance, $"max abs diff {diff} >= {Tolerance}");
     }
@@ -40,16 +42,19 @@ public class BaselinePreprocessingParityTests
     [Fact]
     public void Chain275_through_avg16_matches_python_golden()
     {
-        var config = new PreprocessingConfig
+        // Steps: calibrate → clip → avg3 → band_average (no tissue mask)
+        var preprocessing = new PreprocessingInfo
         {
-            CalibrationEpsilon = 1e-8f,
-            ClipMin = 0f,
-            ClipMax = 1f,
-            NeighborAverageWindow = 3,
-            BandReduceOutBands = 16,
-            BandReduceStrategy = "crop",
-            // Steps: calibrate → clip → avg3 → band_average (no tissue mask)
             Steps = ["calibrate", "clip", "neighbor_average", "band_average"],
+            Params = new PreprocessingConfig
+            {
+                CalibrationEpsilon = 1e-8f,
+                ClipMin = 0f,
+                ClipMax = 1f,
+                NeighborAverageWindow = 3,
+                BandReduceOutBands = 16,
+                BandReduceStrategy = "crop",
+            }
         };
 
         var raw = GoldenFloatLoader.LoadCube(4, 4, 275, "chain275_raw.bin");
@@ -57,7 +62,7 @@ public class BaselinePreprocessingParityTests
         var white = GoldenFloatLoader.LoadCube(4, 4, 275, "chain275_white.bin");
         var expected = GoldenFloatLoader.LoadCube(4, 4, 16, "chain275_expect_avg16.bin");
 
-        var result = PreprocessingService.Run(raw, dark, white, config);
+        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
         var diff = GoldenFloatLoader.MaxAbsDiff(result.Cube, expected);
         Assert.True(diff < Tolerance, $"max abs diff {diff} >= {Tolerance}");
     }

@@ -54,7 +54,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
         var spec = _package.Manifest.InputSpec;
         var patchH = spec.SpatialPatchSize[0];
         var patchW = spec.SpatialPatchSize[1];
-        var bands = spec.SpectralBands ?? spec.ExpectedBands;
+        var bands = spec.SpectralBands;
 
         if (cube.Bands != bands)
             throw new InvalidOperationException(
@@ -285,24 +285,25 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
         return exp;
     }
 
+    /// <summary>
+    /// Validates that the manifest describes a 5D (NCDHW) model compatible
+    /// with this 3D-CNN classifier. Called once when <see cref="SetModel"/> is invoked.
+    /// </summary>
     private static void ValidateManifest(ModelManifest manifest)
     {
         var spec = manifest.InputSpec;
+
         if (spec.SpatialPatchSize.Count < 2)
-            throw new InvalidOperationException("manifest.input_spec.spatial_patch_size must have length >= 2.");
-
-        var rank = spec.InputRank ?? (spec.InputShape?.Count == 5 ? 5 : 4);
-        if (rank != 5)
             throw new InvalidOperationException(
-                "Onnx3DCnnClassifier requires input_rank 5 or input_shape with 5 dimensions (NCDHW). " +
-                "Use OnnxClassifier for 4D NCHW models.");
+                "input_spec.spatial_patch_size must have at least 2 elements.");
 
-        if (spec.InputShape is { Count: 5 } shape)
-        {
-            if (shape[2] != (spec.SpectralBands ?? spec.ExpectedBands))
-                throw new InvalidOperationException(
-                    "manifest input_shape[2] must match spectral band count.");
-        }
+        if (spec.InputRank != 5)
+            throw new InvalidOperationException(
+                $"Onnx3DCnnClassifier requires input_rank = 5 (NCDHW), got {spec.InputRank}.");
+
+        if (spec.InputShape.Count == 5 && spec.InputShape[2] != spec.SpectralBands)
+            throw new InvalidOperationException(
+                $"input_shape[2] ({spec.InputShape[2]}) does not match spectral_bands ({spec.SpectralBands}).");
     }
 
     public void Dispose()
