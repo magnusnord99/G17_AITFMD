@@ -47,7 +47,9 @@ python scripts/export/export_cnn3d_onnx.py \
 Dette skriver:
 
 - `model.onnx`
-- `manifest.json` (med `input_rank: 5` og `input_shape` for NCDHW)
+- `manifest.json` — bygges i `export_cnn3d_onnx.py`. **Preprocessing** (calibrate, clip, avg3→neighbor_average, tissue_mask) hentes fra **`configs/preprocessing/pipeline.yaml`** (standard; overstyr med `--pipeline-config`). `spectral_reduction` og `patching` i den YAML-en brukes ikke i manifest-preprocessing — spektralt og patch kommer fra eksportargumentene (`--spectral-bands`, `--patch-h/w`, `--reducer-method`). Valgfritt: `--manifest-template` for JSON-startpunkt.
+
+Valgfrie flagg bl.a.: `--dataset`, `--train-samples`, `--reducer-method` (f.eks. `wavelet`), `--description`, `--embedded-reducer-in-onnx`.
 
 ---
 
@@ -57,7 +59,7 @@ Kopier **hele** output-mappen (minst `model.onnx` + `manifest.json`, ev. `.onnx.
 
 `GUI_G17_AITFMD/spectral-assist/SpectralAssist/Assets/models/<navn>/`
 
-Oppdater `manifest.json` feltet `artifacts.pipeline_onnx` hvis du bruker annet filnavn enn `model.onnx`.
+Oppdater `manifest.json` feltet `artifacts.model_onnx` hvis du bruker annet filnavn enn `model.onnx`.
 
 **Eksempel i repo:** `baseline_3dcnn_20260324_083658_last` (16 bånd PCA, patch 32×32) ligger under `Assets/models/` etter eksport.
 

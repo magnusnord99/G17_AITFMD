@@ -39,3 +39,5 @@ outputs/reports/*
 !outputs/reports/.gitkeep
 outputs/plots/*
 !outputs/plots/.gitkeep
+# Lokale test-artifakter fra scripts/export/test_export_cnn3d_onnx.py
+outputs/_test*/
