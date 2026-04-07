@@ -15,9 +15,9 @@ architecture:
     - [3, 3, 3]
     - [3, 5, 5]
   num_layers_per_branch: 2
-  growth_rate: 8
+  growth_rate: 4
   bottleneck_factor: 4
-  post_fusion_channels: 96
+  post_fusion_channels: 48
   post_kernel: [3, 3, 3]
   dropout: 0.30
 
