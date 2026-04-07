@@ -11,10 +11,9 @@
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainViewModel />
     </Design.DataContext>
-
 
     <Grid>
         <!-- Main Layout -->
@@ -28,7 +27,7 @@
                     Padding="8,12">
                 <DockPanel LastChildFill="False">
 
-                    <!-- Top: Navigation -->
+                    <!-- App Logo -->
                     <StackPanel DockPanel.Dock="Top" Spacing="4">
                         <TextBlock Text="SpectralAssist"
                                    FontSize="13"
@@ -38,15 +37,7 @@
 
                         <Border Height="1" Background="#2D2D2D" Margin="0,0,0,4" />
 
-                        <Button Content="Open HSI"
-                                Click="OpenHSIButton_Clicked"
-                                Background="Transparent"
-                                Foreground="#AAAAAA"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
-                                Padding="8,6"
-                                CornerRadius="4" />
-
+                        <!-- Navigational Buttons -->
                         <Button Content="Home"
                                 Command="{Binding NavigateToHomeCommand}"
                                 Background="Transparent"
@@ -56,7 +47,26 @@
                                 Padding="8,6"
                                 CornerRadius="4" />
 
+                        <Button Content="Models"
+                                Command="{Binding NavigateToModelsCommand}"
+                                Background="Transparent"
+                                Foreground="#AAAAAA"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,6"
+                                CornerRadius="4" />
+
                         <Border Height="1" Background="#2D2D2D" Margin="0,8,0,4" />
+
+                        <!-- Action Buttons -->
+                        <Button Content="Open HSI"
+                                Click="OpenHSIButton_Clicked"
+                                Background="Transparent"
+                                Foreground="#AAAAAA"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,6"
+                                CornerRadius="4" />
 
                         <Button Content="Run Inference"
                                 Command="{Binding RunInferenceCommand}"
@@ -67,6 +77,11 @@
                                 Padding="8,6"
                                 CornerRadius="4"
                                 IsEnabled="{Binding HasImageView}" />
+
+                        <TextBlock Text="{Binding ActiveModel.DisplayName, FallbackValue='No model selected'}"
+                                   FontSize="11"
+                                   Foreground="#888"
+                                   Margin="16,0,16,4" />
                     </StackPanel>
 
                 </DockPanel>

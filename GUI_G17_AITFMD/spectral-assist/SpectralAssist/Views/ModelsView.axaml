@@ -1,0 +1,360 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
+             xmlns:m="clr-namespace:SpectralAssist.Models"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="SpectralAssist.Views.ModelsView"
+             x:DataType="vm:ModelsViewModel">
+
+    <Design.DataContext>
+        <vm:ModelsViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ROW 1: Header and Dropdown -->
+        <StackPanel Grid.Row="0" Margin="24,20,24,0" Spacing="12">
+            <TextBlock Text="Model Packages"
+                       FontSize="22" FontWeight="Bold"
+                       Foreground="#EEEEEE" />
+            <TextBlock Text="Browse, import, and manage ONNX model packages."
+                       FontSize="13" Foreground="#888888" />
+
+            <!-- Dropdown (browsing only) -->
+            <ComboBox ItemsSource="{Binding AvailableModels}"
+                      SelectedItem="{Binding SelectedModel}"
+                      HorizontalAlignment="Stretch"
+                      MaxDropDownHeight="300"
+                      Margin="0,4,0,0"
+                      IsVisible="{Binding IsBrowsing}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <!-- Preview banner -->
+            <Border Background="#2A2A1A" CornerRadius="4" Padding="12,8"
+                    IsVisible="{Binding IsPreviewing}">
+                <TextBlock Text="Review the model details below before importing."
+                           FontSize="13" Foreground="#CCCC88" />
+            </Border>
+
+            <!-- Importing banner -->
+            <Border Background="#1A2A1A" CornerRadius="4" Padding="12,8"
+                    IsVisible="{Binding IsImporting}">
+                <TextBlock Text="Importing and validating..."
+                           FontSize="13" Foreground="#88CC88" />
+            </Border>
+        </StackPanel>
+
+
+        <!-- ROW 1: Details -->
+        <ScrollViewer Grid.Row="1"
+                      Margin="24,16,24,0"
+                      IsVisible="{Binding DisplayedModel, Converter={x:Static ObjectConverters.IsNotNull}}">
+
+            <StackPanel Spacing="16" DataContext="{Binding DisplayedModel}">
+
+                <!-- METADATA -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="METADATA" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Version"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Version}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Author"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Author}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Created"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.Created}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Schema Version"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SchemaVersion}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Description"
+                                   Foreground="#888888" FontSize="13" Margin="0,3"
+                                   VerticalAlignment="Top" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Metadata.Description}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- MODEL -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="MODEL" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Architecture"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Pipeline.Model.Architecture}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Task"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Pipeline.Model.Task}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Total Parameters"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ParametersDisplay}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Trainable Parameters"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Pipeline.Model.TrainableParameters}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- SPECTRAL REDUCER -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="SPECTRAL REDUCER" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Method"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Pipeline.SpectralReducer.Method}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Embedded in ONNX"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding Pipeline.SpectralReducer.EmbeddedInOnnx}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Input Bands"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Pipeline.SpectralReducer.InputBands}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Output Bands"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Pipeline.SpectralReducer.OutputBands}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- INPUT SPEC -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="INPUT SPEC" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Tensor Layout"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding InputSpec.TensorLayout}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Input Rank"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding InputSpec.InputRank}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Spectral Bands"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding InputSpec.SpectralBands}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Patch Size"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PatchSizeDisplay}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Data Type"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding InputSpec.Dtype}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- OUTPUT SPEC -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="OUTPUT SPEC" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Output Type"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OutputSpec.Type}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Num Classes"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OutputSpec.NumClasses}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Classes"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ClassesDisplay}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- TRAINING -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="TRAINING" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Dataset"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Training.Dataset}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Samples"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Training.Samples}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Epochs"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Training.Epochs}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Accuracy"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="3" Grid.Column="1"
+                                   Text="{Binding Training.Metrics.Accuracy, StringFormat='{}{0:P1}'}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Precision"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="4" Grid.Column="1"
+                                   Text="{Binding Training.Metrics.Precision, StringFormat='{}{0:P1}'}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Recall / F1"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Foreground="#CCCCCC" FontSize="13" Margin="0,3">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}{0:P1} / {1:P1}">
+                                    <Binding Path="Training.Metrics.Recall" />
+                                    <Binding Path="Training.Metrics.F1" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- ARTIFACTS -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="ARTIFACTS" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ONNX File"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Artifacts.ModelOnnx}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                    </Grid>
+                </StackPanel>
+
+                <Border Height="1" Background="#2D2D2D" />
+
+                <!-- VALIDATION -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="VALIDATION" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Status"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Validation.Status}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                    </Grid>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Empty state -->
+        <TextBlock Grid.Row="1"
+                   Text="Select a model from the dropdown above to see its details."
+                   FontSize="13" Foreground="#555555"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding DisplayedModel, Converter={x:Static ObjectConverters.IsNull}}" />
+
+
+        <!-- ROW 2: Bottom Action Bar-->
+        <Border Grid.Row="2"
+                Background="#1A1A1A"
+                BorderBrush="#2D2D2D"
+                BorderThickness="0,1,0,0"
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+
+                <!-- Import (always visible, disabled during preview/import) -->
+                <Button Content="Import Model Package..."
+                        Click="ImportModelButton_Clicked"
+                        IsEnabled="{Binding IsBrowsing}"
+                        Background="#2D2D2D"
+                        Foreground="#CCCCCC"
+                        Padding="12,8"
+                        CornerRadius="4" />
+
+                <!-- Browsing: Delete -->
+                <Button Content="Delete"
+                        Command="{Binding DeleteModelCommand}"
+                        CommandParameter="{Binding DisplayedModel}"
+                        IsVisible="{Binding IsBrowsing}"
+                        Background="#2A1A1A"
+                        Foreground="#CC6666"
+                        Padding="12,8"
+                        CornerRadius="4" />
+
+                <!-- Previewing: Confirm + Cancel -->
+                <Button Content="Confirm Import"
+                        Command="{Binding ConfirmImportCommand}"
+                        IsVisible="{Binding IsPreviewing}"
+                        Background="#1A2A1A"
+                        Foreground="#88CC88"
+                        Padding="12,8"
+                        CornerRadius="4" />
+                <Button Content="Cancel"
+                        Command="{Binding CancelImportCommand}"
+                        IsVisible="{Binding IsPreviewing}"
+                        Background="#2D2D2D"
+                        Foreground="#AAAAAA"
+                        Padding="12,8"
+                        CornerRadius="4" />
+
+            </StackPanel>
+        </Border>
+
+    </Grid>
+
+</UserControl>
