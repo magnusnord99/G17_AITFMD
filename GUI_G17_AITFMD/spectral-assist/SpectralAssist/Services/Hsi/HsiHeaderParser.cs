@@ -38,49 +38,6 @@ public static class HsiHeaderParser
         return header;
     }
 
-    private static Dictionary<string, string> ParseFields2(string text)
-    {
-        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var lines = text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
-
-        var i = 1; // skips top "ENVI" line
-        while (i < lines.Length)
-        {
-            var line = lines[i].Trim();
-            var equalsIndex = line.IndexOf('=');
-            if (equalsIndex < 0)
-            {
-                i++;
-                continue;
-            }
-
-            var key = line[..equalsIndex].Trim();
-            var value = line[(equalsIndex + 1)..].Trim();
-
-            // Handles multi-line blocks
-            if (value.Contains('{') && !value.Contains('}'))
-            {
-                var sb = new StringBuilder(value);
-                while (++i < lines.Length)
-                {
-                    sb.Append(' ').Append(lines[i].Trim());
-                    if (lines[i].Contains('}')) break;
-                }
-
-                value = sb.ToString();
-            }
-
-            // Strip outer braces
-            if (value.StartsWith('{') && value.EndsWith('}'))
-                value = value[1..^1].Trim();
-
-            fields[key] = value;
-            i++;
-        }
-
-        return fields;
-    }
-
     /// <summary>
     /// On macOS, paths may point to ._ resource-fork files. Resolve to the actual ENVI file.
     /// Also handles file:// URLs.
@@ -90,14 +47,14 @@ public static class HsiHeaderParser
         var path = hdrPath;
         if (path.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
             Uri.TryCreate(path, UriKind.Absolute, out var uri))
-            path = uri!.LocalPath;
+            path = uri.LocalPath;
 
         var name = Path.GetFileName(path);
         if (string.IsNullOrEmpty(name) || !name.StartsWith("._", StringComparison.Ordinal))
             return path;
 
         var dir = Path.GetDirectoryName(path);
-        var actualName = name.Substring(2);
+        var actualName = name[2..];
         var actualPath = !string.IsNullOrEmpty(dir) ? Path.Combine(dir, actualName) : actualName;
 
         return File.Exists(actualPath) ? Path.GetFullPath(actualPath) : path;
@@ -143,7 +100,7 @@ public static class HsiHeaderParser
 
     private static string? ResolveDataFilePath(string hdrPath)
     {
-        var dir = Path.GetDirectoryName(hdrPath);
+        var dir = Path.GetDirectoryName(hdrPath) ?? "";
         var baseName = Path.GetFileNameWithoutExtension(hdrPath);
 
         var noExtension = Path.Combine(dir, baseName);
@@ -169,13 +126,31 @@ public static class HsiHeaderParser
         return fallback ?? throw new FormatException($"ENVI header missing required field: '{key}'");
     }
 
-    private static int[] ParseIntList(string value) =>
-        value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(int.Parse)
-            .ToArray();
+    private static float[] ParseFloatList(string value)
+    {
+        var count = 1 + value.Count(c => c == ',');
 
-    private static float[] ParseFloatList(string value) =>
-        value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => float.Parse(s, CultureInfo.InvariantCulture))
-            .ToArray();
+        var result = new float[count];
+        var span = value.AsSpan();
+        var i = 0;
+
+        foreach (var range in span.Split(','))
+            result[i++] = float.Parse(span[range].Trim(), CultureInfo.InvariantCulture);
+
+        return result;
+    }
+
+    private static int[] ParseIntList(string value)
+    {
+        var count = 1 + value.Count(c => c == ',');
+
+        var result = new int[count];
+        var span = value.AsSpan();
+        var i = 0;
+
+        foreach (var range in span.Split(','))
+            result[i++] = int.Parse(span[range].Trim());
+
+        return result;
+    }
 }
