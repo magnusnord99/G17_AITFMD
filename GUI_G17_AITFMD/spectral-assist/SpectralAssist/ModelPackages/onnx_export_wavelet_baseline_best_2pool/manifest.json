@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "baseline_3dcnn_wavelet",
+    "version": "1.0.0",
+    "created": "2026-04-04T16:15:19Z",
+    "author": "ML Pipeline",
+    "description": "Baseline 3D-CNN with wavelet spectral reduction (db2, 275→16 bands)"
+  },
+
+  "pipeline": {
+    "preprocessing": {
+      "steps": ["calibrate", "clip", "neighbor_average", "tissue_mask", "wavelet"],
+      "params": {
+        "calibration_epsilon": 1e-8,
+        "clip_min": 0.0,
+        "clip_max": 1.0,
+        "neighbor_average_window": 3,
+        "band_reduce_out_bands": 16,
+        "band_reduce_strategy": "crop",
+        "tissue_mask_method": "mean_std_percentile",
+        "tissue_mask_q_mean": 0.5,
+        "tissue_mask_q_std": 0.4,
+        "tissue_mask_min_object_size": 1000,
+        "tissue_mask_min_hole_size": 1000
+      }
+    },
+    "spectral_reducer": {
+      "method": "wavelet",
+      "embedded_in_onnx": false,
+      "input_bands": 275,
+      "output_bands": 16
+    },
+    "model": {
+      "architecture": "baseline_3dcnn",
+      "task": "classification",
+      "total_parameters": 19218,
+      "trainable_parameters": 19218,
+      "layers": {
+        "Conv3d": 2,
+        "GroupNorm": 2,
+        "Linear": 1,
+        "Dropout": 1,
+        "MaxPool3d": 2,
+        "AdaptiveAvgPool3d": 1,
+        "ReLU": 2
+      }
+    }
+  },
+
+  "input_spec": {
+    "input_rank": 5,
+    "tensor_layout": "NCDHW",
+    "input_shape": [1, 1, 16, 64, 64],
+    "spectral_bands": 16,
+    "spatial_patch_size": [64, 64],
+    "dtype": "float32"
+  },
+
+  "output_spec": {
+    "type": "logits",
+    "num_classes": 2,
+    "classes": ["class_0", "class_1"]
+  },
+
+  "training": {
+    "dataset": "wavelet_manifest.csv",
+    "samples": 20544,
+    "epochs": 29,
+    "metrics": {
+      "accuracy": 0.886,
+      "precision": 0.850,
+      "recall": 0.868,
+      "f1": 0.859
+    }
+  },
+
+  "artifacts": {
+    "model_onnx": "model.onnx"
+  },
+
+  "validation": {
+    "status": "pending",
+    "result": null
+  }
+}
