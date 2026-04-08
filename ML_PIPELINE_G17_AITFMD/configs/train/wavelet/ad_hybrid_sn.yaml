@@ -1,4 +1,4 @@
-# Wavelet + AD-HybridSN — samme data/split som train_wavelet.yaml
+# Wavelet16 + AD-HybridSN 3D-CNN — samme data/split som configs/train/wavelet/resnet.yaml
 seed: 42
 
 model_config: "configs/models/ad_hybrid_sn_3dcnn.yaml"
@@ -21,8 +21,8 @@ data:
 
 optimizer:
   name: "adam"
-  lr: 5.0e-5
-  weight_decay: 1.0e-4
+  lr: 2.0e-5
+  weight_decay: 3.0e-4
 
 scheduler:
   enabled: true
@@ -35,7 +35,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 13
+  early_stopping_patience: 8
   mixed_precision: true
   save_best_only: true
 

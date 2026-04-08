@@ -47,9 +47,11 @@ python scripts/export/export_cnn3d_onnx.py \
 Dette skriver:
 
 - `model.onnx`
-- `manifest.json` — bygges i `export_cnn3d_onnx.py`. **Preprocessing** (calibrate, clip, avg3→neighbor_average, tissue_mask) hentes fra **`configs/preprocessing/pipeline.yaml`** (standard; overstyr med `--pipeline-config`). `spectral_reduction` og `patching` i den YAML-en brukes ikke i manifest-preprocessing — spektralt og patch kommer fra eksportargumentene (`--spectral-bands`, `--patch-h/w`, `--reducer-method`). Valgfritt: `--manifest-template` for JSON-startpunkt.
+- `manifest.json` — bygges i `export_cnn3d_onnx.py`. **Preprocessing** (calibrate, clip, avg3→neighbor_average, tissue_mask) hentes fra **`configs/preprocessing/pipeline.yaml`** (standard; overstyr med `--pipeline-config`). **`spectral_reduction.reducer`** i samme YAML styrer om PCA er **innebygd i ONNX** (`embedded_in_onnx: true` når reducer er `pca`). Uten `--reducer-method` brukes denne verdien; du kan **overstyre** med `--reducer-method wavelet` (eller `none`) hvis du vil eksportere kun CNN mot pipeline som ellers har PCA. Patch og CNN-bånd: `--spectral-bands`, `--patch-h/w`. Valgfritt: `--manifest-template`.
 
-Valgfrie flagg bl.a.: `--dataset`, `--train-samples`, `--reducer-method` (f.eks. `wavelet`), `--description`, `--embedded-reducer-in-onnx`.
+**PCA-eksport:** Når reducer er `pca`, eksporteres PCA (fra `pca_model` i YAML) + CNN i én graf; ONNX-input har **rå antall bånd** (f.eks. 275) langs den spektrale aksen; `--spectral-bands` må være lik PCA `n_components` (f.eks. 16). Manifest `input_spec.spectral_bands` er da rå-bånd; `pipeline.spectral_reducer` har `input_bands`/`output_bands` rå→redusert.
+
+Valgfrie flagg bl.a.: `--dataset`, `--train-samples`, `--reducer-method`, `--description`.
 
 ---
 

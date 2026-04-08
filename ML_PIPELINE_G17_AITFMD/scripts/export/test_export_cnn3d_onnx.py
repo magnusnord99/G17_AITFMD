@@ -79,10 +79,11 @@ def _run_manifest_only_checks(model_yaml: Path) -> None:
         base=None,
         preprocessing=pre,
         model=model,
+        layers_model=None,
         model_yaml=model_yaml_dict,
         cfg_path=cfg_path,
         ckpt=ckpt,
-        spectral_bands=16,
+        input_spec_bands=16,
         patch_h=64,
         patch_w=64,
         onnx_name="model.onnx",
@@ -91,6 +92,8 @@ def _run_manifest_only_checks(model_yaml: Path) -> None:
         train_samples=20544,
         reducer_method="wavelet",
         embedded_reducer_in_onnx=False,
+        reducer_input_bands=16,
+        reducer_output_bands=16,
     )
 
     pre_m = manifest["pipeline"]["preprocessing"]
