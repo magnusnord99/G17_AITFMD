@@ -63,40 +63,65 @@ public static class PreprocessingService
     /// and the (possibly updated) tissue mask.
     /// </summary>
     private static (HsiCube Cube, bool[]? Mask) ApplyStep(
-        string step, HsiCube cube, HsiCube? dark, HsiCube? white,
+        string step, HsiCube sceneCube, HsiCube? darkCube, HsiCube? whiteCube,
         bool[]? mask, PreprocessingConfig config)
     {
         switch (step)
         {
             case "calibrate":
-                return (Calibration.Apply(cube, dark!, white!, config.CalibrationEpsilon), mask);
+                return (Calibration.Apply(sceneCube, darkCube!, whiteCube!,
+                    config.CalibrationEpsilon ?? throw new InvalidOperationException(
+                        "Step 'calibrate' requires calibration_epsilon in manifest")), mask);
 
             case "clip":
-                ReflectanceClip.ApplyInPlace(cube, config.ClipMin, config.ClipMax);
-                return (cube, mask);
+                ReflectanceClip.ApplyInPlace(sceneCube,
+                    config.ClipMin ?? throw new InvalidOperationException(
+                        "Step 'clip' requires clip_min in manifest"),
+                    config.ClipMax ?? throw new InvalidOperationException(
+                        "Step 'clip' requires clip_max in manifest"));
+                return (sceneCube, mask);
 
             case "neighbor_average":
-                return (NeighborAverage.Apply(cube, config.NeighborAverageWindow), mask);
+                return (NeighborAverage.Apply(sceneCube,
+                    config.NeighborAverageWindow ?? throw new InvalidOperationException(
+                        "Step 'neighbor_average' requires neighbor_average_window in manifest")), mask);
 
             case "tissue_mask":
-                return (cube, TissueMask.BuildMask(cube, config.ToTissueOptions()));
+                return (sceneCube, TissueMask.BuildMask(sceneCube,
+                    config.TissueMaskQMean ?? throw new InvalidOperationException(
+                        "Step 'tissue_mask' requires tissue_mask_q_mean in manifest"),
+                    config.TissueMaskQStd ?? throw new InvalidOperationException(
+                        "Step 'tissue_mask' requires tissue_mask_q_std in manifest"),
+                    config.TissueMaskMinObjectSize ?? throw new InvalidOperationException(
+                        "Step 'tissue_mask' requires tissue_mask_min_object_size in manifest"),
+                    config.TissueMaskMinHoleSize ?? throw new InvalidOperationException(
+                        "Step 'tissue_mask' requires tissue_mask_min_hole_size in manifest"),
+                    config.TissueMaskMethod ?? throw new InvalidOperationException(
+                        "Step 'tissue_mask' requires tissue_mask_method in manifest")));
 
             case "band_average":
-                return (BandAverageReducer.Apply(
-                    cube, config.BandReduceOutBands, config.BandReduceStrategy), mask);
-            
+                return (BandAverageReducer.Apply(sceneCube,
+                        config.BandReduceOutBands ??
+                        throw new InvalidOperationException(
+                            "Step 'band_average' requires band_reduce_out_bands in manifest"),
+                        config.BandReduceStrategy ??
+                        throw new InvalidOperationException(
+                            "Step 'band_average' requires band_reduce_strategy in manifest")),
+                    mask);
+
             case "wavelet":
-                var hwb = HsiCubeToFloatCubeHWB.FromHsiCube(cube);
-                var reduced = WaveletReducer.ApplyApproxPaddedDb2(
-                    hwb, config.BandReduceOutBands);
+                var hwb = HsiCubeToFloatCubeHWB.FromHsiCube(sceneCube);
+                var reduced = WaveletReducer.ApplyApproxPaddedDb2(hwb,
+                    config.BandReduceOutBands ?? throw new InvalidOperationException(
+                        "Step 'wavelet' requires band_reduce_out_bands in manifest"));
                 return (FloatCubeToHsiCube.ToHsiCube(reduced), mask);
-            
-            
+
+
             /* ToDO: Convert from HWB to BSQ straight?
              case "wavelet":
              return (WaveletReducer.Apply(cube, config.BandReduceOutBands), mask);
              */
-            
+
             default:
                 throw new NotSupportedException($"Unknown preprocessing step: '{step}'");
         }

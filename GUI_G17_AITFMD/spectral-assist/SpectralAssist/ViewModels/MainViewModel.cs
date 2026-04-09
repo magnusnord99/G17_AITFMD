@@ -10,17 +10,17 @@ namespace SpectralAssist.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     private readonly ImageLoadingService _loadingService;
-    private readonly InferenceService _inference;
+    private readonly InferenceService _inferenceService;
     private ImageViewModel? _imageView;
     private readonly ModelPackageService _modelRegistry;
     
     public MainViewModel(
         ImageLoadingService loadingService,
-        InferenceService inference,
+        InferenceService inferenceService,
         ModelPackageService modelRegistry)
     {
         _loadingService = loadingService;
-        _inference = inference;
+        _inferenceService = inferenceService;
         _modelRegistry = modelRegistry;
         _modelRegistry.Refresh();
         
@@ -55,7 +55,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToModels()
     {
-        CurrentView = new ModelsViewModel(_modelRegistry, ActiveModel, modelManifest => ActiveModel = modelManifest);
+        CurrentView = new ModelsViewModel(_modelRegistry, _inferenceService, ActiveModel, modelManifest => ActiveModel = modelManifest);
     }
     
     
@@ -66,7 +66,7 @@ public partial class MainViewModel : ViewModelBase
     {
         // Dispose the previous image (if any) then load new one
         _imageView?.Dispose();
-        _imageView = new ImageViewModel(filePath, _loadingService, _inference);
+        _imageView = new ImageViewModel(filePath, _loadingService, _inferenceService);
         CurrentView = _imageView;
     }
     
@@ -106,7 +106,7 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         _loadingService = null!;
-        _inference = null!;
+        _inferenceService = null!;
         _modelRegistry = new ModelPackageService();
     }
 }

@@ -10,12 +10,7 @@ using SpectralAssist.Services;
 namespace SpectralAssist.ViewModels;
 
 /// <summary>The three states of the Models page.</summary>
-public enum ModelViewState
-{
-    Browsing,
-    Previewing,
-    Importing,
-}
+public enum ModelViewState { Browsing, Previewing, Importing, }
 
 /// <summary>
 /// Controls the three states of the Models page:
@@ -28,14 +23,16 @@ public enum ModelViewState
 public partial class ModelsViewModel : ViewModelBase
 {
     private readonly ModelPackageService _modelRegistry;
+    private readonly InferenceService _inferenceService;
     private readonly Action<ModelManifest?> _setActiveModel;
     public ObservableCollection<ModelManifest> AvailableModels => _modelRegistry.AvailableModels;
     private string? _importSourcePath;
 
-    public ModelsViewModel(ModelPackageService modelRegistry, ModelManifest? activeModel,
-        Action<ModelManifest?> setActiveModel)
+    public ModelsViewModel(ModelPackageService modelRegistry, InferenceService inferenceService,
+        ModelManifest? activeModel, Action<ModelManifest?> setActiveModel)
     {
         _modelRegistry = modelRegistry;
+        _inferenceService = inferenceService;
         _setActiveModel = setActiveModel;
         SelectedModel = activeModel ?? AvailableModels.FirstOrDefault();
     }
@@ -53,85 +50,92 @@ public partial class ModelsViewModel : ViewModelBase
     public bool IsPreviewing => ViewState == ModelViewState.Previewing;
     public bool IsImporting => ViewState == ModelViewState.Importing;
 
-    [ObservableProperty] 
-    [NotifyPropertyChangedFor(nameof(DisplayedModel))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(DisplayedModel))]
     private ModelManifest? _selectedModel;
 
-    [ObservableProperty] 
-    [NotifyPropertyChangedFor(nameof(DisplayedModel))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(DisplayedModel))]
     private ModelManifest? _previewModel;
-    
-    public ModelManifest? DisplayedModel => 
-        ViewState is ModelViewState.Previewing or ModelViewState.Importing
-        ? PreviewModel
-        : SelectedModel;
 
-    
-    
+    [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private string? _successMessage;
+
+    public ModelManifest? DisplayedModel =>
+        ViewState is ModelViewState.Previewing or ModelViewState.Importing
+            ? PreviewModel
+            : SelectedModel;
+
+
     // -- Actions -- //
+
+    [RelayCommand]
+    private void DismissError() => ErrorMessage = null;
     
+    [RelayCommand]
+    private void DismissSuccess() => ErrorMessage = null;
+
     public void PreviewImport(string folderPath)
     {
-        var preview = ModelPackageService.TryLoadManifest(folderPath);
-        if (preview == null)
+        ErrorMessage = null;
+        SuccessMessage = null;
+        
+        var result = ModelPackageService.TryLoadManifest(folderPath);
+        if (!result.IsSuccess)
         {
-            // ToDo: show error dialog
+            ErrorMessage = result.Error;
             return;
         }
 
         _importSourcePath = folderPath;
-        PreviewModel = preview;
+        PreviewModel = result.Value;
         ViewState = ModelViewState.Previewing;
     }
-    
+
     [RelayCommand]
     private async Task ConfirmImport()
     {
         if (_importSourcePath == null) return;
 
         ViewState = ModelViewState.Importing;
+        ErrorMessage = null;
+        SuccessMessage = null;
 
-        var (packageInfo, error) = await Task.Run(() => _modelRegistry.ImportPackage(_importSourcePath));
-
-        if (error != null)
+        var importResult = await Task.Run(() => _modelRegistry.ImportPackage(_importSourcePath));
+        if (!importResult.IsSuccess)
         {
-            // ToDo: show error dialog
-            PreviewModel = null;
-            _importSourcePath = null;
-            ViewState = ModelViewState.Browsing;
+            ErrorMessage = importResult.Error;
+            ResetImportState();
             return;
         }
+        
+        var packageInfo = importResult.Value!;
+        var (passed, summary) = await ModelPackageValidator.ValidateAsync(
+            packageInfo.DirectoryPath, packageInfo, _inferenceService);
 
-        // ToDo: Run actual validation smoke test here
-        // var validationResult = await Task.Run(() => ModelPackageValidator.Validate(...));
+        if (passed)
+            SuccessMessage = summary;
+        else
+            ErrorMessage = summary;
 
         SelectedModel = packageInfo;
-        PreviewModel = null;
-        _importSourcePath = null;
-        ViewState = ModelViewState.Browsing;
+        ResetImportState();
     }
 
     [RelayCommand]
-    private void CancelImport()
-    {
-        _importSourcePath = null;
-        PreviewModel = null;
-        ViewState = ModelViewState.Browsing;
-    }
+    private void CancelImport() => ResetImportState();
 
     [RelayCommand]
     private void DeleteModel(ModelManifest modelInfo)
     {
-        // ToDo: confirmation dialog before deleting
-        var (success, error) = _modelRegistry.DeletePackage(modelInfo.Id);
-        if (!success)
+        var result = _modelRegistry.DeletePackage(modelInfo.Id);
+        if (!result.IsSuccess)
         {
-            // ToDo: show error dialog
+            ErrorMessage = result.Error;
             return;
         }
 
         if (SelectedModel == modelInfo)
-            SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
+            SelectedModel = AvailableModels.FirstOrDefault(); 
+        //SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
     }
     
     partial void OnSelectedModelChanged(ModelManifest? value)
@@ -139,8 +143,15 @@ public partial class ModelsViewModel : ViewModelBase
         if (IsBrowsing)
             _setActiveModel(value);
     }
-
     
+    private void ResetImportState()
+    {
+        PreviewModel = null;
+        _importSourcePath = null;
+        ViewState = ModelViewState.Browsing;
+    }
+
+
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ModelsViewModel()
     {

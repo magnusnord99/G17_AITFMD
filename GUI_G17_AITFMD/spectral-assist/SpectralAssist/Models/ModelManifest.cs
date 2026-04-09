@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json.Serialization;
 using SpectralAssist.Services.Preprocessing;
 
@@ -24,18 +26,18 @@ public class ModelManifest
         string.IsNullOrWhiteSpace(Metadata.Name) ? Id : $"{Metadata.Name} v{Metadata.Version}";
 
     [JsonIgnore] public string ClassesDisplay =>
-        OutputSpec.Classes.Count > 0 ? string.Join(", ", OutputSpec.Classes) : "—";
+        OutputSpec.Classes.Count > 0 ? string.Join(", ", OutputSpec.Classes) : "";
 
     [JsonIgnore] public string PatchSizeDisplay =>
         InputSpec.SpatialPatchSize.Count >= 2
             ? $"{InputSpec.SpatialPatchSize[0]} × {InputSpec.SpatialPatchSize[1]}"
-            : "—";
-
-    [JsonIgnore] public string ParametersDisplay =>
-        Pipeline.Model.TotalParameters > 0
-            ? $"{Pipeline.Model.TotalParameters:N0}"
-            : "—";
-
+            : "";
+    
+    [JsonIgnore] public string? ArchitectureDiagramPath =>
+        !string.IsNullOrEmpty(Artifacts.ArchitectureDiagram) 
+            ? Path.Combine(DirectoryPath, Artifacts.ArchitectureDiagram) 
+            : null;
+    
     public override string ToString() => DisplayName;
     
     
@@ -63,7 +65,7 @@ public class ModelManifest
     public ArtifactPaths Artifacts { get; set; } = new();
 
     [JsonPropertyName("validation")]
-    public ValidationStatus Validation { get; set; } = new();
+    public ValidationInfo Validation { get; set; } = new();
 }
 
 /// <summary>Display metadata: name, version, creation date, author, and description.</summary>
@@ -109,6 +111,44 @@ public class PreprocessingInfo
     public PreprocessingConfig Params { get; set; } = new();
 }
 
+/// <summary>Preprocessing hyperparameters matching the Python training pipeline.
+/// Used directly by PreprocessingService to reproduce identical preprocessing.</summary>
+public class PreprocessingConfig
+{
+    [JsonPropertyName("calibration_epsilon")]
+    public float? CalibrationEpsilon { get; set; }
+
+    [JsonPropertyName("clip_min")]
+    public float? ClipMin { get; set; }
+
+    [JsonPropertyName("clip_max")]
+    public float? ClipMax { get; set; }
+
+    [JsonPropertyName("neighbor_average_window")]
+    public int? NeighborAverageWindow { get; set; }
+    
+    [JsonPropertyName("tissue_mask_method")]
+    public string? TissueMaskMethod { get; set; }
+
+    [JsonPropertyName("tissue_mask_q_mean")]
+    public float? TissueMaskQMean { get; set; }
+
+    [JsonPropertyName("tissue_mask_q_std")]
+    public float? TissueMaskQStd { get; set; }
+
+    [JsonPropertyName("tissue_mask_min_object_size")]
+    public int? TissueMaskMinObjectSize { get; set; }
+
+    [JsonPropertyName("tissue_mask_min_hole_size")]
+    public int? TissueMaskMinHoleSize { get; set; }
+    
+    [JsonPropertyName("band_reduce_out_bands")]
+    public int? BandReduceOutBands { get; set; }
+
+    [JsonPropertyName("band_reduce_strategy")]
+    public string? BandReduceStrategy { get; set; }
+}
+
 /// <summary>Spectral band reduction stage. May run in C# (band_average)
 /// or be embedded in the ONNX graph (PCA, autoencoder).</summary>
 public class SpectralReducerInfo
@@ -116,18 +156,18 @@ public class SpectralReducerInfo
     [JsonPropertyName("method")]
     public string Method { get; set; } = string.Empty;
 
-    [JsonPropertyName("embedded_in_onnx")]
+    [JsonPropertyName("embedded_in_onnx")] 
     public bool EmbeddedInOnnx { get; set; }
 
     /// <summary>Bands entering the reducer (e.g. 826 or 275).
     /// Equals input_spec.spectral_bands when <c>embedded_in_onnx</c> is true.</summary>
     [JsonPropertyName("input_bands")]
-    public int InputBands { get; set; }
+    public int? InputBands { get; set; }
 
     /// <summary>Bands after reduction (e.g. 16).
     /// Equals input_spec.spectral_bands when <c>embedded_in_onnx</c> is false.</summary>
     [JsonPropertyName("output_bands")]
-    public int OutputBands { get; set; }
+    public int? OutputBands { get; set; }
 }
 
 /// <summary>The neural network stage of the pipeline: architecture name, task type,
@@ -143,14 +183,14 @@ public class ModelInfo
     public string Task { get; set; } = string.Empty;
 
     [JsonPropertyName("total_parameters")]
-    public long TotalParameters { get; set; }
+    public long? TotalParameters { get; set; }
 
     [JsonPropertyName("trainable_parameters")]
-    public long TrainableParameters { get; set; }
-
-    /// <summary>Layer type to count, e.g. { "Conv3d": 15, "Linear": 1 }.</summary>
+    public long? TrainableParameters { get; set; }
+    
     [JsonPropertyName("layers")]
     public Dictionary<string, int> Layers { get; set; } = new();
+
 }
 
 /// <summary>The ONNX model's expected input tensor shape, layout, and data type.</summary>
@@ -182,7 +222,7 @@ public class OutputSpec
     public string Type { get; set; } = string.Empty;
 
     [JsonPropertyName("num_classes")]
-    public int NumClasses { get; set; }
+    public int? NumClasses { get; set; }
 
     [JsonPropertyName("classes")]
     public List<string> Classes { get; set; } = [];
@@ -192,13 +232,13 @@ public class OutputSpec
 public class TrainingInfo
 {
     [JsonPropertyName("dataset")]
-    public string Dataset { get; set; } = string.Empty;
+    public string? Dataset { get; set; }
 
     [JsonPropertyName("samples")]
-    public int Samples { get; set; }
+    public int? Samples { get; set; }
 
     [JsonPropertyName("epochs")]
-    public int Epochs { get; set; }
+    public int? Epochs { get; set; }
 
     [JsonPropertyName("metrics")]
     public TrainingMetrics Metrics { get; set; } = new();
@@ -208,103 +248,79 @@ public class TrainingInfo
 public class TrainingMetrics
 {
     [JsonPropertyName("accuracy")]
-    public double Accuracy { get; set; }
+    public double? Accuracy { get; set; }
 
     [JsonPropertyName("precision")]
-    public double Precision { get; set; }
+    public double? Precision { get; set; }
 
     [JsonPropertyName("recall")]
-    public double Recall { get; set; }
+    public double? Recall { get; set; }
 
     [JsonPropertyName("f1")]
-    public double F1 { get; set; }
+    public double? F1 { get; set; }
 }
 
 /// <summary>File paths within the model package folder: ONNX model,
 /// optional architecture diagram, and optional validation artifacts.</summary>
 public class ArtifactPaths
 {
-    [JsonPropertyName("model_onnx")]
+    [JsonPropertyName("model_onnx")] 
     public string ModelOnnx { get; set; } = string.Empty;
 
     [JsonPropertyName("architecture_diagram")]
     public string? ArchitectureDiagram { get; set; }
-
-    [JsonPropertyName("validation_expected_json")]
-    public string? ValidationExpectedJson { get; set; }
-
-    [JsonPropertyName("validation_patch_raw_bin")]
-    public string? ValidationPatchRawBin { get; set; }
 }
 
-/// <summary>Smoke test status. Python exports set status to "pending".
-/// The C# app updates it to "passed", "failed", or "skipped" after import.</summary>
-public class ValidationStatus
+/// <summary>Validation information used for the smoke test at import time.</summary>
+public class ValidationInfo
 {
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = "pending";
-
-    /// <summary>Null until the C# app runs the smoke test during import.</summary>
-    [JsonPropertyName("result")]
-    public ValidationResult? Result { get; set; }
-}
-
-/// <summary>Smoke test result written by the C# app after validation.</summary>
-public class ValidationResult
-{
-    [JsonPropertyName("timestamp")]
-    public string Timestamp { get; set; } = string.Empty;
-
-    [JsonPropertyName("preprocessing_max_diff")]
-    public float PreprocessingMaxDiff { get; set; }
-
-    [JsonPropertyName("inference_max_diff")]
-    public float InferenceMaxDiff { get; set; }
-
+    [JsonPropertyName("status")] 
+    public string Status { get; set; } = string.Empty;
+    
     [JsonPropertyName("summary")]
     public string Summary { get; set; } = string.Empty;
+
+    [JsonPropertyName("roi_dir")]
+    public string? RoiDir { get; set; }
+    
+    [JsonPropertyName("tolerance")]
+    public float? Tolerance { get; set; } = 1e-4f;
+
+    [JsonPropertyName("expected_output")]
+    public ExpectedOutput? ExpectedOutput { get; set; }
+    
+    [JsonPropertyName("actual_output")]
+    public ActualOutput? ActualOutput { get; set; }
 }
 
-/// <summary>Preprocessing hyperparameters matching the Python training pipeline.
-/// Used directly by PreprocessingService to reproduce identical preprocessing.</summary>
-public class PreprocessingConfig
+/// <summary>Python validation result, written to manifest during export pipeline test.</summary>
+public class ExpectedOutput
 {
-    [JsonPropertyName("calibration_epsilon")]
-    public float CalibrationEpsilon { get; set; }
+    [JsonPropertyName("logits")]
+    public List<float> Logits { get; set; } = [];
 
-    [JsonPropertyName("clip_min")]
-    public float ClipMin { get; set; }
+    [JsonPropertyName("softmax")] 
+    public List<float> Softmax { get; set; } = [];
 
-    [JsonPropertyName("clip_max")]
-    public float ClipMax { get; set; }
+    [JsonPropertyName("predicted_class")]
+    public int? PredictedClass { get; set; }
+}
 
-    [JsonPropertyName("neighbor_average_window")]
-    public int NeighborAverageWindow { get; set; }
+/// <summary>C# validation result, written to manifest after import-time smoke test.</summary>
+public class ActualOutput
+{
+    [JsonPropertyName("logits")]
+    public List<float> Logits { get; set; } = [];
 
-    [JsonPropertyName("band_reduce_out_bands")]
-    public int BandReduceOutBands { get; set; }
+    [JsonPropertyName("softmax")] 
+    public List<float> Softmax { get; set; } = [];
 
-    [JsonPropertyName("band_reduce_strategy")]
-    public string BandReduceStrategy { get; set; } = string.Empty;
+    [JsonPropertyName("predicted_class")] 
+    public int? PredictedClass { get; set; }
 
-    [JsonPropertyName("tissue_mask_method")]
-    public string TissueMaskMethod { get; set; } = string.Empty;
+    [JsonPropertyName("max_logit_diff")]
+    public float? MaxLogitDiff { get; set; }
 
-    [JsonPropertyName("tissue_mask_q_mean")]
-    public float TissueMaskQMean { get; set; }
-
-    [JsonPropertyName("tissue_mask_q_std")]
-    public float TissueMaskQStd { get; set; }
-
-    [JsonPropertyName("tissue_mask_min_object_size")]
-    public int TissueMaskMinObjectSize { get; set; }
-
-    [JsonPropertyName("tissue_mask_min_hole_size")]
-    public int TissueMaskMinHoleSize { get; set; }
-
-    public TissueMaskOptions ToTissueOptions() => new(
-        qMean: TissueMaskQMean,
-        qStd: TissueMaskQStd,
-        minObjectSize: TissueMaskMinObjectSize,
-        minHoleSize: TissueMaskMinHoleSize);
+    [JsonPropertyName("validated_at")]
+    public string ValidatedAt { get; set; } = string.Empty;
 }

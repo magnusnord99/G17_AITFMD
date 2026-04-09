@@ -83,11 +83,7 @@ public class BsqPreprocessingParityTests
     {
         const int h = 8, w = 8, b = 4;
         var cube = MakeRandomBsqCube(h, w, b, seed: 42);
-
-        var opts = new TissueMaskOptions(
-            qMean: 0.5f, qStd: 0.4f, minObjectSize: 1, minHoleSize: 1);
-
-        var mask = TissueMask.BuildMask(cube, opts);
+        var mask = TissueMask.BuildMask(cube, qMean: 0.5f, qStd: 0.4f, minObjectSize: 1, minHoleSize: 1);
 
         Assert.Equal(h * w, mask.Length);
     }

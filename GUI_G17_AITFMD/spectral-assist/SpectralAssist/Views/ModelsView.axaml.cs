@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -21,20 +22,22 @@ public partial class ModelsView : UserControl
             var topLevel = TopLevel.GetTopLevel(this);
             if (topLevel == null) return;
 
-            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(
-                new FolderPickerOpenOptions
-                {
-                    Title = "Select Model Package Folder (must contain manifest.json + model.onnx)",
-                    AllowMultiple = false,
-                });
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Model Package (manifest.json)",
+                AllowMultiple = false,
+                FileTypeFilter = [new FilePickerFileType("Model Manifest") { Patterns = ["manifest.json"] }]
+            });
 
-            if (folders.Count < 1) return;
+            if (files.Count < 1) return;
 
-            var folderPath = folders[0].Path.LocalPath;
-            Debug.WriteLine($"Import model folder selected: {folderPath}");
+            var packageDir = Path.GetDirectoryName(files[0].Path.LocalPath);
+            if (packageDir == null) return;
+
+            Debug.WriteLine($"Import model package: {packageDir}");
 
             if (DataContext is ModelsViewModel vm)
-                vm.PreviewImport(folderPath);
+                vm.PreviewImport(packageDir);
         }
         catch (Exception e)
         {

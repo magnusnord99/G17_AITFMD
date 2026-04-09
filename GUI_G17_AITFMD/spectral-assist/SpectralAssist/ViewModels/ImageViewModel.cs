@@ -34,8 +34,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     private readonly string _hdrPath;
     private bool _hasCalibration;
-    private HsiCube? _calibratedCube;
-
+    
     private readonly ImageLoadingService _loadingService;
     private readonly InferenceService _inference;
     public OverlayManager Overlay { get; } = new();
@@ -108,9 +107,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             });
 
             var result = await ImageLoadingService.LoadAsync(_hdrPath, progress, _cts.Token);
-            _calibratedCube = result.CalibratedCube;
-            _hasCalibration = result.HasCalibration;
             Cube = result.Cube;
+            _hasCalibration = result.HasCalibration;
+
 
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
@@ -146,7 +145,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (_calibratedCube == null || !_hasCalibration)
+        if (!_hasCalibration)
         {
             InferenceOutput =
                 "Inference requires calibrated data (dark + white reference). " +
@@ -162,7 +161,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             {
                 if (running) InferenceOutput = s;
             });
-            var (result, summary) = await _inference.RunAsync(_calibratedCube, modelPackageDir, progress, _cts.Token);
+            var (result, summary) = await _inference.RunAsync(Cube, modelPackageDir, progress, _cts.Token);
             running = false;
 
             InferenceOutput = summary;
@@ -203,7 +202,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Overlay.Clear();
         CurrentBitmap = null;
         Cube = null;
-        _calibratedCube = null;
         GC.SuppressFinalize(this);
     }
 

@@ -49,6 +49,34 @@
                 <TextBlock Text="Importing and validating..."
                            FontSize="13" Foreground="#88CC88" />
             </Border>
+            
+            <!-- Success banner -->
+            <Border Background="#1A2A1A" CornerRadius="4" Padding="12,8"
+                    IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding SuccessMessage}"
+                               Foreground="#88CC88" FontSize="13" TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Content="X"
+                            Command="{Binding DismissSuccessCommand}"
+                            Background="Transparent" Foreground="#88CC88"
+                            Padding="4,0" VerticalAlignment="Top" />
+                </Grid>
+            </Border>
+
+            <!-- Error banner -->
+            <Border Background="#2A1A1A" CornerRadius="4" Padding="12,8"
+                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding ErrorMessage}"
+                               Foreground="#CC6666" FontSize="13" TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Content="✕"
+                            Command="{Binding DismissErrorCommand}"
+                            Background="Transparent" Foreground="#CC6666"
+                            Padding="4,0" VerticalAlignment="Top" />
+                </Grid>
+            </Border>
+
         </StackPanel>
 
 
@@ -63,8 +91,7 @@
                 <StackPanel Spacing="2">
                     <TextBlock Text="METADATA" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
-                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}"
@@ -100,42 +127,37 @@
                 </StackPanel>
 
                 <Border Height="1" Background="#2D2D2D" />
-
-                <!-- MODEL -->
+                
+                
+                <!-- PREPROCESSING -->
                 <StackPanel Spacing="2">
-                    <TextBlock Text="MODEL" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Text="PREPROCESSING" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
-                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Architecture"
-                                   Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Pipeline.Model.Architecture}"
-                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Task"
-                                   Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Pipeline.Model.Task}"
-                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Total Parameters"
-                                   Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ParametersDisplay}"
-                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Trainable Parameters"
-                                   Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Pipeline.Model.TrainableParameters}"
-                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-                    </Grid>
+                    <TextBlock Text="Steps" Foreground="#888888" FontSize="13" Margin="0,0,0,4" />
+                    <ItemsControl ItemsSource="{Binding Pipeline.Preprocessing.Steps}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1A2A2A" CornerRadius="3"
+                                        Padding="8,3" Margin="0,2,6,2">
+                                    <TextBlock Text="{Binding}" Foreground="#88CCCC" FontSize="12" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
 
                 <Border Height="1" Background="#2D2D2D" />
-
+                
+                
                 <!-- SPECTRAL REDUCER -->
                 <StackPanel Spacing="2">
                     <TextBlock Text="SPECTRAL REDUCER" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
                     <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Method"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
@@ -162,11 +184,77 @@
 
                 <Border Height="1" Background="#2D2D2D" />
 
+                <!-- MODEL -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="MODEL" FontSize="11" FontWeight="SemiBold"
+                               Foreground="#666666" Margin="0,0,0,6" />
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Architecture"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Pipeline.Model.Architecture}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Task"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Pipeline.Model.Task}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Total Parameters"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="2" Grid.Column="1"
+                                   Text="{Binding Pipeline.Model.TotalParameters, StringFormat='{}{0:N0}'}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Trainable Parameters"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="3" Grid.Column="1"
+                                   Text="{Binding Pipeline.Model.TrainableParameters, StringFormat='{}{0:N0}'}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Layers"
+                                   Foreground="#888888" FontSize="13" Margin="0,3"
+                                   VerticalAlignment="Top" />
+                        <ItemsControl Grid.Row="4" Grid.Column="1"
+                                      ItemsSource="{Binding Pipeline.Model.Layers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#2D2D2D" CornerRadius="3"
+                                            Padding="6,2" Margin="0,2,6,2">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="{Binding Key}"
+                                                       Foreground="#CCCCCC" FontSize="12" />
+                                            <TextBlock Text="{Binding Value, StringFormat='x{0}'}"
+                                                       Foreground="#888888" FontSize="12" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </StackPanel>
+                
+                <!-- ARCHITECTURE DIAGRAM/PNG -->
+                <Image Source="{Binding ArchitectureDiagramPath}"
+                       MaxHeight="300"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Left"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding Artifacts.ArchitectureDiagram, 
+                   Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <Border Height="1" Background="#2D2D2D" />
+
+
+                
                 <!-- INPUT SPEC -->
                 <StackPanel Spacing="2">
                     <TextBlock Text="INPUT SPEC" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
                     <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Tensor Layout"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
@@ -201,7 +289,6 @@
                 <StackPanel Spacing="2">
                     <TextBlock Text="OUTPUT SPEC" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
                     <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Output Type"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
@@ -226,7 +313,6 @@
                 <StackPanel Spacing="2">
                     <TextBlock Text="TRAINING" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
                     <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Dataset"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
@@ -269,32 +355,29 @@
                 </StackPanel>
 
                 <Border Height="1" Background="#2D2D2D" />
-
-                <!-- ARTIFACTS -->
-                <StackPanel Spacing="2">
-                    <TextBlock Text="ARTIFACTS" FontSize="11" FontWeight="SemiBold"
-                               Foreground="#666666" Margin="0,0,0,6" />
-
-                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ONNX File"
-                                   Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Artifacts.ModelOnnx}"
-                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-                    </Grid>
-                </StackPanel>
-
-                <Border Height="1" Background="#2D2D2D" />
-
+                
                 <!-- VALIDATION -->
                 <StackPanel Spacing="2">
                     <TextBlock Text="VALIDATION" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-
-                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto">
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Status"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Validation.Status}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tolerance"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding Validation.Tolerance, StringFormat='{}{0:E1}'}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Summary"
+                                   Foreground="#888888" FontSize="13" Margin="0,3"
+                                   VerticalAlignment="Top" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Validation.Summary}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3"
+                                   TextWrapping="Wrap" />
                     </Grid>
                 </StackPanel>
 
@@ -309,7 +392,7 @@
                    IsVisible="{Binding DisplayedModel, Converter={x:Static ObjectConverters.IsNull}}" />
 
 
-        <!-- ROW 2: Bottom Action Bar-->
+        <!-- ROW 2: Bottom Action Bar -->
         <Border Grid.Row="2"
                 Background="#1A1A1A"
                 BorderBrush="#2D2D2D"
@@ -317,10 +400,10 @@
                 Padding="24,12">
             <StackPanel Orientation="Horizontal" Spacing="8">
 
-                <!-- Import (always visible, disabled during preview/import) -->
-                <Button Content="Import Model Package..."
+                <!-- Browsing: Import -->
+                <Button Content="Import New"
                         Click="ImportModelButton_Clicked"
-                        IsEnabled="{Binding IsBrowsing}"
+                        IsVisible="{Binding IsBrowsing}"
                         Background="#2D2D2D"
                         Foreground="#CCCCCC"
                         Padding="12,8"
@@ -329,8 +412,9 @@
                 <!-- Browsing: Delete -->
                 <Button Content="Delete"
                         Command="{Binding DeleteModelCommand}"
-                        CommandParameter="{Binding DisplayedModel}"
+                        CommandParameter="{Binding SelectedModel}"
                         IsVisible="{Binding IsBrowsing}"
+                        IsEnabled="{Binding SelectedModel, Converter={x:Static ObjectConverters.IsNotNull}}"
                         Background="#2A1A1A"
                         Foreground="#CC6666"
                         Padding="12,8"

@@ -54,4 +54,8 @@
             <DependentUpon>ModelsView.axaml</DependentUpon>
         </Compile>
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="ModelPackages\" />
+    </ItemGroup>
 </Project>

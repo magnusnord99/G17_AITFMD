@@ -74,7 +74,7 @@ public static class HsiCalibration
     /// Supports both full-frame references (same dimensions as scene) and
     /// single-line references (one row, broadcast across all lines.
     /// </summary>
-    public static HsiCube ApplyReflectance(HsiCube sceneCube, HsiCube darkCube, HsiCube whiteCube)
+    public static HsiCube ApplyReflectanceOld(HsiCube sceneCube, HsiCube darkCube, HsiCube whiteCube)
     {
         var header = sceneCube.Header;
         var bands = header.Bands;
@@ -125,6 +125,65 @@ public static class HsiCalibration
                     result[offset + i] = d > 1f
                         ? (sceneBand[i] - darkBand[i]) / d
                         : 0f;
+                }
+            }
+        });
+
+        return new HsiCube(header, result);
+    }
+
+    /// <summary>
+    /// Applies reflectance calibration: (scene - dark) / (white - dark + eps).
+    /// Matches Python <c>calibrate_cube</c> exactly (epsilon-based denominator).
+    /// Supports both full-frame references (same dimensions as scene) and
+    /// single-line references (one row, broadcast across all lines).
+    /// </summary>
+    public static HsiCube ApplyReflectance(HsiCube sceneCube, HsiCube darkCube, HsiCube whiteCube,
+        float eps = 1e-8f)
+    {
+        var header = sceneCube.Header;
+        var bands = header.Bands;
+        var samples = header.Samples;
+        var lines = header.Lines;
+        var pixels = lines * samples;
+        var lineRef = darkCube.Header.Lines != lines;
+
+        var result = new float[bands * pixels];
+
+        // Each band is calibrated independently
+        Parallel.For(0, bands, b =>
+        {
+            var sceneBand = sceneCube.GetBand(b);
+            var darkBand = darkCube.GetBand(b);
+            var whiteBand = whiteCube.GetBand(b);
+            var offset = b * pixels;
+            if (lineRef)
+            {
+                // Single-line reference: dark/white have one value per column (x).
+                // Precompute 1 / (white - dark + eps) per column to avoid repeated division.
+                Span<float> invDenom = stackalloc float[samples];
+                Span<float> darkCol = stackalloc float[samples];
+                for (var x = 0; x < samples; x++)
+                {
+                    invDenom[x] = 1f / (whiteBand[x] - darkBand[x] + eps);
+                    darkCol[x] = darkBand[x];
+                }
+
+                for (var y = 0; y < lines; y++)
+                {
+                    var rowStart = y * samples;
+                    for (var x = 0; x < samples; x++)
+                        result[offset + rowStart + x] =
+                            (sceneBand[rowStart + x] - darkCol[x]) * invDenom[x];
+                }
+            }
+            else
+            {
+                // Full-frame reference: one dark/white value per pixel
+                for (var i = 0; i < pixels; i++)
+                {
+                    var denom = whiteBand[i] - darkBand[i] + eps;
+                    result[offset + i] = (sceneBand[i] - darkBand[i]) / denom;
                 }
             }
         });

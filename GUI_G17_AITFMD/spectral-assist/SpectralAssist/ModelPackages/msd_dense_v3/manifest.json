@@ -1,0 +1,92 @@
+{
+    "schema_version": "1.0",
+    "metadata": {
+        "name": "msd_dense_3dcnn",
+        "version": "1.0.0",
+        "created": "2026-04-08T16:14:46Z",
+        "author": "ML Pipeline",
+        "description": "3D CNN ONNX export (msd_dense_3dcnn); NCDHW in [1,1,16,64,64]"
+    },
+    "input_spec": {
+        "input_rank": 5,
+        "tensor_layout": "NCDHW",
+        "input_shape": [1, 1, 16, 64, 64],
+        "spectral_bands": 16,
+        "spatial_patch_size": [64, 64],
+        "dtype": "float32"
+    },
+    "output_spec": {
+        "type": "logits",
+        "num_classes": 2,
+        "classes": ["class_0", "class_1"]
+    },
+    "pipeline": {
+        "preprocessing": {
+            "steps": ["calibrate", "clip", "neighbor_average", "tissue_mask", "wavelet"],
+            "params": {
+                "calibration_epsilon": 1e-08,
+                "clip_min": 0.0,
+                "clip_max": 1.0,
+                "neighbor_average_window": 3,
+                "tissue_mask_method": "mean_std_percentile",
+                "tissue_mask_q_mean": 0.5,
+                "tissue_mask_q_std": 0.4,
+                "tissue_mask_min_object_size": 500,
+                "tissue_mask_min_hole_size": 1000,
+                "band_reduce_out_bands": 16
+            }
+        },
+        "spectral_reducer": {
+            "method": "wavelet",
+            "embedded_in_onnx": false,
+            "input_bands": 275,
+            "output_bands": 16
+        },
+        "model": {
+            "architecture": "msd_dense_3dcnn",
+            "task": "classification",
+            "total_parameters": 82762,
+            "trainable_parameters": 82762,
+            "layers": {
+                "Conv3d": 13,
+                "GroupNorm": 12,
+                "ReLU": 3,
+                "MaxPool3d": 1,
+                "AdaptiveAvgPool3d": 1,
+                "Dropout": 1,
+                "Linear": 1
+            }
+        }
+    },
+    "training": {
+        "dataset": null,
+        "samples": null,
+        "epochs": 10,
+        "metrics": {
+            "accuracy": null,
+            "precision": null,
+            "recall": null,
+            "f1": null
+        }
+    },
+    "artifacts": {
+        "model_onnx": "model.onnx",
+		"architecture_diagram": "architecture.png"
+    },
+    "validation": {
+        "status": "ready",
+        "tolerance": 0.0001,
+        "roi_dir": "roi_validation",
+        "patch_coords": {
+            "y": 368,
+            "x": 470,
+            "h": 64,
+            "w": 64
+        },
+        "expected_output": {
+            "logits": [1.487705, -1.168717],
+            "softmax": [0.934406, 0.065594],
+            "predicted_class": 0
+        }
+    }
+}

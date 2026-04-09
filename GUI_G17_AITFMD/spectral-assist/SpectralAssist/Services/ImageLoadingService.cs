@@ -13,10 +13,7 @@ public readonly struct ImageLoadResult
 {
     /// <summary>The loaded cube (calibrated if references were found, raw otherwise).</summary>
     public HsiCube Cube { get; init; }
-
-    /// <summary>The calibrated cube for inference, or raw scene if no calibration.</summary>
-    public HsiCube CalibratedCube { get; init; }
-
+    
     /// <summary>Whether dark/white calibration was applied.</summary>
     public bool HasCalibration { get; init; }
 }
@@ -59,7 +56,6 @@ public class ImageLoadingService
         return new ImageLoadResult
         {
             Cube = calibrated ?? scene,
-            CalibratedCube = calibrated ?? scene,
             HasCalibration = calibrated != null,
         };
     }

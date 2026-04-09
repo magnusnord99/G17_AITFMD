@@ -45,9 +45,9 @@ public class ModelPackageService : IDisposable
 
         foreach (var dir in Directory.GetDirectories(ModelPackagesDir))
         {
-            var info = TryLoadManifest(dir);
-            if (info != null)
-                AvailableModels.Add(info);
+            var result = TryLoadManifest(dir);
+            if (result.Value != null)
+                AvailableModels.Add(result.Value);
         }
 
         Debug.WriteLine($"ModelPackageService: found {AvailableModels.Count} model(s)");
@@ -59,16 +59,16 @@ public class ModelPackageService : IDisposable
     /// <c>ModelPackages/</c>. Validates that the source contains a valid
     /// <c>manifest.json</c> and the referenced ONNX file before copying.
     /// </summary>
-    public (ModelManifest? Info, string? Error) ImportPackage(string sourceDir)
+    public Result<ModelManifest> ImportPackage(string sourceDir)
     {
         if (!Directory.Exists(sourceDir))
-            return (null, $"Source directory not found: {sourceDir}");
+            return Result<ModelManifest>.Fail($"Source directory not found: {sourceDir}");
 
         var manifestPath = Path.Combine(sourceDir, "manifest.json");
         if (!File.Exists(manifestPath))
-            return (null, "No manifest.json found in the selected folder.");
+            return Result<ModelManifest>.Fail("No manifest.json found in the selected folder.");
 
-        // Parse manifest to validate and extract ONNX filename
+        // Parse manifest file
         ModelManifest manifest;
         try
         {
@@ -78,24 +78,23 @@ public class ModelPackageService : IDisposable
         }
         catch (Exception ex)
         {
-            return (null, $"Invalid manifest.json: {ex.Message}");
+            return Result<ModelManifest>.Fail($"Invalid manifest.json: {ex.Message}");
         }
 
         var onnxFilename = manifest.Artifacts.ModelOnnx;
         if (string.IsNullOrWhiteSpace(onnxFilename))
-            return (null, "manifest.json is missing artifacts.model_onnx.");
+            return Result<ModelManifest>.Fail("manifest.json is missing artifacts.model_onnx.");
 
         var onnxPath = Path.Combine(sourceDir, onnxFilename);
         if (!File.Exists(onnxPath))
-            return (null, $"ONNX file not found: {onnxFilename}");
+            return Result<ModelManifest>.Fail($"ONNX file not found: {onnxFilename}");
 
-        // Determine target directory name (use source folder name)
         var folderName =
             Path.GetFileName(sourceDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         var targetDir = Path.Combine(ModelPackagesDir, folderName);
 
         if (Directory.Exists(targetDir))
-            return (null, $"A model package named '{folderName}' already exists.");
+            return Result<ModelManifest>.Fail($"A model package named '{folderName}' already exists.");
 
         try
         {
@@ -104,23 +103,25 @@ public class ModelPackageService : IDisposable
         }
         catch (Exception ex)
         {
-            return (null, $"Failed to copy model package: {ex.Message}");
+            return Result<ModelManifest>.Fail($"Failed to copy model package: {ex.Message}");
         }
 
         Refresh();
         var imported = AvailableModels.FirstOrDefault(m => m.Id == folderName);
-        return (imported, null);
+        return imported != null
+            ? Result<ModelManifest>.Ok(imported)
+            : Result<ModelManifest>.Fail("Package copied but failed to load.");
     }
 
 
     /// <summary>
     /// Deletes a model package by removing its directory from <c>ModelPackages/</c>.
     /// </summary>
-    public (bool Success, string? Error) DeletePackage(string modelId)
+    public Result<bool> DeletePackage(string modelId)
     {
         var targetDir = Path.Combine(ModelPackagesDir, modelId);
         if (!Directory.Exists(targetDir))
-            return (false, $"Model package '{modelId}' not found.");
+            return Result<bool>.Fail($"Model package '{modelId}' not found.");
 
         // If the deleted package is currently loaded, dispose it
         if (_loadedPackageDir == Path.GetFullPath(targetDir))
@@ -136,11 +137,11 @@ public class ModelPackageService : IDisposable
         }
         catch (Exception ex)
         {
-            return (false, $"Failed to delete model package: {ex.Message}");
+            return Result<bool>.Fail($"Failed to delete model package: {ex.Message}");
         }
 
         Refresh();
-        return (true, null);
+        return Result<bool>.Ok(true);
     }
 
     /// <summary>
@@ -166,16 +167,11 @@ public class ModelPackageService : IDisposable
         var modelPath = Path.Combine(fullPath, manifest.Artifacts.ModelOnnx);
         var (session, provider) = CreateSession(modelPath);
 
-        // ToDo: Run validation if artifacts are present
-        var validationResult = ModelValidationResult.Skipped;
-
         _loadedPackage = new ModelPackage
         {
             Manifest = manifest,
             Session = session,
-            UseGpu = provider != ExecutionProvider.Cpu,
             ActiveProvider = provider,
-            ValidationResult = validationResult,
         };
         _loadedPackageDir = fullPath;
 
@@ -226,29 +222,29 @@ public class ModelPackageService : IDisposable
     /// for runtime use. Returns null if the directory is not a valid model package.
     /// Used both for scanning existing packages and previewing imports.
     /// </summary>
-    public static ModelManifest? TryLoadManifest(string packageDir)
+    public static Result<ModelManifest> TryLoadManifest(string packageDir)
     {
         var manifestPath = Path.Combine(packageDir, "manifest.json");
         if (!File.Exists(manifestPath))
-            return null;
+            return Result<ModelManifest>.Fail("manifest.json not found");
 
         try
         {
             var json = File.ReadAllText(manifestPath);
             var manifest = JsonSerializer.Deserialize<ModelManifest>(json);
-            if (manifest == null) return null;
+            if (manifest == null) 
+                return Result<ModelManifest>.Fail("Failed to deserialize manifest");
 
             manifest.Id = Path.GetFileName(packageDir);
             manifest.DirectoryPath = Path.GetFullPath(packageDir);
-            return manifest;
+            return Result<ModelManifest>.Ok(manifest);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"ModelPackageService: failed to parse {manifestPath}: {ex.Message}");
-            return null;
+            return Result<ModelManifest>.Fail($"Manifest error: {ex.Message}");
         }
     }
-
+    
     private static void CopyDirectory(string sourceDir, string targetDir)
     {
         Directory.CreateDirectory(targetDir);
