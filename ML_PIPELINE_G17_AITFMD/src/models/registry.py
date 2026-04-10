@@ -96,6 +96,7 @@ def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
             num_blocks=list(arch.get("num_blocks", [2, 2, 2])),
             kernel_size=kernel_size,
             dropout=dropout,
+            block_dropout=float(arch.get("block_dropout", 0.0)),
         )
 
     if name == "skip_cnn3d":

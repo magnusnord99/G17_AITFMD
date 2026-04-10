@@ -334,6 +334,10 @@ def main() -> int:
     log.info("patch size: %dx%d  patches_per_cube: %s  max_cached_cubes: %d",
              patch_h, patch_w, "all" if use_all_patches else patches_per_cube, max_cached_cubes)
 
+    augment = bool(data_cfg.get("augment", False))
+    if augment:
+        log.info("Spatial augmentation enabled (hflip, vflip, rot90)")
+
     ds_kwargs = dict(
         patch_h=patch_h, patch_w=patch_w,
         mask_root=mask_path, min_tissue_ratio=min_tissue,
@@ -341,8 +345,8 @@ def main() -> int:
         stride_h=stride_h, stride_w=stride_w,
         use_all_patches=use_all_patches, max_cached_cubes=max_cached_cubes,
     )
-    train_ds = CubePatchDataset(train_rows, val_seed=None, **ds_kwargs)
-    val_ds = CubePatchDataset(val_rows, val_seed=val_seed, **ds_kwargs)
+    train_ds = CubePatchDataset(train_rows, val_seed=None, augment=augment, **ds_kwargs)
+    val_ds = CubePatchDataset(val_rows, val_seed=val_seed, augment=False, **ds_kwargs)
 
     if len(train_ds) == 0:
         raise RuntimeError("No train samples.")
@@ -362,12 +366,16 @@ def main() -> int:
     # Loss
     loss_cfg = cfg.get("loss", {})
     class_weighting = bool(loss_cfg.get("class_weighting", False))
+    label_smoothing = float(loss_cfg.get("label_smoothing", 0.0))
     if class_weighting:
         weights = compute_class_weights(train_rows["label_id"].tolist(), device)
-        criterion = nn.CrossEntropyLoss(weight=weights)
-        log.info("Class weights: [%.4f, %.4f]", float(weights[0]), float(weights[1]))
+        criterion = nn.CrossEntropyLoss(weight=weights, label_smoothing=label_smoothing)
+        log.info("Class weights: [%.4f, %.4f]  label_smoothing=%.2f",
+                 float(weights[0]), float(weights[1]), label_smoothing)
     else:
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+        if label_smoothing > 0:
+            log.info("label_smoothing=%.2f", label_smoothing)
 
     # Optimizer + scheduler
     optimizer = build_optimizer(model.parameters(), cfg.get("optimizer", {}))

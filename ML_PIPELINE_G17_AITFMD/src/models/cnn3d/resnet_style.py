@@ -13,12 +13,13 @@ def _conv3x3(in_ch: int, out_ch: int, kernel_size: int = 3) -> nn.Conv3d:
 
 
 class ResBlock3D(nn.Module):
-    """Residual block: conv-bn-relu-conv-bn + skip."""
+    """Residual block: conv-norm-relu-dropout-conv-norm + skip."""
 
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3, block_dropout: float = 0.0):
         super().__init__()
         self.conv1 = _conv3x3(in_channels, out_channels, kernel_size)
         self.bn1 = make_groupnorm(out_channels)
+        self.drop = nn.Dropout(p=block_dropout) if block_dropout > 0.0 else nn.Identity()
         self.conv2 = _conv3x3(out_channels, out_channels, kernel_size)
         self.bn2 = make_groupnorm(out_channels)
         if in_channels != out_channels:
@@ -31,7 +32,7 @@ class ResBlock3D(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         residual = self.project(x)
-        x = nn.functional.relu(self.bn1(self.conv1(x)))
+        x = self.drop(nn.functional.relu(self.bn1(self.conv1(x))))
         x = self.bn2(self.conv2(x))
         return nn.functional.relu(x + residual)
 
@@ -47,6 +48,7 @@ class ResNet3DCNN(nn.Module):
         num_blocks: list[int] = (2, 2, 2),
         kernel_size: int = 3,
         dropout: float = 0.3,
+        block_dropout: float = 0.0,
     ):
         super().__init__()
         if len(stage_channels) != len(num_blocks):
@@ -65,9 +67,9 @@ class ResNet3DCNN(nn.Module):
         stages = []
         prev_channels = first_channels
         for out_channels, n_stage_blocks in zip(stage_channels, num_blocks):
-            stages.append(ResBlock3D(prev_channels, out_channels, kernel_size))
+            stages.append(ResBlock3D(prev_channels, out_channels, kernel_size, block_dropout=block_dropout))
             for _ in range(n_stage_blocks - 1):
-                stages.append(ResBlock3D(out_channels, out_channels, kernel_size))
+                stages.append(ResBlock3D(out_channels, out_channels, kernel_size, block_dropout=block_dropout))
             stages.append(nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)))
             prev_channels = out_channels
         self.stages = nn.Sequential(*stages)
