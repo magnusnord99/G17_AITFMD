@@ -283,14 +283,12 @@ class Evaluator:
             metadata=metadata,
         )
 
-        # Persistent eval CSV
-        paths_cfg = self.cfg.get("paths", {})
-        reports_dir = Path(paths_cfg.get("reports_dir", "outputs/reports"))
-        if not reports_dir.is_absolute():
-            reports_dir = (PROJECT_ROOT / reports_dir).resolve()
+        # Persistent eval CSV — written one level above run_dir (e.g. outputs/)
+        # so it accumulates across all runs in one place.
+        eval_history_path = self.output_dir.parent / "eval_history.csv"
         append_eval_summary_csv(
             summary_metrics,
-            csv_path=reports_dir / "eval_history.csv",
+            csv_path=eval_history_path,
             run_id=run_id,
             split=split,
         )

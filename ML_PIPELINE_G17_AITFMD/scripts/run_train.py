@@ -277,8 +277,6 @@ def main() -> int:
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     paths_cfg = cfg.get("paths", {})
-    logs_dir = _resolve_path(config_path, str(paths_cfg.get("logs_dir", "outputs/logs")))
-    configure_logging(log_dir=logs_dir, run_name=run_id)
     log = get_logger(__name__)
 
     model_cfg_path_raw = args.model or cfg.get("model_config", "configs/models/baseline_3dcnn.yaml")
@@ -380,17 +378,17 @@ def main() -> int:
     amp_requested = bool(trainer_cfg.get("mixed_precision", False))
     amp_enabled = amp_requested and device.type == "cuda"
 
-    # Output dirs
-    checkpoints_dir = _resolve_path(config_path, str(paths_cfg.get("checkpoints_dir", "outputs/checkpoints")))
-    reports_dir = _resolve_path(config_path, str(paths_cfg.get("reports_dir", "outputs/reports")))
-    plots_dir = _resolve_path(config_path, str(paths_cfg.get("plots_dir", "outputs/plots")))
-    reports_dir.mkdir(parents=True, exist_ok=True)
-
+    # All outputs land in one folder per run: outputs/{model_name}_{run_id}/
     model_name = model_config_path.stem
-    dataset_name = _derive_dataset_name(data_cfg, manifest_path, cube_root_raw)
-    run_plots_dir = plots_dir / model_name / dataset_name / run_id
+    outputs_base = _resolve_path(config_path, str(paths_cfg.get("outputs_dir", "outputs")))
+    run_dir = outputs_base / f"{model_name}_{run_id}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    configure_logging(log_dir=run_dir, run_name="run")
+    log = get_logger(__name__)
 
     log.info("device=%s  model=%s  run_id=%s", device.type, model_name, run_id)
+    log.info("run_dir=%s", run_dir)
     log.info("train=%d  val=%d  manifest=%s", len(train_ds), len(val_ds), manifest_path)
 
     # Sanity-check forward pass
@@ -404,7 +402,7 @@ def main() -> int:
 
     # Callbacks
     ckpt_cb = CheckpointCallback(
-        checkpoint_dir=checkpoints_dir,
+        checkpoint_dir=run_dir,
         model_name=model_name,
         run_id=run_id,
         model_config_path=model_config_path,
@@ -422,7 +420,7 @@ def main() -> int:
         }
         eval_cb = EvalCallback(
             cfg={**cfg, "data": eval_data_cfg},
-            output_dir=run_plots_dir,
+            output_dir=run_dir,
             splits=eval_splits,
             batch_size=batch_size,
         )
@@ -436,7 +434,7 @@ def main() -> int:
         scheduler=scheduler,
         loss_fn=criterion,
         cfg=cfg,
-        output_dir=run_plots_dir,
+        output_dir=run_dir,
         run_id=run_id,
         callbacks=callbacks,
         amp_enabled=amp_enabled,
@@ -444,9 +442,9 @@ def main() -> int:
 
     final_logs = trainer.fit()
 
-    # Save training artefacts (hyperparams, plots, report JSON)
+    # Save training artefacts — all into run_dir
     hp_path = _save_hyperparams_snapshot(
-        run_plots_dir,
+        run_dir,
         run_id=run_id, config_path=config_path, model_config_path=model_config_path,
         manifest_path=manifest_path, mask_path=mask_path, cube_root_path=cube_root_path,
         cfg=cfg, model_cfg=model_cfg, args=args, device=device,
@@ -454,7 +452,7 @@ def main() -> int:
     _save_training_plots(
         {**final_logs, "run_id": run_id, "device": device.type},
         final_logs["history"],
-        run_plots_dir,
+        run_dir,
         model_name,
     )
 
@@ -473,14 +471,11 @@ def main() -> int:
         "val_samples": len(val_ds),
         "duration_sec": final_logs["duration_sec"],
     }
-    report_path = reports_dir / f"train_report_{model_name}_{run_id}.json"
+    report_path = run_dir / "train_report.json"
     report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
 
     log.info("best_epoch=%d  best_val_loss=%.4f", final_logs["best_epoch"], final_logs["best_val_loss"])
-    log.info("best_ckpt=%s", trainer.best_checkpoint_path)
-    log.info("report=%s", report_path)
-    log.info("plots=%s", run_plots_dir)
-    log.info("hyperparams=%s", hp_path)
+    log.info("All outputs in: %s", run_dir)
     return 0
 
 

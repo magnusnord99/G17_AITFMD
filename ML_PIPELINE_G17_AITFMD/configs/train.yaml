@@ -46,10 +46,7 @@ trainer:
   save_best_only: true
 
 paths:
-  checkpoints_dir: "outputs/checkpoints"
-  logs_dir: "outputs/logs"
-  reports_dir: "outputs/reports"
-  plots_dir: "outputs/plots"
+  outputs_dir: "outputs"
 
 splits:
   train_ratio: 0.70

@@ -65,8 +65,8 @@ class CheckpointCallback(BaseCallback):
         self.model_config_path = model_config_path
         self.train_config_path = train_config_path
 
-        self.best_path = self.checkpoint_dir / f"{model_name}_{run_id}_best.pt"
-        self.last_path = self.checkpoint_dir / f"{model_name}_{run_id}_last.pt"
+        self.best_path = self.checkpoint_dir / "best.pt"
+        self.last_path = self.checkpoint_dir / "last.pt"
 
     def on_epoch_end(self, trainer: "Trainer", epoch: int, logs: dict[str, Any]) -> None:
         state = {
