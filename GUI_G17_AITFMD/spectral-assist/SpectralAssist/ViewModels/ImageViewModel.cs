@@ -194,7 +194,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             running = false;
 
             InferenceOutput = FormatResultSummary(classificationResult);
-            Overlay.ApplyResult(classificationResult, Cube!);
+            Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
         }
         catch (OperationCanceledException)
         {
@@ -231,9 +231,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         CurrentBitmap = CurrentDisplayMode switch
         {
-            DisplayMode.Grayscale => BitmapRenderer.BandToBitmap(Cube, SelectedBand),
+            DisplayMode.Grayscale => CubeRenderer.BandToBitmap(Cube, SelectedBand),
 
-            DisplayMode.Rgb => BitmapRenderer.RgbToBitmap(
+            DisplayMode.Rgb => CubeRenderer.RgbToBitmap(
                 Cube,
                 Cube.Header.FindClosestBand(630f),
                 Cube.Header.FindClosestBand(530f),

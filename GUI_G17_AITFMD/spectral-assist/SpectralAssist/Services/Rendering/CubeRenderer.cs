@@ -11,7 +11,7 @@ namespace SpectralAssist.Services.Rendering;
 /// Performs per-band min-max normalization to scale reflectance values to 0-255.
 /// This scaling is for display only, the underlying cube data is not modified.
 /// </summary>
-public static class BitmapRenderer
+public static class CubeRenderer
 {
     /// <summary>
     /// Renders a single band as a grayscale bitmap.
@@ -41,7 +41,7 @@ public static class BitmapRenderer
     }
 
     /// <summary>
-    /// Renders three bands as an RGB composite bitmap.
+    /// Renders three explicit band indices as an RGB composite bitmap.
     /// Each band is independently normalized to preserve per-channel contrast.
     /// </summary>
     public static WriteableBitmap RgbToBitmap(HsiCube cube, int redBand, int greenBand, int blueBand)
@@ -104,93 +104,8 @@ public static class BitmapRenderer
 
         min = low;
         range = high - low;
-        if (range < 1e-6f) range = 1f; // Prevent division by zero
-    }
-
-    /// <summary>
-    /// Renders a horizontal gradient bar showing the active colormap
-    /// from threshold to 1.0. Used as a legend for the classification overlay.
-    /// </summary>
-    public static WriteableBitmap ColorBarLegend(
-        Func<float, Color> colourMap,
-        int width = 256,
-        int height = 20,
-        float threshold = 0f)
-    {
-        var bitmap = new WriteableBitmap(
-            new PixelSize(width, height),
-            new Vector(96, 96),
-            Avalonia.Platform.PixelFormat.Bgra8888,
-            AlphaFormat.Unpremul);
-
-        using var buffer = bitmap.Lock();
-        unsafe
-        {
-            var ptr = (byte*)buffer.Address;
-            var stride = buffer.RowBytes;
-
-            for (var x = 0; x < width; x++)
-            {
-                // Map pixel position to probability range [threshold, 1.0]
-                var prob = threshold + (float)x / (width - 1) * (1f - threshold);
-                var colour = colourMap(prob);
-
-                for (var y = 0; y < height; y++)
-                {
-                    var offset = y * stride + x * 4;
-                    ptr[offset + 0] = colour.B; // B
-                    ptr[offset + 1] = colour.G; // G
-                    ptr[offset + 2] = colour.R; // R
-                    ptr[offset + 3] = 255; // A
-                }
-            }
-        }
-
-        return bitmap;
-    }
-
-    public static WriteableBitmap ClassificationOverlay(
-        HsiCube cube,
-        ClassificationResult result,
-        Func<float, Color> colourMap,
-        int targetClassIndex = 1,
-        float threshold = 0f)
-    {
-        var bitmap = CreateBitmap(cube);
-
-        using var buffer = bitmap.Lock();
-        unsafe
-        {
-            var ptr = (byte*)buffer.Address;
-            var stride = buffer.RowBytes;
-
-            foreach (var pred in result.Predictions)
-            {
-                var prob = pred.Probabilities[targetClassIndex];
-                if (prob < threshold) continue;
-                var colour = colourMap(prob);
-
-                for (var y = 0; y < result.PatchH; y++)
-                {
-                    for (var x = 0; x < result.PatchW; x++)
-                    {
-                        var px = pred.X + x;
-                        var py = pred.Y + y;
-
-                        if (px >= cube.Samples || py >= cube.Lines)
-                            continue;
-
-                        var offset = py * stride + px * 4;
-
-                        ptr[offset + 0] = colour.B; // B
-                        ptr[offset + 1] = colour.G; // G
-                        ptr[offset + 2] = colour.R; // R
-                        ptr[offset + 3] = 255; // A
-                    }
-                }
-            }
-        }
-
-        return bitmap;
+        
+        if (range < 1e-6f) 
+            range = 1f;
     }
 }
