@@ -149,7 +149,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     /// Runs inference using the model at the given package directory.
     /// Called from MainViewModel which resolves the selected model.
     /// </summary>
-    public async Task RunInference(ModelPackage modelPackage)
+    public async Task RunInference(ModelPackage modelPackage, int stride)
     {
         if (Cube == null || string.IsNullOrEmpty(_hdrPath))
         {
@@ -189,9 +189,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             }
             
             // Perform inference on preprocessed cube
-            var strideOverride = 8;
             var classificationResult = await _inferenceService.RunAsync(
-                _cachedPreprocessing.Value, modelPackage, strideOverride, progress, _cts.Token);
+                _cachedPreprocessing.Value, modelPackage, stride, progress, _cts.Token);
             running = false;
 
             InferenceOutput = FormatResultSummary(classificationResult);

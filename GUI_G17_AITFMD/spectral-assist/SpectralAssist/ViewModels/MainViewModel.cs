@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -26,6 +27,7 @@ public partial class MainViewModel : ViewModelBase
         
         // ToDo: Change this from FirstOrDefault to settings based preferred model or last used with persistence?
         ActiveModel = _modelRegistry.AvailableModels.FirstOrDefault();
+        _selectedStride = AvailableStrides[0];
     }
 
     // -- Observables -- //
@@ -37,10 +39,12 @@ public partial class MainViewModel : ViewModelBase
     
     [ObservableProperty] private ModelManifest? _activeModel;
     
+    public IReadOnlyList<StrideOption> AvailableStrides => StrideOption.Presets;
+    [ObservableProperty] private StrideOption _selectedStride = StrideOption.Default;
+    
     public bool HasImageView => _imageView != null;
     public bool IsOnImageView => CurrentView is ImageViewModel;
-
-
+    
     // -- Navigation -- //
     [RelayCommand]
     private void NavigateToHome()
@@ -84,7 +88,16 @@ public partial class MainViewModel : ViewModelBase
 
         CurrentView = _imageView;
         var modelPackage = _modelRegistry.LoadPackage(selected.DirectoryPath);
-        await _imageView.RunInference(modelPackage);
+        var spec = modelPackage.Manifest.InputSpec;
+        var patchSize = spec.SpatialPatchSize[0];
+        var stride = SelectedStride.Divisor switch
+        {
+            0  => spec.Stride.FirstOrDefault(patchSize),
+            -1 => 1,
+            var divisor => patchSize / divisor,
+        };
+        
+        await _imageView.RunInference(modelPackage, stride);
     }
     
     
