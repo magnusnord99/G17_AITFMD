@@ -131,7 +131,7 @@
 
                     <Border Height="1" Background="#3D3D3D" Margin="0,2" />
 
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                           Margin="0,2,0,0">
 
                         <TextBlock Grid.Row="0" Grid.Column="0"
@@ -182,12 +182,24 @@
                             <Run Text="{Binding PatchH}" />
                             <Run Text="px" />
                         </TextBlock>
-
+                        
                         <TextBlock Grid.Row="5" Grid.Column="0"
+                                   Text="Stride size:"
+                                   Foreground="#888888" FontSize="11"
+                                   Margin="0,0,12,4" />
+                        <TextBlock Grid.Row="5" Grid.Column="1"
+                                   Foreground="#CCCCCC" FontSize="11">
+                            <Run Text="{Binding StrideW}" />
+                            <Run Text="×" />
+                            <Run Text="{Binding StrideH}" />
+                            <Run Text="px" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0"
                                    Text="Provider:"
                                    Foreground="#888888" FontSize="11"
                                    Margin="0,0,12,0" />
-                        <TextBlock Grid.Row="5" Grid.Column="1"
+                        <TextBlock Grid.Row="6" Grid.Column="1"
                                    Text="{Binding ExecutionProvider}"
                                    Foreground="#CCCCCC" FontSize="11" />
                     </Grid>

@@ -18,7 +18,7 @@ namespace SpectralAssist.Services;
 public static class ModelPackageValidator
 {
     public static async Task<(bool Passed, string Summary)> ValidateAsync(
-        string packageDir, ModelManifest manifest, InferenceService inferenceService)
+        ModelManifest manifest, ModelPackageService packageService, InferenceService inferenceService)
     {
         var validationInfo = manifest.Validation;
         
@@ -26,7 +26,7 @@ public static class ModelPackageValidator
             validationInfo.ExpectedOutput?.Logits is not { Count: > 0 })
             return (false, "Skipped: missing validation data in package.");
 
-        var validationDir = Path.Combine(packageDir, validationInfo.RoiDir);
+        var validationDir = Path.Combine(manifest.DirectoryPath, validationInfo.RoiDir);
         if (!Directory.Exists(validationDir))
             return (false, "Skipped: validation directory not found.");
 
@@ -40,12 +40,13 @@ public static class ModelPackageValidator
                 return (false, "Skipped: calibration white/black files missing");
             
             // Step 2: Perform remaining preprocessing steps
-            //var preprocessingResult = PreprocessingService.RunFromCalibrated(imageResult.CalibratedCube, preprocessingInfo);
+            var preprocessingResult = PreprocessingService.RunFromCalibrated(imageResult.Cube, preprocessingInfo);
             
             // Step 3: Perform model inference
-            var (classificationResult, _) = await inferenceService.RunAsync(imageResult.Cube, packageDir);
+            var package = packageService.LoadPackage(manifest.DirectoryPath);
+            var classificationResult = await inferenceService.RunAsync(preprocessingResult, package);
 
-            // Step 4: Compare actual against expected
+            // Step 4: Compare actual values vs expected values
             var actualSoftmax = classificationResult.Predictions[0].Probabilities;
             var actualLogits = classificationResult.Predictions[0].Logits;
             var predictedClass = classificationResult.Predictions[0].PredictedClass;
@@ -68,7 +69,7 @@ public static class ModelPackageValidator
                 ? $"PASSED: max logit difference {maxLogitDiff:E2} within tolerance {absoluteTolerance:E2}"
                 : $"FAILED: max logit difference {maxLogitDiff:E2} exceeds tolerance {absoluteTolerance:E2}";
             
-            WriteResult(packageDir, passed, summary, actual);
+            WriteResult(manifest.DirectoryPath, passed, summary, actual);
             validationInfo.Status = passed ? "passed" : "failed";
             validationInfo.Summary = summary;
             validationInfo.ActualOutput = actual;
@@ -77,7 +78,7 @@ public static class ModelPackageValidator
         }
         catch (Exception ex)
         {
-            WriteResult(packageDir, passed: false, $"ERROR: {ex.Message}", actualOutput: null);
+            WriteResult(manifest.DirectoryPath, passed: false, $"ERROR: {ex.Message}", actualOutput: null);
             return (false, $"Validation error: {ex.Message}");
         }
     }

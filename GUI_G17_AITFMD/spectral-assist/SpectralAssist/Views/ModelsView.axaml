@@ -111,16 +111,11 @@
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
                         <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.Created}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Schema Version"
-                                   Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SchemaVersion}"
-                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
-
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Description"
+                        
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Description"
                                    Foreground="#888888" FontSize="13" Margin="0,3"
                                    VerticalAlignment="Top" />
-                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Metadata.Description}"
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.Description}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3"
                                    TextWrapping="Wrap" />
                     </Grid>

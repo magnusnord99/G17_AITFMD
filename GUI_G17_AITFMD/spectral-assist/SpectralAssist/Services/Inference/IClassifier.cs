@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using SpectralAssist.Models;
 
@@ -9,5 +10,8 @@ public interface IClassifier
     Task<ClassificationResult> ClassifyImageAsync(
         HsiCube cube,
         bool[]? tissueMask = null,
-        IProgress<(int Done, int Total)>? progress = null);
+        int? strideOverride = null,
+        IProgress<(int Done, int Total)>? progress = null,
+        CancellationToken ct = default
+    );
 }

@@ -8,8 +8,11 @@ public class ClassificationResult
 
     public int ImageWidth { get; init; }
     public int ImageHeight { get; init; }
-    public int PatchW { get; init; }
     public int PatchH { get; init; }
+    public int PatchW { get; init; }
+    public int StrideH { get; init; }
+    public int StrideW { get; init; }
+
 
     public List<string> Classes { get; init; } = [];
     public string ModelName { get; init; } = "";

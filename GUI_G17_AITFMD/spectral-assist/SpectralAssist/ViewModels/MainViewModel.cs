@@ -83,7 +83,8 @@ public partial class MainViewModel : ViewModelBase
         }
 
         CurrentView = _imageView;
-        await _imageView.RunInference(selected.DirectoryPath);
+        var modelPackage = _modelRegistry.LoadPackage(selected.DirectoryPath);
+        await _imageView.RunInference(modelPackage);
     }
     
     
