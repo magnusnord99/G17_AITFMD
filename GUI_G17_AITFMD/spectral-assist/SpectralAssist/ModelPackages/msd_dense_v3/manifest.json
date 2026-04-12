@@ -13,6 +13,7 @@
         "input_shape": [1, 1, 16, 64, 64],
         "spectral_bands": 16,
         "spatial_patch_size": [64, 64],
+		"default_stride": [32, 32],
         "dtype": "float32"
     },
     "output_spec": {

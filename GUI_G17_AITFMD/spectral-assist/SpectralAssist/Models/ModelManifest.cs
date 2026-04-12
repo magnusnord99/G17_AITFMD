@@ -211,7 +211,7 @@ public class InputSpec
     [JsonPropertyName("spatial_patch_size")]
     public List<int> SpatialPatchSize { get; set; } = [];
     
-    [JsonPropertyName("stride")]
+    [JsonPropertyName("default_stride")]
     public List<int> Stride { get; set; } = [];
     
     [JsonPropertyName("dtype")]
