@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,12 +17,6 @@ public enum LoadingState
     Loading,
     Ready,
     Error
-}
-
-public enum DisplayMode
-{
-    Rgb,
-    Grayscale
 }
 
 /// <summary>
@@ -60,9 +55,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private HsiCube? _cube;
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsGrayscale))]
-    private DisplayMode _currentDisplayMode = DisplayMode.Rgb;
-
+    [ObservableProperty] private DisplayOption _selectedDisplayMode = DisplayOption.Default;
+    public static IReadOnlyList<DisplayOption> AvailableDisplayModes => DisplayOption.Presets;
+    
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
@@ -80,17 +75,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public int MaxBandIndex => Cube?.Bands - 1 ?? 0;
     public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "??";
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
-
-    public bool IsGrayscale
-    {
-        get => CurrentDisplayMode == DisplayMode.Grayscale;
-        set => CurrentDisplayMode = value ? DisplayMode.Grayscale : DisplayMode.Rgb;
-    }
-
+    
     // -- Property change handlers -- //
+    public bool IsSpectralMode => SelectedDisplayMode.DisplayMode == DisplayMode.SpectralBand;
     partial void OnSelectedBandChanged(int value) => UpdateBitmap();
-    partial void OnCurrentDisplayModeChanged(DisplayMode value) => UpdateBitmap();
-
+    partial void OnSelectedDisplayModeChanged(DisplayOption value)
+    {
+        OnPropertyChanged(nameof(IsSpectralMode));
+        UpdateBitmap();
+    }
+    
     public ImageViewModel(
         string hdrPath, 
         ImageLoadingService loadingService,
@@ -142,12 +136,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _hasPreprocessedCube;
     private PreprocessingResult? _cachedPreprocessing;
     private ModelPackage? _lastPackage;
-
-    // -- Inference on Click (delegates to InferenceManager) -- //
-    // ToDO: Add loadTCs into delegation to prevent early start before/during image loading
+    
     /// <summary>
-    /// Runs inference using the model at the given package directory.
-    /// Called from MainViewModel which resolves the selected model.
+    /// Runs inference using the given model package and the chosen stride.
+    /// Invoked by the MainViewModel when inference button is clicked.
     /// </summary>
     public async Task RunInference(ModelPackage modelPackage, int stride)
     {
@@ -176,7 +168,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             // Perform preprocessing if fresh session or different modelPackage
             if (_cachedPreprocessing == null || _lastPackage != modelPackage)
             {
-                InferenceOutput = "Preprocessing (manifest-driven)...";
+                InferenceOutput = "Performing preprocessing...";
                 var preprocessing = modelPackage.Manifest.Pipeline.Preprocessing;
                 _cachedPreprocessing = await Task.Run(
                     () => PreprocessingService.RunFromCalibrated(Cube!, preprocessing), _cts.Token);
@@ -229,17 +221,30 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     {
         if (Cube == null) return;
 
-        CurrentBitmap = CurrentDisplayMode switch
+        CurrentBitmap = SelectedDisplayMode.DisplayMode switch
         {
-            DisplayMode.Grayscale => CubeRenderer.BandToBitmap(Cube, SelectedBand),
+            DisplayMode.SpectralBand => CubeRenderer.BandToBitmap(Cube, SelectedBand),
 
-            DisplayMode.Rgb => CubeRenderer.RgbToBitmap(
-                Cube,
+            DisplayMode.SyntheticRgb => GetCachedSyntheticRgb(Cube),
+            
+            DisplayMode.NearestBandRgb => CubeRenderer.RgbToBitmap(Cube,
                 Cube.Header.FindClosestBand(630f),
                 Cube.Header.FindClosestBand(530f),
                 Cube.Header.FindClosestBand(460f)),
-            _ => CurrentBitmap
+            
+            _ => throw new ArgumentOutOfRangeException(nameof(DisplayMode))
         };
+    }
+    
+    private WriteableBitmap? _cachedSyntheticRgb;
+    
+    /// <summary>
+    /// Returns the cached synthetic RGB bitmap, recomputing only initially.
+    /// </summary>
+    private WriteableBitmap GetCachedSyntheticRgb(HsiCube cube)
+    {
+        _cachedSyntheticRgb ??= CubeRenderer.SyntheticRgbToBitmap(cube, SyntheticRgbParameters.HistologyBalanced);
+        return _cachedSyntheticRgb;
     }
 
     public void Dispose()

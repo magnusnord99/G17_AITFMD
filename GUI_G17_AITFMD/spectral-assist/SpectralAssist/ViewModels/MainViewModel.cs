@@ -39,8 +39,8 @@ public partial class MainViewModel : ViewModelBase
     
     [ObservableProperty] private ModelManifest? _activeModel;
     
-    public IReadOnlyList<StrideOption> AvailableStrides => StrideOption.Presets;
     [ObservableProperty] private StrideOption _selectedStride = StrideOption.Default;
+    public static IReadOnlyList<StrideOption> AvailableStrides => StrideOption.Presets;
     
     public bool HasImageView => _imageView != null;
     public bool IsOnImageView => CurrentView is ImageViewModel;
