@@ -32,6 +32,7 @@ public class PreprocessingServiceTests
                 TissueMaskQStd = 0.4f,
                 TissueMaskMinObjectSize = 1,
                 TissueMaskMinHoleSize = 1,
+                TissueMaskMethod = "mean_std_percentile"
             }
         };
 
@@ -58,6 +59,9 @@ public class PreprocessingServiceTests
             Steps = ["calibrate", "clip", "neighbor_average", "band_average"],
             Params = new PreprocessingConfig
             {
+                CalibrationEpsilon = 1e-8f,
+                ClipMin = 0f,
+                ClipMax = 1f,
                 NeighborAverageWindow = 3,
                 BandReduceOutBands = 3,
                 BandReduceStrategy = "uneven",
@@ -76,7 +80,7 @@ public class PreprocessingServiceTests
         var cube = MakeZeroBsqCube(2, 2, 3);
         var preprocessing = new PreprocessingInfo
         {
-            Steps = ["calibrate", "magic_filter"],
+            Steps = ["magic_filter"],
             Params = new PreprocessingConfig()
         };
 
@@ -105,6 +109,7 @@ public class PreprocessingServiceTests
                 TissueMaskQStd = 0.4f,
                 TissueMaskMinObjectSize = 1,
                 TissueMaskMinHoleSize = 1,
+                TissueMaskMethod = "mean_std_percentile"
             }
         };
 
@@ -138,6 +143,7 @@ public class PreprocessingServiceTests
                 TissueMaskQStd = 0.4f,
                 TissueMaskMinObjectSize = 1,
                 TissueMaskMinHoleSize = 1,
+                TissueMaskMethod = "mean_std_percentile"
             }
         };
 
