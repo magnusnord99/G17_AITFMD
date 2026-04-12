@@ -1,6 +1,4 @@
-using System;
-
-namespace SpectralAssist.Services.Preprocessing;
+namespace SpectralAssist.Tests.Utils;
 
 /// <summary>
 /// Float32 cube stored in HWB layout matching NumPy (H, W, B) with C-order ravel:

@@ -1,5 +1,6 @@
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Tests.Utils;
 using Xunit;
 
 namespace SpectralAssist.Tests;

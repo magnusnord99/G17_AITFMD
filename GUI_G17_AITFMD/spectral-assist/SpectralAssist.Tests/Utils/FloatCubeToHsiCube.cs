@@ -1,6 +1,6 @@
 using SpectralAssist.Models;
 
-namespace SpectralAssist.Services.Preprocessing;
+namespace SpectralAssist.Tests.Utils;
 
 /// <summary>
 /// Converts float cubes from pipeline layout (HWB, C-order like NumPy) to BSQ layout used by

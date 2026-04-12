@@ -1,12 +1,12 @@
 using System;
+using System.Threading.Tasks;
+using SpectralAssist.Models;
 
 namespace SpectralAssist.Services.Preprocessing;
 
 /// <summary>
-/// Draft implementation of the Python wavelet reducer for the specific mode used in this project:
-/// db2 + approx_padded + periodization + edge padding.
-///
-/// Kept isolated on purpose: no GUI wiring, no DI registration, no pipeline integration yet.
+/// Wavelet spectral reducer using PyWavelets-compatible db2 decomposition
+/// with approx_padded + periodization + edge padding.
 /// </summary>
 public static class WaveletReducer
 {
@@ -21,12 +21,14 @@ public static class WaveletReducer
 
     /// <summary>
     /// Apply the same high-level strategy as Python <c>reduce_cube_wavelet_approx_padded</c>:
-    /// 1) pad the spectral dimension to targetBands * 2^L
-    /// 2) run repeated db2 approximation steps
-    /// 3) keep only cA_L with exact length <paramref name="targetBands"/>
+    /// <list>
+    /// <item>1) pad the spectral dimension to targetBands * 2^L</item>
+    /// <item>2) run repeated db2 approximation steps</item>
+    /// <item>3) keep only cA_L with exact length <paramref name="targetBands"/></item>
+    /// </list>
     /// </summary>
-    public static FloatCubeHWB ApplyApproxPaddedDb2(
-        FloatCubeHWB cube,
+    public static HsiCube Apply(
+        HsiCube cube,
         int targetBands = 16,
         int? level = null,
         string mode = "periodization",
@@ -37,55 +39,66 @@ public static class WaveletReducer
         if (targetBands <= 0)
             throw new ArgumentOutOfRangeException(nameof(targetBands), "targetBands must be > 0.");
         if (!string.Equals(mode, "periodization", StringComparison.Ordinal))
-            throw new ArgumentException("Draft reducer currently supports only mode='periodization'.", nameof(mode));
+            throw new ArgumentException("Only mode='periodization' is supported.", nameof(mode));
         if (!string.Equals(padMode, "edge", StringComparison.Ordinal))
-            throw new ArgumentException("Draft reducer currently supports only padMode='edge'.", nameof(padMode));
+            throw new ArgumentException("Only padMode='edge' is supported.", nameof(padMode));
 
-        var minLevel = MinLevelForTarget(cube.Bands, targetBands);
+        var nBands = cube.Bands;
+        var samples = cube.Samples;
+        var lines = cube.Lines;
+        var pixels = cube.PixelsPerBand;
+
+        var minLevel = MinLevelForTarget(nBands, targetBands);
         var effectiveLevel = level ?? Math.Max(1, minLevel);
         if (effectiveLevel < minLevel)
         {
             throw new ArgumentException(
-                $"level={effectiveLevel} is too small for bands={cube.Bands} and targetBands={targetBands}. Need level >= {minLevel}.",
+                $"level={effectiveLevel} is too small for bands={nBands} and targetBands={targetBands}. Need level >= {minLevel}.",
                 nameof(level));
         }
 
         var paddedBands = targetBands * (1 << effectiveLevel);
-        if (paddedBands < cube.Bands)
+        if (paddedBands < nBands)
             throw new InvalidOperationException("Internal error: padded length is smaller than input bands.");
 
-        var output = new float[cube.Lines * cube.Samples * targetBands];
-        var spectrum = new float[cube.Bands];
+        var output = new float[targetBands * pixels];
 
-        for (var y = 0; y < cube.Lines; y++)
+        // Process rows in parallel: each thread gets its own spectrum and pad buffers
+        Parallel.For(0, lines, () => new float[nBands], (y, _, spectrum) =>
         {
-            for (var x = 0; x < cube.Samples; x++)
-            {
-                for (var b = 0; b < cube.Bands; b++)
-                    spectrum[b] = cube.Get(y, x, b);
+            var rowStart = y * samples;
 
+            for (var x = 0; x < samples; x++)
+            {
+                var px = rowStart + x;
+                for (var b = 0; b < nBands; b++)
+                    spectrum[b] = cube.GetBand(b)[px];
+
+                // Pad and apply wavelet decomposition
                 var current = EdgePadSpectrum(spectrum, paddedBands);
                 for (var i = 0; i < effectiveLevel; i++)
                     current = DwtApproxOnceDb2(current);
 
-                if (current.Length != targetBands)
-                {
-                    throw new InvalidOperationException(
-                        $"Unexpected cA length after padding. Expected {targetBands}, got {current.Length}.");
-                }
-
-                for (var outBand = 0; outBand < targetBands; outBand++)
-                {
-                    var outIdx = FloatCubeHWB.FlatIndex(y, x, outBand, cube.Samples, targetBands);
-                    output[outIdx] = current[outBand];
-                }
+                // Scatter: write reduced spectrum to BSQ output planes
+                for (var b = 0; b < targetBands; b++)
+                    output[b * pixels + px] = current[b];
             }
-        }
 
-        return new FloatCubeHWB(cube.Lines, cube.Samples, targetBands, output);
+            return spectrum;
+        }, _ => { });
+
+        var header = new HsiHeader
+        {
+            Lines = cube.Lines,
+            Samples = cube.Samples,
+            Bands = targetBands,
+            Interleave = "bsq",
+        };
+
+        return new HsiCube(header, output);
     }
 
-    internal static int MinLevelForTarget(int nBands, int targetBands)
+    private static int MinLevelForTarget(int nBands, int targetBands)
     {
         if (nBands <= 0)
             throw new ArgumentOutOfRangeException(nameof(nBands), "nBands must be > 0.");
@@ -96,7 +109,7 @@ public static class WaveletReducer
         return (int)Math.Ceiling(Math.Log(ratio, 2.0));
     }
 
-    internal static float[] EdgePadSpectrum(float[] spectrum, int paddedLength)
+    private static float[] EdgePadSpectrum(float[] spectrum, int paddedLength)
     {
         if (spectrum.Length == 0)
             throw new ArgumentException("Spectrum must be non-empty.", nameof(spectrum));
@@ -113,7 +126,7 @@ public static class WaveletReducer
         return padded;
     }
 
-    internal static float[] DwtApproxOnceDb2(float[] signal)
+    private static float[] DwtApproxOnceDb2(float[] signal)
     {
         if (signal.Length < 2 || signal.Length % 2 != 0)
             throw new ArgumentException("Signal length must be an even integer >= 2.", nameof(signal));
@@ -126,7 +139,7 @@ public static class WaveletReducer
             // PyWavelets periodization for db2 aligns the low-pass filter
             // as a reversed filter with a -1 phase shift relative to the naive formulation.
             var start = (2 * outIndex) - 1;
-            double sum = 0.0;
+            var sum = 0.0;
 
             for (var k = 0; k < filterLength; k++)
             {

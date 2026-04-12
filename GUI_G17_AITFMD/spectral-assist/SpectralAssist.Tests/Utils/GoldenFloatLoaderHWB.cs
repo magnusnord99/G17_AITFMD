@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using SpectralAssist.Services.Preprocessing;
-
-namespace SpectralAssist.Tests;
+﻿namespace SpectralAssist.Tests.Utils;
 
 internal static class GoldenFloatLoaderHWB
 {

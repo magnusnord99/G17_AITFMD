@@ -1,6 +1,6 @@
 using SpectralAssist.Models;
 
-namespace SpectralAssist.Tests;
+namespace SpectralAssist.Tests.Utils;
 
 /// <summary>
 /// Loads golden-file fixtures (Python-exported float32 binaries) as BSQ <see cref="HsiCube"/>.
