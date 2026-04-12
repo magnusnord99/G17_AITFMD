@@ -116,8 +116,8 @@ public partial class ModelsViewModel : ViewModelBase
         else
             ErrorMessage = summary;
 
-        SelectedModel = modelManifest;
         ResetImportState();
+        SelectedModel = modelManifest;
     }
 
     [RelayCommand]
@@ -135,7 +135,7 @@ public partial class ModelsViewModel : ViewModelBase
 
         if (SelectedModel == modelInfo)
             SelectedModel = AvailableModels.FirstOrDefault(); 
-        //SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
+        //ToDo: SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
     }
     
     partial void OnSelectedModelChanged(ModelManifest? value)
