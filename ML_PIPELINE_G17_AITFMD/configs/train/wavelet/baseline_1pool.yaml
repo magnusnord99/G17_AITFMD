@@ -21,7 +21,7 @@ data:
 optimizer:
   name: "adam"
   lr: 5.0e-5
-  weight_decay: 1.0e-4
+  weight_decay: 3.0e-4
 
 scheduler:
   enabled: true
@@ -34,7 +34,7 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 13
+  early_stopping_patience: 6
   mixed_precision: true
   save_best_only: true
 

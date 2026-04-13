@@ -8,9 +8,9 @@ model:
 architecture:
   in_channels: 1
   num_classes: 2
-  dropout: 0.45         # FC dropout (økt fra 0.30)
+  dropout: 0.45         # FC dropout
   block_dropout: 0.10   # dropout mellom conv1 og conv2 i hvert ResBlock
-  stage_channels: [16, 32, 64]
+  stage_channels: [8, 16, 32]   # halverte kanaler (129k params vs 516k)
   num_blocks: [2, 2, 2]  # blocks per stage
   kernel_size: 3
 
