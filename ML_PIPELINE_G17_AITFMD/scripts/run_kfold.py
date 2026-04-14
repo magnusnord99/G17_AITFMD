@@ -70,6 +70,9 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--folds", default=None,
                    help="Comma-separated fold indices to run (default: all). E.g. --folds 0,1,2")
     p.add_argument("--no-auto-eval", action="store_true", help="Skip automatic eval after each fold")
+    p.add_argument("--resume", default=None, metavar="KFOLD_RUN_DIR",
+                   help="Path to an existing kfold run directory to resume. "
+                        "Completed folds (with fold_result.json) are skipped automatically.")
     return p.parse_args()
 
 
@@ -159,6 +162,12 @@ def _train_fold(
     fold_dir = kfold_run_dir / f"fold_{fold_idx}"
     fold_dir.mkdir(parents=True, exist_ok=True)
 
+    # ── Skip already-completed folds ──────────────────────────────────────
+    fold_result_path = fold_dir / "fold_result.json"
+    if fold_result_path.exists():
+        log.info("Fold %d: already complete (fold_result.json found), skipping.", fold_idx)
+        return json.loads(fold_result_path.read_text(encoding="utf-8"))
+
     # ── Split by fold column ──────────────────────────────────────────────
     test_fold = fold_idx
     val_fold = (fold_idx + 1) % k
@@ -217,8 +226,10 @@ def _train_fold(
         stride_h=stride_h, stride_w=stride_w,
         use_all_patches=use_all_patches, max_cached_cubes=max_cached_cubes,
     )
+    use_roi = str(cfg.get("trainer", {}).get("checkpoint_metric", "val_loss")) == "val_auc_roi"
     train_ds = CubePatchDataset(train_rows, val_seed=None, augment=augment, **ds_kwargs)
-    val_ds   = CubePatchDataset(val_rows,   val_seed=val_seed, augment=False, **ds_kwargs)
+    val_ds   = CubePatchDataset(val_rows,   val_seed=val_seed, augment=False,
+                                return_cube_idx=use_roi, **ds_kwargs)
 
     if len(train_ds) == 0:
         raise RuntimeError(f"Fold {fold_idx}: No train samples.")
@@ -235,6 +246,14 @@ def _train_fold(
     model = build_model_from_config(model_config_path).to(device)
     log.info("Model: %s  params=%d", model.__class__.__name__, _count_params(model))
 
+    # ── Check for resume checkpoint ───────────────────────────────────────
+    last_ckpt_path = fold_dir / "last.pt"
+    resume_state: dict | None = None
+    if last_ckpt_path.exists():
+        log.info("Fold %d: found last.pt — resuming from checkpoint.", fold_idx)
+        resume_state = torch.load(last_ckpt_path, map_location=device, weights_only=False)
+        model.load_state_dict(resume_state["model_state_dict"])
+
     # ── Loss ──────────────────────────────────────────────────────────────
     loss_cfg = cfg.get("loss", {})
     class_weighting = bool(loss_cfg.get("class_weighting", False))
@@ -250,6 +269,9 @@ def _train_fold(
     optimizer = build_optimizer(model.parameters(), cfg.get("optimizer", {}))
     max_epochs = int(cfg.get("trainer", {}).get("max_epochs", 50))
     scheduler = build_scheduler(optimizer, cfg.get("scheduler", {}), num_epochs=max_epochs)
+
+    if resume_state is not None:
+        optimizer.load_state_dict(resume_state["optimizer_state_dict"])
 
     trainer_cfg = cfg.get("trainer", {})
     amp_enabled = bool(trainer_cfg.get("mixed_precision", False)) and device.type == "cuda"
@@ -296,8 +318,9 @@ def _train_fold(
         run_id=fold_run_id,
         callbacks=callbacks,
         amp_enabled=amp_enabled,
+        roi_val=use_roi,
     )
-    final_logs = trainer.fit()
+    final_logs = trainer.fit(resume_from=resume_state)
 
     _save_fold_plots(
         {**final_logs, "run_id": fold_run_id},
@@ -314,7 +337,7 @@ def _train_fold(
         if test_jsons:
             test_eval_json = json.loads(test_jsons[-1].read_text(encoding="utf-8"))
 
-    return {
+    result = {
         "fold": fold_idx,
         "test_patients": test_patients,
         "val_patients": val_patients,
@@ -328,6 +351,8 @@ def _train_fold(
         "test_eval": test_eval_json,
         "fold_dir": str(fold_dir),
     }
+    fold_result_path.write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -449,13 +474,22 @@ def main() -> int:
     else:
         folds_to_run = list(range(k))
 
-    # Shared run ID for the entire k-fold run
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     model_name = model_config_path.stem
     paths_cfg = cfg.get("paths", {})
     outputs_base = _resolve_path(config_path, str(paths_cfg.get("outputs_dir", "outputs")))
-    kfold_run_dir = outputs_base / f"kfold_{model_name}_{run_id}"
-    kfold_run_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.resume:
+        kfold_run_dir = Path(args.resume).expanduser().resolve()
+        if not kfold_run_dir.exists():
+            kfold_run_dir = (PROJECT_ROOT / args.resume).resolve()
+        if not kfold_run_dir.exists():
+            raise FileNotFoundError(f"Resume dir not found: {args.resume}")
+        # Recover run_id from directory name (kfold_<model>_<run_id>)
+        run_id = kfold_run_dir.name.split("_", 2)[-1] if "_" in kfold_run_dir.name else kfold_run_dir.name
+    else:
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        kfold_run_dir = outputs_base / f"kfold_{model_name}_{run_id}"
+        kfold_run_dir.mkdir(parents=True, exist_ok=True)
 
     configure_logging(log_dir=kfold_run_dir, run_name="kfold")
     log = get_logger(__name__)

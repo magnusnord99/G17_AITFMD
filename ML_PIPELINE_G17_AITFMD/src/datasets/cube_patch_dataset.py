@@ -43,6 +43,7 @@ class CubePatchDataset(Dataset):
         use_all_patches: bool = False,
         max_cached_cubes: int = 12,
         augment: bool = False,
+        return_cube_idx: bool = False,
     ):
         required = {"output_path", "label_id", "split"}
         missing = required - set(rows.columns)
@@ -62,6 +63,7 @@ class CubePatchDataset(Dataset):
         self.stride_w = stride_w
         self.use_all_patches = use_all_patches
         self.augment = augment and not self._is_val  # aldri augmenter val/test
+        self.return_cube_idx = return_cube_idx
         # Hold nylig brukte kuber i RAM (viktig når shuffle hopper mellom ROI-er — ellers full npy-load hver batch)
         self.max_cached_cubes = max(0, int(max_cached_cubes))
         self._cube_cache: dict[int, np.ndarray] = {}
@@ -189,6 +191,8 @@ class CubePatchDataset(Dataset):
 
         x_t = torch.from_numpy(patch.astype(np.float32, copy=False)).permute(2, 0, 1).unsqueeze(0)
         y_t = torch.tensor(int(row["label_id"]), dtype=torch.long)
+        if self.return_cube_idx:
+            return x_t, y_t, torch.tensor(cube_idx, dtype=torch.long)
         return x_t, y_t
 
     def _augment_patch(self, patch: np.ndarray) -> np.ndarray:

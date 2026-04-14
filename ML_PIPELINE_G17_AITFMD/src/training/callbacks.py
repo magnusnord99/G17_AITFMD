@@ -66,23 +66,49 @@ class CheckpointCallback(BaseCallback):
         self.train_config_path = train_config_path
 
         self.best_path = self.checkpoint_dir / "best.pt"
+        self.best_by_auc_path = self.checkpoint_dir / "best_by_auc.pt"
+        self.best_by_f1_opt_path = self.checkpoint_dir / "best_by_f1_opt.pt"
+        self.best_by_loss_path = self.checkpoint_dir / "best_by_loss.pt"
         self.last_path = self.checkpoint_dir / "last.pt"
 
-    def on_epoch_end(self, trainer: "Trainer", epoch: int, logs: dict[str, Any]) -> None:
-        state = {
+    def _make_state(self, trainer: "Trainer", epoch: int, logs: dict[str, Any]) -> dict:
+        return {
             "epoch": epoch,
             "model_state_dict": trainer.model.state_dict(),
             "optimizer_state_dict": trainer.optimizer.state_dict(),
+            "scheduler_state_dict": trainer.scheduler.state_dict() if trainer.scheduler is not None else None,
             "model_config_path": str(self.model_config_path),
             "train_config_path": str(self.train_config_path),
             "val_metrics": logs.get("val_metrics", {}),
+            "best_val_loss": trainer.best_val_loss,
+            "best_epoch": trainer.best_epoch,
+            "best_auc_roi": trainer.best_auc_roi,
+            "best_f1_roi_opt": trainer.best_f1_roi_opt,
+            "history": trainer.history,
         }
+
+    def on_epoch_end(self, trainer: "Trainer", epoch: int, logs: dict[str, Any]) -> None:
+        state = self._make_state(trainer, epoch, logs)
         torch.save(state, self.last_path)
 
-        if logs.get("improved", False):
-            torch.save(state, self.best_path)
-            trainer.best_checkpoint_path = self.best_path
-            log.info("Checkpoint saved (best): %s", self.best_path.name)
+        if trainer.checkpoint_metric == "val_auc_roi":
+            # ── ROI-modus: tre separate checkpoint-filer ──────────────────
+            if logs.get("improved_auc", False):
+                torch.save(state, self.best_by_auc_path)
+                trainer.best_checkpoint_path = self.best_by_auc_path
+                log.info("Checkpoint saved (best_by_auc): %s", self.best_by_auc_path.name)
+            if logs.get("improved_f1_opt", False):
+                torch.save(state, self.best_by_f1_opt_path)
+                log.info("Checkpoint saved (best_by_f1_opt): %s", self.best_by_f1_opt_path.name)
+            if logs.get("improved_loss", False):
+                torch.save(state, self.best_by_loss_path)
+                log.info("Checkpoint saved (best_by_loss): %s", self.best_by_loss_path.name)
+        else:
+            # ── Standard modus: gammel oppførsel, én best.pt ──────────────
+            if logs.get("improved", False):
+                torch.save(state, self.best_path)
+                trainer.best_checkpoint_path = self.best_path
+                log.info("Checkpoint saved (best): %s", self.best_path.name)
 
     def on_train_end(self, trainer: "Trainer", logs: dict[str, Any]) -> None:
         log.info("Best checkpoint: %s", trainer.best_checkpoint_path)

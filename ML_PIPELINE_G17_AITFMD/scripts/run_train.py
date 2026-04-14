@@ -345,8 +345,10 @@ def main() -> int:
         stride_h=stride_h, stride_w=stride_w,
         use_all_patches=use_all_patches, max_cached_cubes=max_cached_cubes,
     )
+    use_roi = str(cfg.get("trainer", {}).get("checkpoint_metric", "val_loss")) == "val_auc_roi"
     train_ds = CubePatchDataset(train_rows, val_seed=None, augment=augment, **ds_kwargs)
-    val_ds = CubePatchDataset(val_rows, val_seed=val_seed, augment=False, **ds_kwargs)
+    val_ds = CubePatchDataset(val_rows, val_seed=val_seed, augment=False,
+                              return_cube_idx=use_roi, **ds_kwargs)
 
     if len(train_ds) == 0:
         raise RuntimeError("No train samples.")
@@ -401,7 +403,7 @@ def main() -> int:
 
     # Sanity-check forward pass
     try:
-        x0, _ = train_ds[0]
+        x0 = train_ds[0][0]
         with torch.no_grad():
             model(x0.unsqueeze(0).to(device))
     except RuntimeError as e:
@@ -446,6 +448,7 @@ def main() -> int:
         run_id=run_id,
         callbacks=callbacks,
         amp_enabled=amp_enabled,
+        roi_val=use_roi,
     )
 
     final_logs = trainer.fit()

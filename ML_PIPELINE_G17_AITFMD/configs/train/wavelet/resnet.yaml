@@ -10,7 +10,7 @@ data:
   patch_w: 64
   stride_h: 32
   stride_w: 32
-  min_tissue_ratio: 0.3
+  min_tissue_ratio: 0.7
   patches_per_cube: 64
   use_all_patches: false
   fold_index: 0
@@ -22,7 +22,7 @@ data:
 optimizer:
   name: "adam"
   lr: 5.0e-5
-  weight_decay: 3.0e-4
+  weight_decay: 1.0e-4
 
 scheduler:
   enabled: true
@@ -36,7 +36,9 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 10
+  early_stopping_patience: 8
+  early_stopping_min_delta: 0.002
+  checkpoint_metric: "val_auc_roi"
   mixed_precision: true
   save_best_only: true
 
