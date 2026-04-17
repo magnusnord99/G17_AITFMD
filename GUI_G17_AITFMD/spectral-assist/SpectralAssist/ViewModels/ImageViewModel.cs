@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
 using SpectralAssist.Services.Rendering;
@@ -18,17 +19,16 @@ public enum LoadingState
     Error
 }
 
-public enum DisplayMode
-{
-    Rgb,
-    Grayscale
-}
-
 /// <summary>
 /// Coordinator ViewModel for the image analysis view.
-/// Delegates loading to <see cref="ImageLoadingService"/>,
-/// inference to <see cref="InferenceService"/>,
-/// and overlay state to <see cref="OverlayManager"/>.
+/// Orchestrates three independent stages: Load → Preprocess → Infer.
+/// Each stage is handled by its own service:
+/// <list>
+/// <item><see cref="ImageLoadingService"/> loads and calibrates the HSI cube</item>
+/// <item><see cref="PreprocessingService"/> for manifest-driven preprocessing (static class)</item>
+/// <item><see cref="InferenceService"/> for ONNX model inference</item>
+/// </list>
+/// Overlay state is managed by <see cref="OverlayManager"/>.
 /// </summary>
 public partial class ImageViewModel : ViewModelBase, IDisposable
 {
@@ -36,7 +36,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private bool _hasCalibration;
     
     private readonly ImageLoadingService _loadingService;
-    private readonly InferenceService _inference;
+    private readonly InferenceService _inferenceService;
     public OverlayManager Overlay { get; } = new();
 
     private readonly CancellationTokenSource _cts = new();
@@ -55,9 +55,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private HsiCube? _cube;
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsGrayscale))]
-    private DisplayMode _currentDisplayMode = DisplayMode.Rgb;
-
+    [ObservableProperty] private DisplayOption _selectedDisplayMode = DisplayOption.Default;
+    public static IReadOnlyList<DisplayOption> AvailableDisplayModes => DisplayOption.Presets;
+    
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
@@ -75,22 +75,24 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public int MaxBandIndex => Cube?.Bands - 1 ?? 0;
     public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "??";
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
-
-    public bool IsGrayscale
-    {
-        get => CurrentDisplayMode == DisplayMode.Grayscale;
-        set => CurrentDisplayMode = value ? DisplayMode.Grayscale : DisplayMode.Rgb;
-    }
-
+    
     // -- Property change handlers -- //
+    public bool IsSpectralMode => SelectedDisplayMode.DisplayMode == DisplayMode.SpectralBand;
     partial void OnSelectedBandChanged(int value) => UpdateBitmap();
-    partial void OnCurrentDisplayModeChanged(DisplayMode value) => UpdateBitmap();
-
-    public ImageViewModel(string hdrPath, ImageLoadingService loadingService, InferenceService inference)
+    partial void OnSelectedDisplayModeChanged(DisplayOption value)
+    {
+        OnPropertyChanged(nameof(IsSpectralMode));
+        UpdateBitmap();
+    }
+    
+    public ImageViewModel(
+        string hdrPath, 
+        ImageLoadingService loadingService,
+        InferenceService inferenceService)
     {
         _hdrPath = hdrPath;
         _loadingService = loadingService;
-        _inference = inference;
+        _inferenceService = inferenceService;
         _ = LoadAsync();
     }
 
@@ -130,14 +132,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             _loadTcs.TrySetResult();
         }
     }
-
-    // -- Inference on Click (delegates to InferenceManager) -- //
-    // ToDO: Add loadTCs into delegation to prevent early start before/during image loading
+    
+    [ObservableProperty] private bool _hasPreprocessedCube;
+    private PreprocessingResult? _cachedPreprocessing;
+    private ModelPackage? _lastPackage;
+    
     /// <summary>
-    /// Runs inference using the model at the given package directory.
-    /// Called from MainViewModel which resolves the selected model.
+    /// Runs inference using the given model package and the chosen stride.
+    /// Invoked by the MainViewModel when inference button is clicked.
     /// </summary>
-    public async Task RunInference(string modelPackageDir)
+    public async Task RunInference(ModelPackage modelPackage, int stride)
     {
         if (Cube == null || string.IsNullOrEmpty(_hdrPath))
         {
@@ -155,17 +159,34 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
-            InferenceOutput = "Running preprocessing pipeline...";
             var running = true;
             var progress = new Progress<string>(s =>
             {
                 if (running) InferenceOutput = s;
             });
-            var (result, summary) = await _inference.RunAsync(Cube, modelPackageDir, progress, _cts.Token);
+            
+            // Perform preprocessing if fresh session or different modelPackage
+            if (_cachedPreprocessing == null || _lastPackage != modelPackage)
+            {
+                InferenceOutput = "Performing preprocessing...";
+                var preprocessing = modelPackage.Manifest.Pipeline.Preprocessing;
+                _cachedPreprocessing = await Task.Run(
+                    () => PreprocessingService.RunFromCalibrated(Cube!, preprocessing), _cts.Token);
+                _lastPackage = modelPackage;
+                HasPreprocessedCube = _cachedPreprocessing.HasValue;
+            }
+            else
+            {
+                InferenceOutput = "Using cached preprocessing...";
+            }
+            
+            // Perform inference on preprocessed cube
+            var classificationResult = await _inferenceService.RunAsync(
+                _cachedPreprocessing.Value, modelPackage, stride, progress, _cts.Token);
             running = false;
 
-            InferenceOutput = summary;
-            Overlay.ApplyResult(result, Cube!);
+            InferenceOutput = FormatResultSummary(classificationResult);
+            Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
         }
         catch (OperationCanceledException)
         {
@@ -176,23 +197,54 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Error: {ex.Message}";
         }
     }
+    
+    // -- Debug Summary (remove for production) -- //
+    private static string FormatResultSummary(ClassificationResult result)
+    {
+        var text = new StringBuilder();
+        text.AppendLine($"Model: {result.ModelName}");
+        text.AppendLine($"Evaluated: {result.Evaluated} patches ({result.Skipped} skipped as background)");
+        text.AppendLine();
+ 
+        foreach (var pred in result.Predictions)
+        {
+            var className = result.Classes[pred.PredictedClass];
+            text.AppendLine($"  ({pred.X},{pred.Y}): {className} ({pred.Confidence:P1})");
+        }
+ 
+        return text.ToString();
+    }
+
 
     // -- Display -- //
     private void UpdateBitmap()
     {
         if (Cube == null) return;
 
-        CurrentBitmap = CurrentDisplayMode switch
+        CurrentBitmap = SelectedDisplayMode.DisplayMode switch
         {
-            DisplayMode.Grayscale => BitmapRenderer.BandToBitmap(Cube, SelectedBand),
+            DisplayMode.SpectralBand => CubeRenderer.BandToBitmap(Cube, SelectedBand),
 
-            DisplayMode.Rgb => BitmapRenderer.RgbToBitmap(
-                Cube,
+            DisplayMode.SyntheticRgb => GetCachedSyntheticRgb(Cube),
+            
+            DisplayMode.NearestBandRgb => CubeRenderer.RgbToBitmap(Cube,
                 Cube.Header.FindClosestBand(630f),
                 Cube.Header.FindClosestBand(530f),
                 Cube.Header.FindClosestBand(460f)),
-            _ => CurrentBitmap
+            
+            _ => throw new ArgumentOutOfRangeException(nameof(DisplayMode))
         };
+    }
+    
+    private WriteableBitmap? _cachedSyntheticRgb;
+    
+    /// <summary>
+    /// Returns the cached synthetic RGB bitmap, recomputing only initially.
+    /// </summary>
+    private WriteableBitmap GetCachedSyntheticRgb(HsiCube cube)
+    {
+        _cachedSyntheticRgb ??= CubeRenderer.SyntheticRgbToBitmap(cube, SyntheticRgbParameters.HistologyBalanced);
+        return _cachedSyntheticRgb;
     }
 
     public void Dispose()
@@ -200,18 +252,20 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cts.Cancel();
         _cts.Dispose();
         Overlay.Clear();
+        _cachedPreprocessing = null;
+        _lastPackage = null;
         CurrentBitmap = null;
         Cube = null;
         GC.SuppressFinalize(this);
     }
-
-
+    
+    
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ImageViewModel()
     {
         _hdrPath = "design.hdr";
         _loadingService = null!;
-        _inference = null!;
+        _inferenceService = null!;
 
         var dummyHeader = new HsiHeader
         {

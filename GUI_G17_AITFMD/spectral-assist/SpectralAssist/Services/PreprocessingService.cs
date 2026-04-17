@@ -6,14 +6,13 @@ namespace SpectralAssist.Services;
 
 /// <summary>
 /// Manifest-driven preprocessing pipeline.
-///
 /// Executes the ordered steps declared in the model package's <see cref="PreprocessingInfo"/>
 /// to transform a raw or calibrated HSI cube into the format the ONNX model expects.
 ///
 /// Two entry points:
 /// <list>
-/// <item><see cref="Run"/> — from raw data, runs every step including calibration.</item>
-/// <item><see cref="RunFromCalibrated"/> — from a cached calibrated cube, skips calibration.
+/// <item><see cref="Run"/> from raw data, runs every step including calibration.</item>
+/// <item><see cref="RunFromCalibrated"/> from a cached calibrated cube, skips calibration.
 /// Clones the input first because some steps (e.g. clip) modify the cube in-place,
 /// and the caller's cached cube must not be mutated.</item>
 /// </list>
@@ -110,18 +109,10 @@ public static class PreprocessingService
                     mask);
 
             case "wavelet":
-                var hwb = HsiCubeToFloatCubeHWB.FromHsiCube(sceneCube);
-                var reduced = WaveletReducer.ApplyApproxPaddedDb2(hwb,
+                return (WaveletReducer.Apply(sceneCube,
                     config.BandReduceOutBands ?? throw new InvalidOperationException(
-                        "Step 'wavelet' requires band_reduce_out_bands in manifest"));
-                return (FloatCubeToHsiCube.ToHsiCube(reduced), mask);
-
-
-            /* ToDO: Convert from HWB to BSQ straight?
-             case "wavelet":
-             return (WaveletReducer.Apply(cube, config.BandReduceOutBands), mask);
-             */
-
+                        "Step 'wavelet' requires band_reduce_out_bands in manifest")), mask);
+            
             default:
                 throw new NotSupportedException($"Unknown preprocessing step: '{step}'");
         }

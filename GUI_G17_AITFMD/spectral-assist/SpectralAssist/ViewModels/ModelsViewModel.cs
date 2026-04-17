@@ -107,17 +107,17 @@ public partial class ModelsViewModel : ViewModelBase
             return;
         }
         
-        var packageInfo = importResult.Value!;
+        var modelManifest = importResult.Value!;
         var (passed, summary) = await ModelPackageValidator.ValidateAsync(
-            packageInfo.DirectoryPath, packageInfo, _inferenceService);
+            modelManifest, _modelRegistry, _inferenceService);
 
         if (passed)
             SuccessMessage = summary;
         else
             ErrorMessage = summary;
 
-        SelectedModel = packageInfo;
         ResetImportState();
+        SelectedModel = modelManifest;
     }
 
     [RelayCommand]
@@ -135,7 +135,7 @@ public partial class ModelsViewModel : ViewModelBase
 
         if (SelectedModel == modelInfo)
             SelectedModel = AvailableModels.FirstOrDefault(); 
-        //SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
+        //ToDo: SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
     }
     
     partial void OnSelectedModelChanged(ModelManifest? value)

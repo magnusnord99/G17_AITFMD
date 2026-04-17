@@ -1,4 +1,5 @@
 using SpectralAssist.Services.Preprocessing;
+using SpectralAssist.Tests.Utils;
 using Xunit;
 
 namespace SpectralAssist.Tests;

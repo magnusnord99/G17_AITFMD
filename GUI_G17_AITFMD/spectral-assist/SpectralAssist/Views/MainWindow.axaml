@@ -37,7 +37,7 @@
 
                         <Border Height="1" Background="#2D2D2D" Margin="0,0,0,4" />
 
-                        <!-- Navigational Buttons -->
+                        <!-- Navigational -->
                         <Button Content="Home"
                                 Command="{Binding NavigateToHomeCommand}"
                                 Background="Transparent"
@@ -58,7 +58,7 @@
 
                         <Border Height="1" Background="#2D2D2D" Margin="0,8,0,4" />
 
-                        <!-- Action Buttons -->
+                        <!-- Actions -->
                         <Button Content="Open HSI"
                                 Click="OpenHSIButton_Clicked"
                                 Background="Transparent"
@@ -67,7 +67,7 @@
                                 HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4" />
-
+                        
                         <Button Content="Run Inference"
                                 Command="{Binding RunInferenceCommand}"
                                 Background="#2D2D2D"
@@ -82,6 +82,21 @@
                                    FontSize="11"
                                    Foreground="#888"
                                    Margin="16,0,16,4" />
+                        
+                        <!-- Stride Dropdown -->
+                        <TextBlock Text="Stride:"
+                                   FontSize="11"
+                                   Foreground="#888888"
+                                   Margin="8,8,8,2"
+                                   ToolTip.Tip="Patch overlap for inference (higher overlap is smoother but slower)" />
+
+                        <ComboBox ItemsSource="{Binding AvailableStrides}"
+                                  SelectedItem="{Binding SelectedStride}"
+                                  HorizontalAlignment="Stretch"
+                                  FontSize="11"
+                                  Margin="8,0"
+                                  ToolTip.Tip="Controls smoothness vs. speed of inference overlay" />
+                        
                     </StackPanel>
 
                 </DockPanel>

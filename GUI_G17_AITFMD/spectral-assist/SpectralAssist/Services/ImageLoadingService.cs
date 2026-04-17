@@ -38,7 +38,7 @@ public class ImageLoadingService
         CancellationToken ct = default)
     {
         // Step 1: Parse header
-        progress?.Report(("Reading header...", 0));
+        progress?.Report(("Reading image data...", 0));
         var header = HsiHeaderParser.Parse(hdrPath);
         progress?.Report(($"{header.Samples}x{header.Lines}x{header.Bands} bands, {header.Interleave.ToUpper()}", 0));
 

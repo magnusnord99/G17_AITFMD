@@ -3,7 +3,6 @@ using System.Linq;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SpectralAssist.Models;
-using SpectralAssist.Services;
 using SpectralAssist.Services.Rendering;
 
 namespace SpectralAssist.ViewModels;
@@ -13,7 +12,9 @@ namespace SpectralAssist.ViewModels;
 /// </summary>
 public partial class OverlayManager : ObservableObject
 {
-    private HsiCube? _cube;
+    private float[]? _cachedHeatmap;
+    private int _heatmapWidth;
+    private int _heatmapHeight;
 
     // -- States -- //
     [ObservableProperty] private WriteableBitmap? _overlayBitmap;
@@ -38,15 +39,19 @@ public partial class OverlayManager : ObservableObject
 
     partial void OnOverlayThresholdChanged(double value) => RebuildOverlay();
 
+    
     /// <summary>
-    /// Applies a new classification result and rebuilds the overlay bitmaps.
-    /// Called by the ViewModel after inference completes.
+    /// Applies a new classification result and performs one-time build of the Gaussian-weighted heatmap,
+    /// then renders the overlay bitmap.
     /// </summary>
-    public void ApplyResult(ClassificationResult result, HsiCube cube)
+    public void ApplyResult(ClassificationResult result, int imageWidth, int imageHeight)
     {
-        _cube = cube;
+        // Build the heatmap once
         ClassificationResult = result;
-        // Ensure a real colormap is selected (not "Off") when inference completes
+        _heatmapWidth = imageWidth;
+        _heatmapHeight = imageHeight;
+        _cachedHeatmap = HeatmapRenderer.BuildHeatmap(result, _heatmapWidth, _heatmapHeight);
+        
         if (SelectedColorMapName == "Off")
             SelectedColorMapName = "Green-Red";
         ShowOverlay = true;
@@ -54,20 +59,21 @@ public partial class OverlayManager : ObservableObject
     }
 
     /// <summary>
-    /// Rebuilds the overlay and color bar bitmaps from current state.
+    /// Re-renders the overlay bitmap from the cached heatmap using current colormap and threshold.
     /// Called automatically when colormap or threshold changes.
     /// </summary>
     private void RebuildOverlay()
     {
-        if (ClassificationResult == null || _cube == null) return;
+        if (_cachedHeatmap == null || ClassificationResult == null) return;
 
         var colorMap = ColorMaps.All.GetValueOrDefault(SelectedColorMapName, ColorMaps.GreenRed);
-        OverlayBitmap = BitmapRenderer.ClassificationOverlay(
-            _cube,
-            ClassificationResult,
+        OverlayBitmap = HeatmapRenderer.RenderHeatmap(
+            _cachedHeatmap,
+            _heatmapWidth,
+            _heatmapHeight,
             colorMap,
             threshold: (float)OverlayThreshold);
-        ColorBarBitmap = BitmapRenderer.ColorBarLegend(
+        ColorBarBitmap = HeatmapRenderer.ColorBarLegend(
             colorMap,
             threshold: (float)OverlayThreshold);
     }
@@ -77,7 +83,7 @@ public partial class OverlayManager : ObservableObject
     /// </summary>
     public void Clear()
     {
-        _cube = null;
+        _cachedHeatmap = null;
         ClassificationResult = null;
         OverlayBitmap = null;
         ColorBarBitmap = null;

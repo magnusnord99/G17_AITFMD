@@ -124,6 +124,7 @@ public class BsqPreprocessingParityTests
                 TissueMaskQStd = 0.4f,
                 TissueMaskMinObjectSize = 1,
                 TissueMaskMinHoleSize = 1,
+                TissueMaskMethod = "mean_std_percentile"
             }
         };
 
