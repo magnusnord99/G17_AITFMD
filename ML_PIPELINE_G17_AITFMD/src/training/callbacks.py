@@ -84,6 +84,7 @@ class CheckpointCallback(BaseCallback):
             "best_epoch": trainer.best_epoch,
             "best_auc_roi": trainer.best_auc_roi,
             "best_f1_roi_opt": trainer.best_f1_roi_opt,
+            "best_checkpoint_path": str(trainer.best_checkpoint_path) if trainer.best_checkpoint_path else None,
             "history": trainer.history,
         }
 

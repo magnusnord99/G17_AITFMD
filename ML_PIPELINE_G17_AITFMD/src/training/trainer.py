@@ -118,6 +118,20 @@ class Trainer:
             sched_state = resume_from.get("scheduler_state_dict")
             if sched_state is not None and self.scheduler is not None:
                 self.scheduler.load_state_dict(sched_state)
+            # Restore best_checkpoint_path so EvalCallback can find the best model
+            # even if no further improvement happens after resuming.
+            raw_ckpt = resume_from.get("best_checkpoint_path")
+            if raw_ckpt and Path(raw_ckpt).exists():
+                self.best_checkpoint_path = Path(raw_ckpt)
+            else:
+                # Fallback for checkpoints saved before this field was added:
+                # infer from output_dir using known naming conventions.
+                for _candidate in ("best_by_auc.pt", "best.pt"):
+                    _p = self.output_dir / _candidate
+                    if _p.exists():
+                        self.best_checkpoint_path = _p
+                        log.info("Restored best_checkpoint_path from output_dir: %s", _p.name)
+                        break
             log.info(
                 "Resuming from epoch %d (best_val_loss=%.4f at epoch %d)",
                 start_epoch, self.best_val_loss, self.best_epoch,
