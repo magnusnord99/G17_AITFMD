@@ -14,7 +14,8 @@ namespace SpectralAssist.Services.Hsi;
 /// </summary>
 public static class HsiCubeLoader
 {
-    public static async Task<HsiCube> LoadAsync(HsiHeader header, IProgress<(float, int)>? progress = null, CancellationToken ct = default)
+    public static async Task<HsiCube> LoadAsync(HsiHeader header, IProgress<(float, int)>? progress = null,
+        CancellationToken ct = default)
     {
         if (header.DataFilePath == null)
             throw new FileNotFoundException("The data file was not found.");

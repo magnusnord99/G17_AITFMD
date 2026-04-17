@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using SpectralAssist.Models;
 
 namespace SpectralAssist.Tests;
@@ -88,6 +86,7 @@ internal static class GoldenFloatLoader
                 if (d > max) max = d;
             }
         }
+
         return max;
     }
 
@@ -108,6 +107,7 @@ internal static class GoldenFloatLoader
                     bsq[b * plane + pixelIdx] = hwb[hwbBase + b];
             }
         }
+
         return bsq;
     }
 }

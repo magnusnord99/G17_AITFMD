@@ -13,12 +13,15 @@ namespace SpectralAssist.Services.Preprocessing;
 public static class TissueMask
 {
     /// <summary>Build boolean tissue mask; result length = Lines × Samples (row-major).</summary>
-    public static bool[] BuildMask(HsiCube cube, in TissueMaskOptions options)
+    public static bool[] BuildMask(HsiCube cube, float qMean, float qStd, int minObjectSize, int minHoleSize,
+        string method = "mean_std_percentile")
     {
-        if (options.QMean is <= 0 or >= 1)
-            throw new ArgumentOutOfRangeException(nameof(options), "q_mean must be in (0, 1).");
-        if (options.QStd is <= 0 or >= 1)
-            throw new ArgumentOutOfRangeException(nameof(options), "q_std must be in (0, 1).");
+        if (method is not null and not "mean_std_percentile")
+            throw new NotSupportedException($"Tissue mask method '{method}' is not supported");
+        if (qMean is <= 0 or >= 1)
+            throw new ArgumentOutOfRangeException(nameof(qMean), "q_mean must be in (0, 1).");
+        if (qStd is <= 0 or >= 1)
+            throw new ArgumentOutOfRangeException(nameof(qStd), "q_std must be in (0, 1).");
 
         var n = cube.PixelsPerBand;
         var bands = cube.Bands;
@@ -39,6 +42,7 @@ public static class TissueMask
                     locals.localSum[i] += v;
                     locals.localSumSq[i] += v * v;
                 }
+
                 return locals;
             },
             locals =>
@@ -64,17 +68,17 @@ public static class TissueMask
         }
 
         // Quantile thresholds
-        var tMean = LinearQuantile(mean, options.QMean);
-        var tStd = LinearQuantile(std, options.QStd);
+        var tMean = LinearQuantile(mean, qMean);
+        var tStd = LinearQuantile(std, qStd);
 
         var raw = new bool[n];
         for (var i = 0; i < n; i++)
             raw[i] = std[i] > tStd || mean[i] < tMean;
 
         // Morphological cleanup
-        return CleanMask(raw, cube.Lines, cube.Samples, options.MinObjectSize, options.MinHoleSize);
+        return CleanMask(raw, cube.Lines, cube.Samples, minObjectSize, minHoleSize);
     }
-    
+
 
     /// <summary>Matches Python <c>tissue_mask._clean_mask</c> with skimage fallback API.</summary>
     private static bool[] CleanMask(bool[] rawMask, int height, int width, int minObjectSize, int minHoleSize)
@@ -96,7 +100,7 @@ public static class TissueMask
         var result = (bool[])mask.Clone();
         var visited = new bool[n];
         var stack = new Stack<int>();
-        var comp = new List<int>();  // Reused across components to avoid repeated allocation
+        var comp = new List<int>(); // Reused across components to avoid repeated allocation
 
         for (var idx = 0; idx < n; idx++)
         {
@@ -154,8 +158,8 @@ public static class TissueMask
             inv[i] = !inv[i];
         return inv;
     }
-    
-    
+
+
     /// <summary>Default <c>np.quantile(..., method="linear")</c> (NumPy 2.x).</summary>
     private static float LinearQuantile(float[] values, float q)
     {
@@ -174,16 +178,17 @@ public static class TissueMask
             return sorted[low];
         return sorted[low] + (vi - low) * (sorted[high] - sorted[low]);
     }
-    
 }
 
 /// <summary>Options aligned with Python <c>build_tissue_mask(..., method="mean_std_percentile")</c>.</summary>
 public readonly struct TissueMaskOptions(
-    float qMean = 0.5f,
-    float qStd = 0.4f,
-    int minObjectSize = 1000,
-    int minHoleSize = 1000)
+    string method = "unknown",
+    float qMean = 0.0f,
+    float qStd = 0.0f,
+    int minObjectSize = 0,
+    int minHoleSize = 0)
 {
+    public string Method { get; } = method;
     public float QMean { get; } = qMean;
     public float QStd { get; } = qStd;
     public int MinObjectSize { get; } = minObjectSize;

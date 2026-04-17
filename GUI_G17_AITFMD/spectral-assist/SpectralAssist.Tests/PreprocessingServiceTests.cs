@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
-using SpectralAssist.Services.Preprocessing;
 using Xunit;
 
 namespace SpectralAssist.Tests;
@@ -16,25 +13,29 @@ public class PreprocessingServiceTests
     public void Default_steps_produce_reduced_bands_and_mask()
     {
         const int h = 4, w = 4, bandsIn = 9;
-        var raw = MakeBsqCube(h, w, bandsIn, seed: 42);
-        var dark = MakeZeroBsqCube(h, w, bandsIn);
-        var white = MakeOnesBsqCube(h, w, bandsIn);
+        var sceneCube = MakeBsqCube(h, w, bandsIn, seed: 42);
+        var darkCube = MakeZeroBsqCube(h, w, bandsIn);
+        var whiteCube = MakeOnesBsqCube(h, w, bandsIn);
 
-        var config = new PreprocessingConfig
+        var preprocessing = new PreprocessingInfo
         {
-            CalibrationEpsilon = 1e-8f,
-            ClipMin = 0f,
-            ClipMax = 1f,
-            NeighborAverageWindow = 3,
-            BandReduceOutBands = 3,
-            BandReduceStrategy = "uneven",
-            TissueMaskQMean = 0.5f,
-            TissueMaskQStd = 0.4f,
-            TissueMaskMinObjectSize = 1,
-            TissueMaskMinHoleSize = 1,
+            Steps = ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"],
+            Params = new PreprocessingConfig
+            {
+                CalibrationEpsilon = 1e-8f,
+                ClipMin = 0f,
+                ClipMax = 1f,
+                NeighborAverageWindow = 3,
+                BandReduceOutBands = 3,
+                BandReduceStrategy = "uneven",
+                TissueMaskQMean = 0.5f,
+                TissueMaskQStd = 0.4f,
+                TissueMaskMinObjectSize = 1,
+                TissueMaskMinHoleSize = 1,
+            }
         };
 
-        var result = PreprocessingService.Run(raw, dark, white, config);
+        var result = PreprocessingService.Run(sceneCube, darkCube, whiteCube, preprocessing);
 
         // avg3: 9/3 = 3 bands, then band_average with 3 out = 1 band each
         Assert.Equal(h, result.Cube.Lines);
@@ -52,15 +53,18 @@ public class PreprocessingServiceTests
         var dark = MakeZeroBsqCube(h, w, bandsIn);
         var white = MakeOnesBsqCube(h, w, bandsIn);
 
-        var config = new PreprocessingConfig
+        var preprocessing = new PreprocessingInfo
         {
-            NeighborAverageWindow = 3,
-            BandReduceOutBands = 3,
-            BandReduceStrategy = "uneven",
             Steps = ["calibrate", "clip", "neighbor_average", "band_average"],
+            Params = new PreprocessingConfig
+            {
+                NeighborAverageWindow = 3,
+                BandReduceOutBands = 3,
+                BandReduceStrategy = "uneven",
+            }
         };
 
-        var result = PreprocessingService.Run(raw, dark, white, config);
+        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
 
         Assert.Equal(3, result.Cube.Bands);
         Assert.Null(result.TissueMask);
@@ -70,13 +74,14 @@ public class PreprocessingServiceTests
     public void Unknown_step_throws()
     {
         var cube = MakeZeroBsqCube(2, 2, 3);
-        var config = new PreprocessingConfig
+        var preprocessing = new PreprocessingInfo
         {
             Steps = ["calibrate", "magic_filter"],
+            Params = new PreprocessingConfig()
         };
 
         Assert.Throws<NotSupportedException>(() =>
-            PreprocessingService.Run(cube, cube, cube, config));
+            PreprocessingService.Run(cube, cube, cube, preprocessing));
     }
 
     [Fact]
@@ -86,20 +91,24 @@ public class PreprocessingServiceTests
         // Pre-calibrated cube (values already in 0-1 range)
         var calibrated = MakeBsqCube(h, w, bandsIn, seed: 42);
 
-        var config = new PreprocessingConfig
+        var preprocessing = new PreprocessingInfo
         {
-            ClipMin = 0f,
-            ClipMax = 1f,
-            NeighborAverageWindow = 3,
-            BandReduceOutBands = 3,
-            BandReduceStrategy = "uneven",
-            TissueMaskQMean = 0.5f,
-            TissueMaskQStd = 0.4f,
-            TissueMaskMinObjectSize = 1,
-            TissueMaskMinHoleSize = 1,
+            Steps = ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"],
+            Params = new PreprocessingConfig
+            {
+                ClipMin = 0f,
+                ClipMax = 1f,
+                NeighborAverageWindow = 3,
+                BandReduceOutBands = 3,
+                BandReduceStrategy = "uneven",
+                TissueMaskQMean = 0.5f,
+                TissueMaskQStd = 0.4f,
+                TissueMaskMinObjectSize = 1,
+                TissueMaskMinHoleSize = 1,
+            }
         };
 
-        var result = PreprocessingService.RunFromCalibrated(calibrated, config);
+        var result = PreprocessingService.RunFromCalibrated(calibrated, preprocessing);
 
         Assert.Equal(3, result.Cube.Bands);
         Assert.NotNull(result.TissueMask);
@@ -115,28 +124,32 @@ public class PreprocessingServiceTests
         var originalBand0 = new float[h * w];
         calibrated.GetBand(0).CopyTo(originalBand0);
 
-        var config = new PreprocessingConfig
+        var preprocessing = new PreprocessingInfo
         {
-            ClipMin = 0.1f,
-            ClipMax = 0.4f,
-            NeighborAverageWindow = 3,
-            BandReduceOutBands = 3,
-            BandReduceStrategy = "uneven",
-            TissueMaskQMean = 0.5f,
-            TissueMaskQStd = 0.4f,
-            TissueMaskMinObjectSize = 1,
-            TissueMaskMinHoleSize = 1,
+            Steps = ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"],
+            Params = new PreprocessingConfig
+            {
+                ClipMin = 0.1f,
+                ClipMax = 0.4f,
+                NeighborAverageWindow = 3,
+                BandReduceOutBands = 3,
+                BandReduceStrategy = "uneven",
+                TissueMaskQMean = 0.5f,
+                TissueMaskQStd = 0.4f,
+                TissueMaskMinObjectSize = 1,
+                TissueMaskMinHoleSize = 1,
+            }
         };
 
-        _ = PreprocessingService.RunFromCalibrated(calibrated, config);
+        _ = PreprocessingService.RunFromCalibrated(calibrated, preprocessing);
 
         // Original cube must be unchanged
         var afterBand0 = calibrated.GetBand(0);
         for (var i = 0; i < originalBand0.Length; i++)
             Assert.Equal(originalBand0[i], afterBand0[i]);
     }
-    
-    
+
+
     // -- Helpers -- //
 
     private static HsiCube MakeBsqCube(int h, int w, int b, int seed)

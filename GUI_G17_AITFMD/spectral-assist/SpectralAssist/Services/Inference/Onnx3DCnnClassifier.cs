@@ -12,35 +12,25 @@ namespace SpectralAssist.Services.Inference;
 /// <summary>
 /// ONNX Runtime classifier for 3D-CNN models with shape <c>[1, 1, C, H, W]</c> (NCDHW).
 /// Uses IOBinding to keep tensors on GPU between patch inferences, eliminating per-patch
-/// CPU↔GPU copies. Falls back to CPU-side Run() when no GPU execution provider is active.
+/// CPU ↔ GPU copies. Falls back to CPU-side Run() when no GPU execution provider is active.
 /// </summary>
 public class Onnx3DCnnClassifier : IClassifier, IDisposable
 {
     private ModelPackage? _package;
-
-    /// <summary>Cached input/output names from the ONNX model metadata.</summary>
+    private ExecutionProvider _executionProvider;
     private string? _inputName;
     private string? _outputName;
-
-    /// <summary>Whether the session has a GPU execution provider (CUDA/DirectML/etc).</summary>
-    private bool _useGpu;
-    private ExecutionProvider _executionProvider;
-
-    public ModelManifest? Manifest => _package?.Manifest;
-
+    
     public void SetModel(ModelPackage package)
     {
         _package?.Dispose();
         _package = package;
         ValidateManifest(_package.Manifest);
+        _executionProvider = package.ActiveProvider;
 
         // Cache input/output tensor names from model metadata
         _inputName = _package.Session.InputNames[0];
         _outputName = _package.Session.OutputNames[0];
-
-        // Detect whether the session was created with a GPU provider
-        _useGpu = package.UseGpu;
-        _executionProvider = package.ActiveProvider;
     }
 
     public Task<ClassificationResult> ClassifyImageAsync(
@@ -52,13 +42,14 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
         var spec = _package.Manifest.InputSpec;
         var patchH = spec.SpatialPatchSize[0];
         var patchW = spec.SpatialPatchSize[1];
-        var bands = spec.SpectralBands ?? spec.ExpectedBands;
+        var bands = spec.SpectralBands;
 
         if (cube.Bands != bands)
             throw new InvalidOperationException(
                 $"Model expects {bands} spectral bands, cube has {cube.Bands}.");
 
-        var predictions = _useGpu
+        //ToDo: Check executionPrivoder logic vs _useGPU? IOBinding vs CPU?
+        var predictions = _executionProvider == ExecutionProvider.Cuda
             ? ClassifyAllPatchesWithIOBinding(cube, bands, patchH, patchW, tissueMask, progress)
             : ClassifyAllPatchesCpu(cube, bands, patchH, patchW, tissueMask, progress);
 
@@ -80,8 +71,8 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             ExecutionProvider = _executionProvider.ToString(),
         });
     }
-    
-    
+
+
     /// <summary>
     /// Uses IOBinding to keep the output tensor on GPU between patches.
     /// Input is pinned CPU memory (OrtMemoryInfo.DefaultInstance) which ORT copies to GPU once.
@@ -145,6 +136,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
                         X = startX,
                         Y = startY,
                         Probabilities = probs,
+                        Logits = logits
                     });
 
                     progress?.Report((++done, totalPatches));
@@ -158,7 +150,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
 
         return predictions;
     }
-    
+
 
     /// <summary>
     /// CPU fallback using standard session.Run().
@@ -215,6 +207,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
                         X = startX,
                         Y = startY,
                         Probabilities = probs,
+                        Logits = logits
                     });
 
                     progress?.Report((++done, totalPatches));
@@ -228,7 +221,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
 
         return predictions;
     }
-    
+
     /// <summary>
     /// Extracts a BSQ patch from the cube into a pre-allocated buffer.
     /// Same layout as <see cref="HsiCube.ExtractPatch"/> but avoids allocation.
@@ -247,7 +240,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             }
         }
     }
-    
+
     /// <summary>
     /// Returns true if any pixel in the patch region is marked as tissue (true) in the mask.
     /// If mask is null, always returns true (classify everything).
@@ -282,25 +275,26 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             exp[i] /= sum;
         return exp;
     }
-    
+
+    /// <summary>
+    /// Validates that the manifest describes a 5D (NCDHW) model compatible
+    /// with this 3D-CNN classifier. Called once when <see cref="SetModel"/> is invoked.
+    /// </summary>
     private static void ValidateManifest(ModelManifest manifest)
     {
-        var spec = manifest.InputSpec;
-        if (spec.SpatialPatchSize.Count < 2)
-            throw new InvalidOperationException("manifest.input_spec.spatial_patch_size must have length >= 2.");
+        var inputSpec = manifest.InputSpec;
 
-        var rank = spec.InputRank ?? (spec.InputShape?.Count == 5 ? 5 : 4);
-        if (rank != 5)
+        if (inputSpec.SpatialPatchSize.Count < 2)
             throw new InvalidOperationException(
-                "Onnx3DCnnClassifier requires input_rank 5 or input_shape with 5 dimensions (NCDHW). " +
-                "Use OnnxClassifier for 4D NCHW models.");
+                "input_spec.spatial_patch_size must have at least 2 elements.");
 
-        if (spec.InputShape is { Count: 5 } shape)
-        {
-            if (shape[2] != (spec.SpectralBands ?? spec.ExpectedBands))
-                throw new InvalidOperationException(
-                    "manifest input_shape[2] must match spectral band count.");
-        }
+        if (inputSpec.InputRank != 5)
+            throw new InvalidOperationException(
+                $"Onnx3DCnnClassifier requires input_rank = 5 (NCDHW), got {inputSpec.InputRank}.");
+
+        if (inputSpec.InputShape.Count == 5 && inputSpec.InputShape[2] != inputSpec.SpectralBands)
+            throw new InvalidOperationException(
+                $"input_shape[2] ({inputSpec.InputShape[2]}) does not match spectral_bands ({inputSpec.SpectralBands}).");
     }
 
     public void Dispose()

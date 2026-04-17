@@ -1,4 +1,3 @@
-using System;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
 using SpectralAssist.Services.Preprocessing;
@@ -84,11 +83,7 @@ public class BsqPreprocessingParityTests
     {
         const int h = 8, w = 8, b = 4;
         var cube = MakeRandomBsqCube(h, w, b, seed: 42);
-
-        var opts = new TissueMaskOptions(
-            qMean: 0.5f, qStd: 0.4f, minObjectSize: 1, minHoleSize: 1);
-
-        var mask = TissueMask.BuildMask(cube, opts);
+        var mask = TissueMask.BuildMask(cube, qMean: 0.5f, qStd: 0.4f, minObjectSize: 1, minHoleSize: 1);
 
         Assert.Equal(h * w, mask.Length);
     }
@@ -114,21 +109,25 @@ public class BsqPreprocessingParityTests
         var dark = MakeZeroBsqCube(h, w, bandsIn);
         var white = MakeOnesBsqCube(h, w, bandsIn);
 
-        var config = new PreprocessingConfig
+        var preprocessing = new PreprocessingInfo
         {
-            CalibrationEpsilon = 1e-8f,
-            ClipMin = 0f,
-            ClipMax = 1f,
-            NeighborAverageWindow = 3,
-            BandReduceOutBands = 3,
-            BandReduceStrategy = "uneven",
-            TissueMaskQMean = 0.5f,
-            TissueMaskQStd = 0.4f,
-            TissueMaskMinObjectSize = 1,
-            TissueMaskMinHoleSize = 1,
+            Steps = ["calibrate", "clip", "neighbor_average", "tissue_mask", "band_average"],
+            Params = new PreprocessingConfig
+            {
+                CalibrationEpsilon = 1e-8f,
+                ClipMin = 0f,
+                ClipMax = 1f,
+                NeighborAverageWindow = 3,
+                BandReduceOutBands = 3,
+                BandReduceStrategy = "uneven",
+                TissueMaskQMean = 0.5f,
+                TissueMaskQStd = 0.4f,
+                TissueMaskMinObjectSize = 1,
+                TissueMaskMinHoleSize = 1,
+            }
         };
 
-        var result = PreprocessingService.Run(raw, dark, white, config);
+        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
 
         Assert.Equal(3, result.Cube.Bands);
         Assert.Equal(h, result.Cube.Lines);

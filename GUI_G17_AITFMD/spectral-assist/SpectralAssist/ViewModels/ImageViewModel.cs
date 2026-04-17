@@ -10,8 +10,19 @@ using SpectralAssist.Services.Rendering;
 
 namespace SpectralAssist.ViewModels;
 
-public enum LoadingState { Idle, Loading, Ready, Error }
-public enum DisplayMode { Rgb, Grayscale }
+public enum LoadingState
+{
+    Idle,
+    Loading,
+    Ready,
+    Error
+}
+
+public enum DisplayMode
+{
+    Rgb,
+    Grayscale
+}
 
 /// <summary>
 /// Coordinator ViewModel for the image analysis view.
@@ -23,15 +34,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     private readonly string _hdrPath;
     private bool _hasCalibration;
-    private HsiCube? _calibratedCube;
-
+    
     private readonly ImageLoadingService _loadingService;
     private readonly InferenceService _inference;
     public OverlayManager Overlay { get; } = new();
-    
+
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource _loadTcs = new();
-    
+
     // -- States -- //
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoading))]
@@ -44,9 +54,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private HsiCube? _cube;
-    
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsGrayscale))]
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsGrayscale))]
     private DisplayMode _currentDisplayMode = DisplayMode.Rgb;
 
     [ObservableProperty]
@@ -84,7 +93,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _inference = inference;
         _ = LoadAsync();
     }
-    
+
     // -- Image loading on Initialization (delegates to ImageLoadingService) -- //
     private async Task LoadAsync()
     {
@@ -98,9 +107,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             });
 
             var result = await ImageLoadingService.LoadAsync(_hdrPath, progress, _cts.Token);
-            _calibratedCube = result.CalibratedCube;
-            _hasCalibration = result.HasCalibration;
             Cube = result.Cube;
+            _hasCalibration = result.HasCalibration;
+
 
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
@@ -124,8 +133,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     // -- Inference on Click (delegates to InferenceManager) -- //
     // ToDO: Add loadTCs into delegation to prevent early start before/during image loading
-    [RelayCommand]
-    private async Task RunInference()
+    /// <summary>
+    /// Runs inference using the model at the given package directory.
+    /// Called from MainViewModel which resolves the selected model.
+    /// </summary>
+    public async Task RunInference(string modelPackageDir)
     {
         if (Cube == null || string.IsNullOrEmpty(_hdrPath))
         {
@@ -133,7 +145,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (_calibratedCube == null || !_hasCalibration)
+        if (!_hasCalibration)
         {
             InferenceOutput =
                 "Inference requires calibrated data (dark + white reference). " +
@@ -149,7 +161,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             {
                 if (running) InferenceOutput = s;
             });
-            var (result, summary) = await _inference.RunAsync(_calibratedCube, progress, _cts.Token);
+            var (result, summary) = await _inference.RunAsync(Cube, modelPackageDir, progress, _cts.Token);
             running = false;
 
             InferenceOutput = summary;
@@ -190,7 +202,36 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Overlay.Clear();
         CurrentBitmap = null;
         Cube = null;
-        _calibratedCube = null;
         GC.SuppressFinalize(this);
+    }
+
+
+    /// <summary>Design preview constructor filled with dummy data.</summary>
+    public ImageViewModel()
+    {
+        _hdrPath = "design.hdr";
+        _loadingService = null!;
+        _inference = null!;
+
+        var dummyHeader = new HsiHeader
+        {
+            Description = "Preview Sample",
+            Samples = 320,
+            Lines = 240,
+            Bands = 3,
+            WavelengthUnit = "nm",
+            WavelengthValues = [460f, 530f, 630f],
+        };
+        Cube = new HsiCube(dummyHeader, new float[320 * 240 * 3]);
+
+        // Placeholder Bitmap
+        CurrentBitmap = new WriteableBitmap(
+            new Avalonia.PixelSize(320, 240),
+            new Avalonia.Vector(96, 96),
+            Avalonia.Platform.PixelFormat.Bgra8888,
+            Avalonia.Platform.AlphaFormat.Opaque);
+
+        LoadingState = LoadingState.Ready;
+        StatusMessage = "Design preview";
     }
 }

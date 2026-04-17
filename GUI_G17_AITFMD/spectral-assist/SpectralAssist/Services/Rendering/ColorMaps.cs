@@ -29,7 +29,7 @@ public static class ColorMaps
             B: 0
         );
     }
-    
+
     /// <summary>
     /// Black to Red to Yellow to White.
     /// Widely used for intensity/probability heatmaps in CT/MRI.
@@ -55,6 +55,7 @@ public static class ColorMaps
             g = 255;
             b = (byte)((probability - 0.66f) / 0.34f * 255);
         }
+
         return new Color(r, g, b);
     }
 
@@ -93,6 +94,7 @@ public static class ColorMaps
             g = Lerp(0.773f, 0.906f, t);
             b = Lerp(0.340f, 0.144f, t);
         }
+
         return new Color((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
     }
 
@@ -131,8 +133,9 @@ public static class ColorMaps
             g = Lerp(0.318f, 0.998f, t);
             b = Lerp(0.098f, 0.645f, t);
         }
+
         return new Color((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
     }
-    
+
     private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 }

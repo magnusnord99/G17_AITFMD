@@ -37,7 +37,7 @@ public partial class App : Application
                 DataContext = vm
             };
         }
-        
+
         base.OnFrameworkInitializationCompleted();
     }
 

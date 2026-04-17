@@ -12,6 +12,7 @@
         <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
 
+    <!-- Base models: copied to output on build, not overwritten if already newer -->
     <ItemGroup>
         <None Include="ModelPackages\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -29,19 +30,19 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
-        <PackageReference Include="PanAndZoom" Version="11.3.9.1" />
-        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
+        <PackageReference Include="PanAndZoom" Version="11.3.9.1"/>
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/>
     </ItemGroup>
-    
+
     <!-- macOS: CPU + CoreML -->
     <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/>
     </ItemGroup>
 
     <!-- Windows/Linux: CPU + CUDA -->
     <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) Or $([MSBuild]::IsOSPlatform('Linux'))">
-        <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1" />
+        <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -49,5 +50,12 @@
             <DependentUpon>ImageViewBackup.axaml</DependentUpon>
             <SubType>Code</SubType>
         </Compile>
+        <Compile Update="Views\ModelsView.axaml.cs">
+            <DependentUpon>ModelsView.axaml</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="ModelPackages\" />
     </ItemGroup>
 </Project>

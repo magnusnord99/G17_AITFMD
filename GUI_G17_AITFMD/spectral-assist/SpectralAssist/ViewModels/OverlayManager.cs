@@ -35,6 +35,7 @@ public partial class OverlayManager : ObservableObject
         ShowOverlay = value != "Off";
         if (ShowOverlay) RebuildOverlay();
     }
+
     partial void OnOverlayThresholdChanged(double value) => RebuildOverlay();
 
     /// <summary>

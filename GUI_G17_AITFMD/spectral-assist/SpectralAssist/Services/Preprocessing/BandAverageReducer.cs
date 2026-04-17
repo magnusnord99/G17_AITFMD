@@ -59,30 +59,32 @@ public static class BandAverageReducer
     /// <summary>Same logic as Python <c>_compute_bin_sizes</c>.</summary>
     private static int[] ComputeBinSizes(int nIn, int nOut, string strategy)
     {
-        if (strategy == "crop")
+        switch (strategy)
         {
-            var nUsable = nIn / nOut * nOut;
-            if (nUsable == 0)
-                throw new ArgumentException($"Cannot crop {nIn} bands to {nOut} — too few bands.");
-            var baseSize = nUsable / nOut;
-            var list = new int[nOut];
-            for (var i = 0; i < nOut; i++)
-                list[i] = baseSize;
-            return list;
+            case "crop":
+            {
+                var nUsable = nIn / nOut * nOut;
+                if (nUsable == 0)
+                    throw new ArgumentException($"Cannot crop {nIn} bands to {nOut} — too few bands.");
+                var baseSize = nUsable / nOut;
+                var list = new int[nOut];
+                for (var i = 0; i < nOut; i++)
+                    list[i] = baseSize;
+                return list;
+            }
+            case "uneven":
+            {
+                var baseSize = nIn / nOut;
+                var remainder = nIn % nOut;
+                var list = new int[nOut];
+                for (var i = 0; i < remainder; i++)
+                    list[i] = baseSize + 1;
+                for (var i = remainder; i < nOut; i++)
+                    list[i] = baseSize;
+                return list;
+            }
+            default:
+                throw new ArgumentException($"Unknown strategy '{strategy}'. Use 'crop' or 'uneven'.");
         }
-
-        if (strategy == "uneven")
-        {
-            var baseSize = nIn / nOut;
-            var remainder = nIn % nOut;
-            var list = new int[nOut];
-            for (var i = 0; i < remainder; i++)
-                list[i] = baseSize + 1;
-            for (var i = remainder; i < nOut; i++)
-                list[i] = baseSize;
-            return list;
-        }
-
-        throw new ArgumentException($"Unknown strategy '{strategy}'. Use 'crop' or 'uneven'.");
     }
 }

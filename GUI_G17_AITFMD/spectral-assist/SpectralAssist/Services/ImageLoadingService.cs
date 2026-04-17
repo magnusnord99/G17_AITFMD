@@ -13,10 +13,7 @@ public readonly struct ImageLoadResult
 {
     /// <summary>The loaded cube (calibrated if references were found, raw otherwise).</summary>
     public HsiCube Cube { get; init; }
-
-    /// <summary>The calibrated cube for inference, or raw scene if no calibration.</summary>
-    public HsiCube CalibratedCube { get; init; }
-
+    
     /// <summary>Whether dark/white calibration was applied.</summary>
     public bool HasCalibration { get; init; }
 }
@@ -48,43 +45,18 @@ public class ImageLoadingService
         // Step 2: Load binary data
         var loadProgress = new Progress<(float percent, int band)>(p =>
             progress?.Report(($"Loading image data... {p.percent:P0}", p.percent)));
-
         var scene = await HsiCubeLoader.LoadAsync(header, loadProgress, ct);
 
-        // Step 3: Calibrate if references exist
-        if (HsiCalibration.TryFindReferenceHdrPaths(hdrPath, out var darkHdr, out var whiteHdr))
-        {
-            progress?.Report(("Loading dark/white references...", 1));
-            var darkTask = HsiCubeLoader.LoadAsync(HsiHeaderParser.Parse(darkHdr!), ct: ct);
-            var whiteTask = HsiCubeLoader.LoadAsync(HsiHeaderParser.Parse(whiteHdr!), ct: ct);
-            await Task.WhenAll(darkTask, whiteTask);
+        // Step 3: Calibrate if dark/white references exist in same folder
+        var calibrated = await HsiCalibration.TryCalibrateAsync(hdrPath, scene, progress, ct);
 
-            var dark = darkTask.Result;
-            var white = whiteTask.Result;
+        if (calibrated == null)
+            progress?.Report(("Calibration skipped (no dark/white in folder)...", 1));
 
-            if (scene.Bands != dark.Bands || scene.Bands != white.Bands)
-            {
-                throw new InvalidOperationException(
-                    $"Band mismatch: scene {scene.Bands}, dark {dark.Bands}, white {white.Bands}");
-            }
-
-            var calibrated = HsiCalibration.ApplyReflectance(scene, dark, white);
-            progress?.Report(("Calibration complete...", 1));
-
-            return new ImageLoadResult
-            {
-                Cube = calibrated,
-                CalibratedCube = calibrated,
-                HasCalibration = true,
-            };
-        }
-
-        progress?.Report(("Calibration skipped (no dark/white in folder)...", 1));
         return new ImageLoadResult
         {
-            Cube = scene,
-            CalibratedCube = scene,
-            HasCalibration = false,
+            Cube = calibrated ?? scene,
+            HasCalibration = calibrated != null,
         };
     }
 }

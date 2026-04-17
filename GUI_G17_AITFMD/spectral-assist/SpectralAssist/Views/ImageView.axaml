@@ -9,6 +9,10 @@
              x:Class="SpectralAssist.Views.ImageView"
              x:DataType="vm:ImageViewModel">
 
+    <Design.DataContext>
+        <vm:ImageViewModel />
+    </Design.DataContext>
+
     <Panel>
         <!-- Loading State -->
         <StackPanel IsVisible="{Binding IsLoading}"

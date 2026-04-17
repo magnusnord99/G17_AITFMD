@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using SpectralAssist.Services.Preprocessing;
 using Xunit;
 
@@ -16,14 +14,8 @@ public class TissueMaskParityTests
     {
         var cube = GoldenFloatLoader.LoadCubeFromSubDir(16, 16, 16, "tissue_mask_golden", "cube_hwb_f32.bin");
         var expectedMask = LoadMaskBytes(16, 16, "tissue_mask_golden", "mask_uint8.bin");
-
-        var opts = new TissueMaskOptions(
-            qMean: 0.5f,
-            qStd: 0.4f,
-            minObjectSize: 4,
-            minHoleSize: 4);
-
-        var actual = TissueMask.BuildMask(cube, opts);
+        var actual = TissueMask.BuildMask(cube, qMean: 0.5f, qStd: 0.4f, minObjectSize: 4, minHoleSize: 4);
+        
         Assert.Equal(expectedMask.Length, actual.Length);
         for (var i = 0; i < actual.Length; i++)
         {
@@ -40,6 +32,7 @@ public class TissueMaskParityTests
         var bytes = File.ReadAllBytes(path);
         if (bytes.Length != n)
             throw new InvalidDataException($"Expected {n} bytes in {fileName}, got {bytes.Length}.");
+        
         return bytes;
     }
 }
