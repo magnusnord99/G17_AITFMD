@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Export;
 
 namespace SpectralAssist.ViewModels;
 
@@ -12,16 +13,19 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly ImageLoadingService _loadingService;
     private readonly InferenceService _inferenceService;
+    private readonly PdfReportService _pdfReportService;
     private ImageViewModel? _imageView;
     private readonly ModelPackageService _modelRegistry;
     
     public MainViewModel(
         ImageLoadingService loadingService,
         InferenceService inferenceService,
-        ModelPackageService modelRegistry)
+        ModelPackageService modelRegistry,
+        PdfReportService pdfReportService)
     {
         _loadingService = loadingService;
         _inferenceService = inferenceService;
+        _pdfReportService = pdfReportService;
         _modelRegistry = modelRegistry;
         _modelRegistry.Refresh();
         
@@ -70,7 +74,7 @@ public partial class MainViewModel : ViewModelBase
     {
         // Dispose the previous image (if any) then load new one
         _imageView?.Dispose();
-        _imageView = new ImageViewModel(filePath, _loadingService, _inferenceService);
+        _imageView = new ImageViewModel(filePath, _loadingService, _inferenceService, _pdfReportService);
         CurrentView = _imageView;
     }
     
@@ -121,6 +125,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _loadingService = null!;
         _inferenceService = null!;
+        _pdfReportService = null!;
         _modelRegistry = new ModelPackageService();
     }
 }

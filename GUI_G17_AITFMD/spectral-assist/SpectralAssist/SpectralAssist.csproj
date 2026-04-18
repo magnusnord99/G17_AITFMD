@@ -12,6 +12,11 @@
         <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
 
+    <!-- Exclude macOS resource-fork ghost files created on FAT/exFAT volumes -->
+    <ItemGroup>
+        <Compile Remove="**/._*.cs"/>
+    </ItemGroup>
+
     <!-- Base models: copied to output on build, not overwritten if already newer -->
     <ItemGroup>
         <None Include="ModelPackages\**\*">
@@ -32,6 +37,7 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
         <PackageReference Include="PanAndZoom" Version="11.3.9.1"/>
+        <PackageReference Include="QuestPDF" Version="2024.12.3"/>
         <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/>
     </ItemGroup>
 

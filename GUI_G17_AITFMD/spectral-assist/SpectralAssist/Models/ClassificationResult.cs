@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace SpectralAssist.Models;
 
@@ -23,4 +24,13 @@ public class ClassificationResult
 
     // ToDo: Remove this before deployment
     public string ExecutionProvider { get; init; } = "Unknown";
+
+    /// <summary>Set after a successful run for reporting (PDF/UI).</summary>
+    public DateTimeOffset InferenceCompletedAt { get; init; }
+
+    /// <summary>From model package manifest at inference time.</summary>
+    public string ManifestDisplayName { get; init; } = "";
+
+    /// <summary>Training validation accuracy from manifest, if present.</summary>
+    public double? TrainingValidationAccuracy { get; init; }
 }

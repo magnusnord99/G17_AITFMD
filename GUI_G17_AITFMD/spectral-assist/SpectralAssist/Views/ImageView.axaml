@@ -322,6 +322,12 @@
                                 IsVisible="{Binding Overlay.ClassificationResult,
                                             Converter={x:Static ObjectConverters.IsNotNull}}">
 
+                        <Button Content="Eksporter PDF"
+                                Command="{Binding ExportPdfCommand}"
+                                FontSize="11"
+                                Padding="10,4"
+                                Margin="0,0,8,0" />
+
                         <TextBlock Text="Overlay"
                                    VerticalAlignment="Center"
                                    Foreground="#888888"

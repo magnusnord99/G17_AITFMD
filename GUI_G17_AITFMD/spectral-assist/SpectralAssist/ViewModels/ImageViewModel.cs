@@ -1,12 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Export;
 using SpectralAssist.Services.Rendering;
 
 namespace SpectralAssist.ViewModels;
@@ -37,6 +43,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     
     private readonly ImageLoadingService _loadingService;
     private readonly InferenceService _inferenceService;
+    private readonly PdfReportService? _pdfReportService;
     public OverlayManager Overlay { get; } = new();
 
     private readonly CancellationTokenSource _cts = new();
@@ -86,13 +93,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
     
     public ImageViewModel(
-        string hdrPath, 
+        string hdrPath,
         ImageLoadingService loadingService,
-        InferenceService inferenceService)
+        InferenceService inferenceService,
+        PdfReportService? pdfReportService = null)
     {
         _hdrPath = hdrPath;
         _loadingService = loadingService;
         _inferenceService = inferenceService;
+        _pdfReportService = pdfReportService;
         _ = LoadAsync();
     }
 
@@ -136,6 +145,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _hasPreprocessedCube;
     private PreprocessingResult? _cachedPreprocessing;
     private ModelPackage? _lastPackage;
+    private string _lastSummaryText = "";
     
     /// <summary>
     /// Runs inference using the given model package and the chosen stride.
@@ -181,12 +191,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             }
             
             // Perform inference on preprocessed cube
-            var classificationResult = await _inferenceService.RunAsync(
+            var rawResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, modelPackage, stride, progress, _cts.Token);
             running = false;
 
-            InferenceOutput = FormatResultSummary(classificationResult);
+            var classificationResult = WithInferenceReportMetadata(rawResult, modelPackage);
+            _lastSummaryText = ClassificationResultMetrics.BuildReportSummaryText(classificationResult);
+            InferenceOutput = _lastSummaryText;
             Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
+            ExportPdfCommand.NotifyCanExecuteChanged();
         }
         catch (OperationCanceledException)
         {
@@ -198,23 +211,148 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
     }
     
-    // -- Debug Summary (remove for production) -- //
-    private static string FormatResultSummary(ClassificationResult result)
+    private static ClassificationResult WithInferenceReportMetadata(
+        ClassificationResult raw,
+        ModelPackage package)
     {
-        var text = new StringBuilder();
-        text.AppendLine($"Model: {result.ModelName}");
-        text.AppendLine($"Evaluated: {result.Evaluated} patches ({result.Skipped} skipped as background)");
-        text.AppendLine();
- 
-        foreach (var pred in result.Predictions)
+        var m = package.Manifest;
+        return new ClassificationResult
         {
-            var className = result.Classes[pred.PredictedClass];
-            text.AppendLine($"  ({pred.X},{pred.Y}): {className} ({pred.Confidence:P1})");
-        }
- 
-        return text.ToString();
+            Predictions = raw.Predictions,
+            ImageWidth = raw.ImageWidth,
+            ImageHeight = raw.ImageHeight,
+            PatchH = raw.PatchH,
+            PatchW = raw.PatchW,
+            StrideH = raw.StrideH,
+            StrideW = raw.StrideW,
+            Classes = raw.Classes,
+            ModelName = raw.ModelName,
+            TotalPossible = raw.TotalPossible,
+            Evaluated = raw.Evaluated,
+            Skipped = raw.Skipped,
+            ExecutionProvider = raw.ExecutionProvider,
+            InferenceCompletedAt = DateTimeOffset.Now,
+            ManifestDisplayName = m.DisplayName,
+            TrainingValidationAccuracy = m.Training.Metrics.Accuracy,
+        };
     }
 
+    private bool CanExportPdf() =>
+        _pdfReportService != null
+        && IsReady
+        && Overlay.ClassificationResult != null
+        && Overlay.ClassificationResult.InferenceCompletedAt != default;
+
+    [RelayCommand(CanExecute = nameof(CanExportPdf))]
+    private async Task ExportPdfAsync()
+    {
+        if (_pdfReportService == null) return;
+
+        var topLevel = GetTopLevel();
+        if (topLevel == null) return;
+
+        var suggested = $"SpectralAssist_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export PDF report",
+            DefaultExtension = "pdf",
+            SuggestedFileName = suggested,
+            FileTypeChoices = [new FilePickerFileType("PDF") { Patterns = ["*.pdf"] }]
+        });
+        if (file == null) return;
+
+        try
+        {
+            StatusMessage = "Generating PDF…";
+            var pdfService = _pdfReportService;
+            var pdfBytes = await Task.Run(() =>
+            {
+                var doc = BuildPdfReportDocument();
+                using var ms = new MemoryStream();
+                pdfService.Write(ms, doc);
+                return ms.ToArray();
+            });
+
+            await using var outStream = await file.OpenWriteAsync();
+            await outStream.WriteAsync(pdfBytes);
+            StatusMessage = "PDF export complete";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"PDF export failed: {ex.Message}";
+        }
+    }
+
+    private static TopLevel? GetTopLevel()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
+            return window;
+        return null;
+    }
+
+    private PdfReportDocument BuildPdfReportDocument()
+    {
+        if (Cube == null || Overlay.ClassificationResult == null)
+            throw new InvalidOperationException("Cannot build PDF: missing cube or result.");
+
+        var result = Overlay.ClassificationResult;
+        if (result.InferenceCompletedAt == default)
+            throw new InvalidOperationException("Cannot build PDF: inference metadata is missing.");
+        var w = Cube.Samples;
+        var h = Cube.Lines;
+        var heatmap = HeatmapRenderer.BuildHeatmap(result, w, h);
+        var colorMap = ColorMaps.GreenRed;
+
+        var rgb = CubeRenderer.SyntheticRgbToBitmap(Cube, SyntheticRgbParameters.HistologyBalanced);
+        WriteableBitmap? c0 = null, c50 = null, c80 = null;
+        try
+        {
+            using var ol0 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0f);
+            using var ol50 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0.5f);
+            using var ol80 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0.8f);
+
+            c0 = RgbOverlayComposer.Compose(rgb, ol0, 0.5f);
+            c50 = RgbOverlayComposer.Compose(rgb, ol50, 0.5f);
+            c80 = RgbOverlayComposer.Compose(rgb, ol80, 0.5f);
+
+            var accDisplay = result.TrainingValidationAccuracy is { } a ? $"{a:P1}" : "—";
+
+            return new PdfReportDocument
+            {
+                InferenceCompletedAt = result.InferenceCompletedAt,
+                ExportedAt = DateTimeOffset.Now,
+                ManifestDisplayName = result.ManifestDisplayName,
+                ModelNameFromResult = result.ModelName,
+                AccuracyDisplay = accDisplay,
+                ReportSummaryText = _lastSummaryText,
+                SyntheticRgbPng = EncodeForPdf(rgb),
+                Overlay0Png = EncodeForPdf(c0),
+                Overlay50Png = EncodeForPdf(c50),
+                Overlay80Png = EncodeForPdf(c80),
+            };
+        }
+        finally
+        {
+            rgb.Dispose();
+            c0?.Dispose();
+            c50?.Dispose();
+            c80?.Dispose();
+        }
+    }
+
+    private static byte[] EncodeForPdf(Bitmap original)
+    {
+        var scaled = BitmapExportHelper.MaybeDownscale(original);
+        try
+        {
+            return BitmapExportHelper.ToPngBytes(scaled);
+        }
+        finally
+        {
+            if (!ReferenceEquals(scaled, original))
+                scaled.Dispose();
+        }
+    }
 
     // -- Display -- //
     private void UpdateBitmap()
@@ -255,6 +393,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cachedPreprocessing = null;
         _lastPackage = null;
         CurrentBitmap = null;
+        _cachedSyntheticRgb?.Dispose();
+        _cachedSyntheticRgb = null;
         Cube = null;
         GC.SuppressFinalize(this);
     }
@@ -266,6 +406,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _hdrPath = "design.hdr";
         _loadingService = null!;
         _inferenceService = null!;
+        _pdfReportService = null;
 
         var dummyHeader = new HsiHeader
         {
