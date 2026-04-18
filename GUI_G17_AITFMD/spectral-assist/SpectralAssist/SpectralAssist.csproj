@@ -15,6 +15,11 @@
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
+    
+    <!-- Exclude macOS resource-fork ghost files created on FAT/exFAT volumes -->
+    <ItemGroup>
+        <Compile Remove="**/._*.cs"/>
+    </ItemGroup>
 
     <!-- Base ModelsPackages: copied to output on build -->
     <ItemGroup>
@@ -48,7 +53,7 @@
     <ItemGroup Condition="'$(IsWinOrLinux)' == 'true'">
         <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1" />
     </ItemGroup>
-    
+
     <ItemGroup>
         <Compile Update="Views\ImageViewBackup.axaml.cs">
             <DependentUpon>ImageViewBackup.axaml</DependentUpon>
