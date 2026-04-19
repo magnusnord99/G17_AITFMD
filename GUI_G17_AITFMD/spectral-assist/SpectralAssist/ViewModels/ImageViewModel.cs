@@ -198,6 +198,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
     }
     
+    //ToDo: Remove soon
     // -- Debug Summary (remove for production) -- //
     private static string FormatResultSummary(ClassificationResult result)
     {
@@ -258,6 +259,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Cube = null;
         GC.SuppressFinalize(this);
     }
+    
+    
+    // ToDo: Split view?
+    // Export:
+    // 4 ulike bilder: 
+    // 1: RGB standard
+    // 2: RGB med overlay?
+    // 3: RGB med overlay med en viss threshold 80%?
+    // 4: RGB med overlay med en viss threshold 50%?
     
     
     /// <summary>Design preview constructor filled with dummy data.</summary>
