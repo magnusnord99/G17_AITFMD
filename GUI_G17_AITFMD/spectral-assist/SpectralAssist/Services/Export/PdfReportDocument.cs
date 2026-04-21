@@ -16,4 +16,8 @@ public sealed class PdfReportDocument
     public required byte[] Overlay0Png { get; init; }
     public required byte[] Overlay50Png { get; init; }
     public required byte[] Overlay80Png { get; init; }
+
+    public required float Overlay1Threshold { get; init; }
+    public required float Overlay2Threshold { get; init; }
+    public required float OverlayOpacity { get; init; }
 }

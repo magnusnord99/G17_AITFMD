@@ -14,6 +14,7 @@ using SpectralAssist.Models;
 using SpectralAssist.Services;
 using SpectralAssist.Services.Export;
 using SpectralAssist.Services.Rendering;
+using SpectralAssist.Views;
 
 namespace SpectralAssist.ViewModels;
 
@@ -248,11 +249,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     {
         if (_pdfReportService == null) return;
 
-        var topLevel = GetTopLevel();
-        if (topLevel == null) return;
+        var ownerWindow = GetTopLevelAsWindow();
+        if (ownerWindow == null) return;
+
+        var optionsDialog = new ExportOptionsDialog();
+        await optionsDialog.ShowDialog(ownerWindow);
+        var options = optionsDialog.Result;
+        if (options == null) return;
 
         var suggested = $"SpectralAssist_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await ownerWindow.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export PDF report",
             DefaultExtension = "pdf",
@@ -263,11 +269,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
-            StatusMessage = "Generating PDF…";
+            StatusMessage = "Genererer PDF…";
             var pdfService = _pdfReportService;
             var pdfBytes = await Task.Run(() =>
             {
-                var doc = BuildPdfReportDocument();
+                var doc = BuildPdfReportDocument(options);
                 using var ms = new MemoryStream();
                 pdfService.Write(ms, doc);
                 return ms.ToArray();
@@ -275,22 +281,22 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
             await using var outStream = await file.OpenWriteAsync();
             await outStream.WriteAsync(pdfBytes);
-            StatusMessage = "PDF export complete";
+            StatusMessage = "PDF-eksport fullført";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"PDF export failed: {ex.Message}";
+            StatusMessage = $"PDF-eksport mislyktes: {ex.Message}";
         }
     }
 
-    private static TopLevel? GetTopLevel()
+    private static Window? GetTopLevelAsWindow()
     {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
             return window;
         return null;
     }
 
-    private PdfReportDocument BuildPdfReportDocument()
+    private PdfReportDocument BuildPdfReportDocument(ExportOptions options)
     {
         if (Cube == null || Overlay.ClassificationResult == null)
             throw new InvalidOperationException("Cannot build PDF: missing cube or result.");
@@ -301,19 +307,19 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         var w = Cube.Samples;
         var h = Cube.Lines;
         var heatmap = HeatmapRenderer.BuildHeatmap(result, w, h);
-        var colorMap = ColorMaps.GreenRed;
+        var colorMap = ColorMaps.All.GetValueOrDefault(options.ColorMapName, ColorMaps.GreenRed);
 
         var rgb = CubeRenderer.SyntheticRgbToBitmap(Cube, SyntheticRgbParameters.HistologyBalanced);
-        WriteableBitmap? c0 = null, c50 = null, c80 = null;
+        WriteableBitmap? c0 = null, c1 = null, c2 = null;
         try
         {
             using var ol0 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0f);
-            using var ol50 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0.5f);
-            using var ol80 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0.8f);
+            using var ol1 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, options.Overlay1Threshold);
+            using var ol2 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, options.Overlay2Threshold);
 
-            c0 = RgbOverlayComposer.Compose(rgb, ol0, 0.5f);
-            c50 = RgbOverlayComposer.Compose(rgb, ol50, 0.5f);
-            c80 = RgbOverlayComposer.Compose(rgb, ol80, 0.5f);
+            c0 = RgbOverlayComposer.Compose(rgb, ol0, options.Opacity);
+            c1 = RgbOverlayComposer.Compose(rgb, ol1, options.Opacity);
+            c2 = RgbOverlayComposer.Compose(rgb, ol2, options.Opacity);
 
             var accDisplay = result.TrainingValidationAccuracy is { } a ? $"{a:P1}" : "—";
 
@@ -327,16 +333,19 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 ReportSummaryText = _lastSummaryText,
                 SyntheticRgbPng = EncodeForPdf(rgb),
                 Overlay0Png = EncodeForPdf(c0),
-                Overlay50Png = EncodeForPdf(c50),
-                Overlay80Png = EncodeForPdf(c80),
+                Overlay50Png = EncodeForPdf(c1),
+                Overlay80Png = EncodeForPdf(c2),
+                Overlay1Threshold = options.Overlay1Threshold,
+                Overlay2Threshold = options.Overlay2Threshold,
+                OverlayOpacity = options.Opacity,
             };
         }
         finally
         {
             rgb.Dispose();
             c0?.Dispose();
-            c50?.Dispose();
-            c80?.Dispose();
+            c1?.Dispose();
+            c2?.Dispose();
         }
     }
 
