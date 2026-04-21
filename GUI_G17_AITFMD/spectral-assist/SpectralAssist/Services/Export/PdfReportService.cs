@@ -146,11 +146,11 @@ public sealed class PdfReportService
 
                 table.Cell().Row(1).Column(1).Element(c => Figure(c, "Synthetic RGB", doc.SyntheticRgbPng));
                 table.Cell().Row(1).Column(2); // gap
-                table.Cell().Row(1).Column(3).Element(c => Figure(c, "Overlay — threshold 0 %, opacity 50 %", doc.Overlay0Png));
+                table.Cell().Row(1).Column(3).Element(c => Figure(c, $"Overlay — threshold 0 %, opacity {doc.OverlayOpacity:P0}", doc.Overlay0Png));
 
-                table.Cell().Row(2).Column(1).PaddingTop(10).Element(c => Figure(c, "Overlay — threshold 50 %, opacity 50 %", doc.Overlay50Png));
+                table.Cell().Row(2).Column(1).PaddingTop(10).Element(c => Figure(c, $"Overlay — threshold {doc.Overlay1Threshold:P0}, opacity {doc.OverlayOpacity:P0}", doc.Overlay50Png));
                 table.Cell().Row(2).Column(2); // gap
-                table.Cell().Row(2).Column(3).PaddingTop(10).Element(c => Figure(c, "Overlay — threshold 80 %, opacity 50 %", doc.Overlay80Png));
+                table.Cell().Row(2).Column(3).PaddingTop(10).Element(c => Figure(c, $"Overlay — threshold {doc.Overlay2Threshold:P0}, opacity {doc.OverlayOpacity:P0}", doc.Overlay80Png));
             });
         });
     }
