@@ -94,7 +94,15 @@ public class ModelPackageService : IDisposable
         var targetDir = Path.Combine(ModelPackagesDir, folderName);
 
         if (Directory.Exists(targetDir))
-            return Result<ModelManifest>.Fail($"A model package named '{folderName}' already exists.");
+        {
+            var existing = TryLoadManifest(targetDir);
+            if (existing.IsSuccess)
+                return Result<ModelManifest>.Fail($"A model package named '{folderName}' already exists.");
+
+            // Directory exists but has no valid manifest — leftover from a failed import. Clean it up.
+            try { Directory.Delete(targetDir, recursive: true); }
+            catch (Exception ex) { return Result<ModelManifest>.Fail($"Could not remove broken package directory: {ex.Message}"); }
+        }
 
         try
         {
@@ -103,6 +111,9 @@ public class ModelPackageService : IDisposable
         }
         catch (Exception ex)
         {
+            // Clean up partial copy so the user can retry
+            try { if (Directory.Exists(targetDir)) Directory.Delete(targetDir, recursive: true); }
+            catch { /* best-effort */ }
             return Result<ModelManifest>.Fail($"Failed to copy model package: {ex.Message}");
         }
 
@@ -251,13 +262,22 @@ public class ModelPackageService : IDisposable
 
         foreach (var file in Directory.GetFiles(sourceDir))
         {
-            var destFile = Path.Combine(targetDir, Path.GetFileName(file));
+            var name = Path.GetFileName(file);
+            // Skip macOS AppleDouble metadata files (._*) and other OS artifacts
+            if (name.StartsWith("._") || name == ".DS_Store")
+                continue;
+
+            var destFile = Path.Combine(targetDir, name);
             File.Copy(file, destFile, overwrite: false);
         }
 
         foreach (var subDir in Directory.GetDirectories(sourceDir))
         {
-            var destSubDir = Path.Combine(targetDir, Path.GetFileName(subDir));
+            var name = Path.GetFileName(subDir);
+            if (name.StartsWith("."))
+                continue;
+
+            var destSubDir = Path.Combine(targetDir, name);
             CopyDirectory(subDir, destSubDir);
         }
     }
