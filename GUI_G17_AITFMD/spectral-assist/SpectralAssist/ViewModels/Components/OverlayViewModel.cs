@@ -5,12 +5,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using SpectralAssist.Models;
 using SpectralAssist.Services.Rendering;
 
-namespace SpectralAssist.ViewModels;
+namespace SpectralAssist.ViewModels.Components;
 
 /// <summary>
 /// Manages the overlay, colormap, threshold and info panel states for the classification overlay.
 /// </summary>
-public partial class OverlayManager : ObservableObject
+public partial class OverlayViewModel : ObservableObject
 {
     private float[]? _cachedHeatmap;
     private int _heatmapWidth;
@@ -22,7 +22,7 @@ public partial class OverlayManager : ObservableObject
     [ObservableProperty] private double _overlayOpacity = 0.5;
     [ObservableProperty] private bool _showOverlay = true;
     [ObservableProperty] private double _overlayThreshold;
-    [ObservableProperty] private ClassificationResult? _classificationResult;
+    [ObservableProperty] private ClassificationReport? _classificationResult;
     [ObservableProperty] private bool _showInfoPanel;
     [ObservableProperty] private string _selectedColorMapName = "Green-Red";
 
@@ -44,13 +44,13 @@ public partial class OverlayManager : ObservableObject
     /// Applies a new classification result and performs one-time build of the Gaussian-weighted heatmap,
     /// then renders the overlay bitmap.
     /// </summary>
-    public void ApplyResult(ClassificationResult result, int imageWidth, int imageHeight)
+    public void ApplyResult(ClassificationReport report, int imageWidth, int imageHeight)
     {
         // Build the heatmap once
-        ClassificationResult = result;
+        ClassificationResult = report;
         _heatmapWidth = imageWidth;
         _heatmapHeight = imageHeight;
-        _cachedHeatmap = HeatmapRenderer.BuildHeatmap(result, _heatmapWidth, _heatmapHeight);
+        _cachedHeatmap = HeatmapRenderer.BuildHeatmap(report, _heatmapWidth, _heatmapHeight);
         
         if (SelectedColorMapName == "Off")
             SelectedColorMapName = "Green-Red";

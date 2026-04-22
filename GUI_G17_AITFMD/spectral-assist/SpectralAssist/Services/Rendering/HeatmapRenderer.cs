@@ -24,13 +24,13 @@ public static class HeatmapRenderer
     /// thresholds or colormaps.
     /// </summary>
     public static float[] BuildHeatmap(
-        ClassificationResult result,
+        ClassificationReport report,
         int width,
         int height,
         int targetClassIndex = 1)
     {
-        var patchH = result.PatchH;
-        var patchW = result.PatchW;
+        var patchH = report.PatchH;
+        var patchW = report.PatchW;
         var pixelCount = width * height;
 
         var heatmap = new float[pixelCount];
@@ -43,7 +43,7 @@ public static class HeatmapRenderer
             Array.Clear(weightSum, 0, pixelCount);
 
             // Gaussian-weighted accumulation of patch scores
-            foreach (var pred in result.Predictions)
+            foreach (var pred in report.Predictions)
             {
                 var score = pred.Probabilities[targetClassIndex];
 

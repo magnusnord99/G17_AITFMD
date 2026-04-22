@@ -22,13 +22,13 @@ public enum ModelViewState { Browsing, Previewing, Importing, }
 /// </summary>
 public partial class ModelsViewModel : ViewModelBase
 {
-    private readonly ModelPackageService _modelRegistry;
+    private readonly ModelPackageManager _modelRegistry;
     private readonly InferenceService _inferenceService;
     private readonly Action<ModelManifest?> _setActiveModel;
     public ObservableCollection<ModelManifest> AvailableModels => _modelRegistry.AvailableModels;
     private string? _importSourcePath;
 
-    public ModelsViewModel(ModelPackageService modelRegistry, InferenceService inferenceService,
+    public ModelsViewModel(ModelPackageManager modelRegistry, InferenceService inferenceService,
         ModelManifest? activeModel, Action<ModelManifest?> setActiveModel)
     {
         _modelRegistry = modelRegistry;
@@ -78,7 +78,7 @@ public partial class ModelsViewModel : ViewModelBase
         ErrorMessage = null;
         SuccessMessage = null;
         
-        var result = ModelPackageService.TryLoadManifest(folderPath);
+        var result = ModelPackageManager.TryLoadManifest(folderPath);
         if (!result.IsSuccess)
         {
             ErrorMessage = result.Error;
@@ -155,7 +155,7 @@ public partial class ModelsViewModel : ViewModelBase
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ModelsViewModel()
     {
-        _modelRegistry = new ModelPackageService();
+        _modelRegistry = new ModelPackageManager();
         _setActiveModel = _ => { };
         var sample = new ModelManifest
         {

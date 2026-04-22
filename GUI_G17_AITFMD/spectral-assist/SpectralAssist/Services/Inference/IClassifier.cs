@@ -7,7 +7,7 @@ namespace SpectralAssist.Services.Inference;
 
 public interface IClassifier
 {
-    Task<ClassificationResult> ClassifyImageAsync(
+    Task<ClassificationReport> ClassifyImageAsync(
         HsiCube cube,
         bool[]? tissueMask = null,
         int? strideOverride = null,

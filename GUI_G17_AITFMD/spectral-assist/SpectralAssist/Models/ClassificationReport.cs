@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace SpectralAssist.Models;
 
-public class ClassificationResult
+public class ClassificationReport
 {
     // Identity
     public string RunId { get; init; } = string.Empty;
@@ -30,7 +30,7 @@ public class ClassificationResult
     // ToDo: Remove this before deployment
     [JsonIgnore] public string ExecutionProvider { get; init; } = "Unknown";
     
-    // ToDo: Remove soon (debuf window in imageViewmodel)
+    // ToDo: Remove soon (debug window in imageViewmodel)
     public int TotalPossible { get; init; }
     public int Evaluated { get; init; }
     public int Skipped { get; init; }

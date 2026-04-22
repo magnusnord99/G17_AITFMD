@@ -10,7 +10,7 @@ namespace SpectralAssist.Services;
 /// Runs ONNX model inference on a preprocessed HSI cube.
 /// Single responsibility: set model → classify patches → return result.
 /// Preprocessing is handled separately by <see cref="PreprocessingService"/>.
-/// Model loading/caching is handled by <see cref="ModelPackageService"/>.
+/// Model loading/caching is handled by <see cref="ModelPackageManager"/>.
 /// Registered as a singleton in DI.
 /// </summary>
 public class InferenceService
@@ -21,11 +21,11 @@ public class InferenceService
     /// Runs ONNX inference on an already-preprocessed cube.
     /// </summary>
     /// <param name="preprocessedResult">Output from <see cref="PreprocessingService"/>.</param>
-    /// <param name="package">Loaded model package (from <see cref="ModelPackageService"/>).</param>
+    /// <param name="package">Loaded model package (from <see cref="ModelPackageManager"/>).</param>
     /// <param name="strideOverride">Optional stride override (null = use manifest default).</param>
     /// <param name="progress">Reports status messages back to the caller.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task<ClassificationResult> RunAsync(
+    public async Task<ClassificationReport> RunAsync(
         PreprocessingResult preprocessedResult,
         ModelPackage package,
         int? strideOverride = null,

@@ -31,7 +31,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
         _outputName = _package.Session.OutputNames[0];
     }
 
-    public Task<ClassificationResult> ClassifyImageAsync(
+    public Task<ClassificationReport> ClassifyImageAsync(
         HsiCube cube, 
         bool[]? tissueMask = null,
         int? strideOverride = null, 
@@ -55,7 +55,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             ? ClassifyAllPatchesWithIOBinding(cube, grid, tissueMask, progress, ct)
             : ClassifyAllPatchesCpu(cube, grid, tissueMask, progress, ct);
         
-        return Task.FromResult(new ClassificationResult
+        return Task.FromResult(new ClassificationReport
         {
             Predictions = predictions,
             ImageWidth = cube.Samples,
