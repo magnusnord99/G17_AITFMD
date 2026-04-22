@@ -17,8 +17,8 @@ public partial class OverlayViewModel : ObservableObject
     private int _heatmapHeight;
 
     // -- States -- //
-    [ObservableProperty] private WriteableBitmap? _overlayBitmap;
-    [ObservableProperty] private WriteableBitmap? _colorBarBitmap;
+    [ObservableProperty] private Bitmap? _overlayBitmap;
+    [ObservableProperty] private Bitmap? _colorBarBitmap;
     [ObservableProperty] private double _overlayOpacity = 0.5;
     [ObservableProperty] private bool _showOverlay = true;
     [ObservableProperty] private double _overlayThreshold;

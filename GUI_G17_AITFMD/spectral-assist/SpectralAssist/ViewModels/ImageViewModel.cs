@@ -29,7 +29,7 @@ public enum LoadingState
 /// <item><see cref="PreprocessingService"/> for manifest-driven preprocessing (static class)</item>
 /// <item><see cref="InferenceService"/> for ONNX model inference</item>
 /// </list>
-/// Overlay state is managed by <see cref="Components.OverlayViewModel"/>.
+/// Overlay state is managed by <see cref="OverlayViewModel"/>.
 /// </summary>
 public partial class ImageViewModel : ViewModelBase, IDisposable
 {
@@ -62,7 +62,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private bool _hasCalibration;
     
     private readonly InferenceService _inferenceService;
-    public Components.OverlayViewModel Overlay { get; } = new();
+    public OverlayViewModel Overlay { get; } = new();
 
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource _loadTcs = new();
@@ -90,7 +90,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private double _progress;
-    [ObservableProperty] private WriteableBitmap? _currentBitmap;
+    [ObservableProperty] private Bitmap? _currentBitmap;
     [ObservableProperty] private string _inferenceOutput = "";
 
     // -- Computed properties -- //
@@ -230,12 +230,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         };
     }
 
-    private WriteableBitmap? _cachedSyntheticRgb;
+    private Bitmap? _cachedSyntheticRgb;
 
     /// <summary>
     /// Returns the cached synthetic RGB bitmap, recomputing only initially.
     /// </summary>
-    private WriteableBitmap GetCachedSyntheticRgb(HsiCube cube)
+    private Bitmap GetCachedSyntheticRgb(HsiCube cube)
     {
         _cachedSyntheticRgb ??= CubeRenderer.SyntheticRgbToBitmap(cube, SyntheticRgbParameters.HistologyBalanced);
         return _cachedSyntheticRgb;

@@ -16,7 +16,7 @@ public partial class ImageTileViewModel : ObservableObject
     {
         Source = source;
         _onOpen = onOpen;
-        Thumbnail = ThumbnailService.TryLoadFromId(libraryRoot, source.ImageId);
+        Thumbnail = ThumbnailService.TryLoadThumbnail(libraryRoot, source);
     }
 
     // States __________________________________________________________

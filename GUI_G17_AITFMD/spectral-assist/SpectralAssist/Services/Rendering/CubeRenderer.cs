@@ -17,35 +17,31 @@ public static class CubeRenderer
     /// <summary>
     /// Renders a single band as a grayscale bitmap.
     /// </summary>
-    public static WriteableBitmap BandToBitmap(HsiCube cube, int bandIndex)
+    public static Bitmap BandToBitmap(HsiCube cube, int bandIndex)
     {
         var band = cube.GetBand(bandIndex);
         MinMax(band, out var min, out var range);
 
-        var bitmap = CreateBitmap(cube);
-        using var fb = bitmap.Lock();
-        unsafe
+        var stride = cube.Samples * 4;
+        var pixels = new byte[cube.Lines * stride];
+        for (var i = 0; i < band.Length; i++)
         {
-            var ptr = (byte*)fb.Address;
-            for (var i = 0; i < band.Length; i++)
-            {
-                // Same value in R, G, B channels produces grayscale
-                var value = NormalizeClamp(band[i], min, range);
-                ptr[i * 4 + 0] = value; // B
-                ptr[i * 4 + 1] = value; // G
-                ptr[i * 4 + 2] = value; // R
-                ptr[i * 4 + 3] = 255; // A 
-            }
+            // Same value in R, G, B channels produces grayscale
+            var value = NormalizeClamp(band[i], min, range);
+            pixels[i * 4 + 0] = value; // B
+            pixels[i * 4 + 1] = value; // G
+            pixels[i * 4 + 2] = value; // R
+            pixels[i * 4 + 3] = 255;   // A
         }
 
-        return bitmap;
+        return CreateOpaqueBitmap(pixels, cube.Samples, cube.Lines, stride);
     }
 
     /// <summary>
     /// Renders three explicit band indices as an RGB composite bitmap.
     /// Each band is independently normalized to preserve per-channel contrast.
     /// </summary>
-    public static WriteableBitmap RgbToBitmap(HsiCube cube, int redBand, int greenBand, int blueBand)
+    public static Bitmap RgbToBitmap(HsiCube cube, int redBand, int greenBand, int blueBand)
     {
         var r = cube.GetBand(redBand);
         var g = cube.GetBand(greenBand);
@@ -55,31 +51,40 @@ public static class CubeRenderer
         MinMax(g, out var gMin, out var gRange);
         MinMax(b, out var bMin, out var bRange);
 
-        var bitmap = CreateBitmap(cube);
-        using var fb = bitmap.Lock();
-        unsafe
+        var stride = cube.Samples * 4;
+        var pixels = new byte[cube.Lines * stride];
+        for (var i = 0; i < r.Length; i++)
         {
             // Pixel layout is BGRA to match Bgra8888 format
-            var ptr = (byte*)fb.Address;
-            for (var i = 0; i < r.Length; i++)
-            {
-                ptr[i * 4 + 0] = NormalizeClamp(b[i], bMin, bRange); // B
-                ptr[i * 4 + 1] = NormalizeClamp(g[i], gMin, gRange); // G
-                ptr[i * 4 + 2] = NormalizeClamp(r[i], rMin, rRange); // R
-                ptr[i * 4 + 3] = 255; // A
-            }
+            pixels[i * 4 + 0] = NormalizeClamp(b[i], bMin, bRange); // B
+            pixels[i * 4 + 1] = NormalizeClamp(g[i], gMin, gRange); // G
+            pixels[i * 4 + 2] = NormalizeClamp(r[i], rMin, rRange); // R
+            pixels[i * 4 + 3] = 255;                                // A
         }
 
-        return bitmap;
+        return CreateOpaqueBitmap(pixels, cube.Samples, cube.Lines, stride);
     }
 
-    private static WriteableBitmap CreateBitmap(HsiCube cube)
+    /// <summary>
+    /// Builds a Skia-native immutable <see cref="Bitmap"/> from a pre-filled BGRA byte buffer.
+    /// The Bitmap ctor copies pixel data into Skia on construction, so <paramref name="pixels"/>
+    /// may be collected afterwards.
+    /// </summary>
+    private static Bitmap CreateOpaqueBitmap(byte[] pixels, int width, int height, int stride)
     {
-        return new WriteableBitmap(
-            new PixelSize(cube.Samples, cube.Lines),
-            new Vector(96, 96),
-            PixelFormat.Bgra8888,
-            AlphaFormat.Opaque);
+        unsafe
+        {
+            fixed (byte* ptr = pixels)
+            {
+                return new Bitmap(
+                    PixelFormat.Bgra8888,
+                    AlphaFormat.Opaque,
+                    (IntPtr)ptr,
+                    new PixelSize(width, height),
+                    new Vector(96, 96),
+                    stride);
+            }
+        }
     }
 
     /// <summary>
@@ -114,7 +119,7 @@ public static class CubeRenderer
     /// Renders a synthetic RGB composite by simulating the human eye spectral response
     /// using Gaussian-weighted integration across all spectral bands.
     /// </summary>
-    public static WriteableBitmap SyntheticRgbToBitmap(HsiCube cube, SyntheticRgbParameters parameters)
+    public static Bitmap SyntheticRgbToBitmap(HsiCube cube, SyntheticRgbParameters parameters)
     {
         var wavelengths = cube.Header.WavelengthValues;
         var pixelCount = cube.PixelsPerBand;
@@ -171,21 +176,17 @@ public static class CubeRenderer
             MinMax(gCh.AsSpan(0, pixelCount), out var gMin, out var gRange);
             MinMax(bCh.AsSpan(0, pixelCount), out var bMin, out var bRange);
 
-            var bitmap = CreateBitmap(cube);
-            using var fb = bitmap.Lock();
-            unsafe
+            var stride = cube.Samples * 4;
+            var pixels = new byte[cube.Lines * stride];
+            for (var i = 0; i < pixelCount; i++)
             {
-                var ptr = (byte*)fb.Address;
-                for (var i = 0; i < pixelCount; i++)
-                {
-                    ptr[i * 4 + 0] = NormalizeClamp(bCh[i], bMin, bRange); // B
-                    ptr[i * 4 + 1] = NormalizeClamp(gCh[i], gMin, gRange); // G
-                    ptr[i * 4 + 2] = NormalizeClamp(rCh[i], rMin, rRange); // R
-                    ptr[i * 4 + 3] = 255; // A
-                }
+                pixels[i * 4 + 0] = NormalizeClamp(bCh[i], bMin, bRange); // B
+                pixels[i * 4 + 1] = NormalizeClamp(gCh[i], gMin, gRange); // G
+                pixels[i * 4 + 2] = NormalizeClamp(rCh[i], rMin, rRange); // R
+                pixels[i * 4 + 3] = 255;                                  // A
             }
 
-            return bitmap;
+            return CreateOpaqueBitmap(pixels, cube.Samples, cube.Lines, stride);
         }
         finally
         {
