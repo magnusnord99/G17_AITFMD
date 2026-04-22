@@ -1,36 +1,40 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Library;
 
 namespace SpectralAssist.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly ImageLoadingService _loadingService;
     private readonly InferenceService _inferenceService;
+    private readonly LibraryManager _libraryManager;
+    private readonly ModelPackageManager _modelManager;
+    
     private ImageViewModel? _imageView;
-    private readonly ModelPackageService _modelRegistry;
+    private LibraryViewModel? _libraryView;
     
     public MainViewModel(
-        ImageLoadingService loadingService,
         InferenceService inferenceService,
-        ModelPackageService modelRegistry)
+        LibraryManager libraryManager,
+        ModelPackageManager modelManager)
     {
-        _loadingService = loadingService;
         _inferenceService = inferenceService;
-        _modelRegistry = modelRegistry;
-        _modelRegistry.Refresh();
+        _modelManager = modelManager;
+        _libraryManager = libraryManager;
+        _modelManager.Refresh();
         
         // ToDo: Change this from FirstOrDefault to settings based preferred model or last used with persistence?
-        ActiveModel = _modelRegistry.AvailableModels.FirstOrDefault();
+        ActiveModel = _modelManager.AvailableModels.FirstOrDefault();
         _selectedStride = AvailableStrides[0];
     }
 
-    // -- Observables -- //
+    // --- Observable States --- //
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImageView))]
     [NotifyPropertyChangedFor(nameof(IsOnImageView))]
@@ -38,14 +42,13 @@ public partial class MainViewModel : ViewModelBase
     private ViewModelBase _currentView = new HomeViewModel();
     
     [ObservableProperty] private ModelManifest? _activeModel;
-    
     [ObservableProperty] private StrideOption _selectedStride = StrideOption.Default;
-    public static IReadOnlyList<StrideOption> AvailableStrides => StrideOption.Presets;
     
+    public static IReadOnlyList<StrideOption> AvailableStrides => StrideOption.Presets;
     public bool HasImageView => _imageView != null;
     public bool IsOnImageView => CurrentView is ImageViewModel;
     
-    // -- Navigation -- //
+    // --- Commands --- //
     [RelayCommand]
     private void NavigateToHome()
     {
@@ -59,18 +62,25 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToModels()
     {
-        CurrentView = new ModelsViewModel(_modelRegistry, _inferenceService, ActiveModel, modelManifest => ActiveModel = modelManifest);
+        CurrentView = new ModelsViewModel(_modelManager, _inferenceService, ActiveModel, 
+            modelManifest => ActiveModel = modelManifest);
     }
     
-    
-    // -- Actions -- //
+    [RelayCommand]
+    private void NavigateToLibrary()
+    {
+        _libraryView ??= new LibraryViewModel(_libraryManager, OpenImageFromLibrary);
+        _libraryView.RefreshView();
+        CurrentView = _libraryView;
+    }
     
     [RelayCommand]
     public void OpenImage(string filePath)
     {
         // Dispose the previous image (if any) then load new one
         _imageView?.Dispose();
-        _imageView = new ImageViewModel(filePath, _loadingService, _inferenceService);
+        _imageView = new ImageViewModel(filePath, _inferenceService);
+        _libraryView?.ActiveImageId = null;
         CurrentView = _imageView;
     }
     
@@ -87,7 +97,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         CurrentView = _imageView;
-        var modelPackage = _modelRegistry.LoadPackage(selected.DirectoryPath);
+        var modelPackage = _modelManager.LoadPackage(selected.DirectoryPath);
         var spec = modelPackage.Manifest.InputSpec;
         var patchSize = spec.SpatialPatchSize[0];
         var stride = SelectedStride.Divisor switch
@@ -98,6 +108,17 @@ public partial class MainViewModel : ViewModelBase
         };
         
         await _imageView.RunInference(modelPackage, stride);
+    }
+    
+    private void OpenImageFromLibrary(ImageNode imageNode)
+    {
+        if (_libraryManager.Root == null) return;
+
+        var absPath = Path.Combine(_libraryManager.Root, imageNode.CurrentRelPath.Replace('/', Path.DirectorySeparatorChar));
+        _imageView?.Dispose();
+        _imageView = new ImageViewModel(absPath, _inferenceService, imageNode.ImageId, _libraryManager);
+        _libraryView?.ActiveImageId = imageNode.ImageId;
+        CurrentView = _imageView;
     }
     
     
@@ -119,8 +140,8 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public MainViewModel()
     {
-        _loadingService = null!;
         _inferenceService = null!;
-        _modelRegistry = new ModelPackageService();
+        _libraryManager = null!;
+        _modelManager = new ModelPackageManager();
     }
 }
