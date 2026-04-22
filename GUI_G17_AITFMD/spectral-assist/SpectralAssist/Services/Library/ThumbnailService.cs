@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using Avalonia;
 using Avalonia.Media.Imaging;
+using SpectralAssist.Models;
 
 namespace SpectralAssist.Services.Library;
 
@@ -14,28 +16,87 @@ public static class ThumbnailService
 {
     // Maximum size of the thumbnail’s longest edge, in pixels.
     private const int MaxEdge = 320;
-
+    
+    // Valid preview image file extensions
+    private static readonly string[] PreviewExtensions = [".jpg", ".jpeg", ".png", ".bmp"];
+    
     /// <summary>
-    /// Attempts to load a cached thumbnail for the given image ID.
-    /// Returns <c>null</c> if the thumbnail does not exist or cannot be read.
+    /// Attempts to load a thumbnail bitmap for the given image. The method resolves
+    /// the thumbnail path using the service’s standard lookup rules (cached
+    /// thumbnail, then sibling preview) and loads the bitmap if possible.
+    /// Returns <c>null</c> if no thumbnail can be resolved or loaded.
     /// </summary>
-    /// <param name="libraryRoot">The root of the library to look in.</param>
-    /// <param name="imageId">The ID of the image to find.</param>
-    /// <returns>Returns the thumbnail bitmap if found; otherwise null</returns>
-    public static Bitmap? TryLoadFromId(string libraryRoot, string imageId)
+    /// <param name="libraryRoot">The library root to load the thumbnail from.</param>
+    /// <param name="image">The image node whose thumbnail is being loaded.</param>
+    /// <returns>The loaded bitmap, or <c>null</c> if unavailable.</returns>
+    public static Bitmap? TryLoadThumbnail(string libraryRoot, ImageNode image)
     {
-        if (string.IsNullOrEmpty(imageId)) return null;
-        var path = LibraryPaths.ThumbnailPath(libraryRoot, imageId);
+        var path = TryResolveThumbnailPath(libraryRoot, image);
+        if (path == null) return null;
+
+        try
         {
-            try
-            {
-                return new Bitmap(path);
-            }
-            catch
-            {
-                return null;
-            }
+            return new Bitmap(path);
         }
+        catch (Exception e)
+        {
+            Console.WriteLine("Thumbnail loading failed: " + e.Message);
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// Resolves a thumbnail path for the given image using the service’s lookup
+    /// order. First checks the cached thumbnail under the library’s sidecar folder.
+    /// If none exists, attempts to locate a sibling preview image next to the scene
+    /// file. Returns <c>null</c> if no suitable file is found.
+    /// </summary>
+    /// <param name="libraryRoot">The library root to search under.</param>
+    /// <param name="image">The image node whose thumbnail path is being resolved.</param>
+    /// <returns>The resolved thumbnail path, or <c>null</c> if none exists.</returns>
+    private static string? TryResolveThumbnailPath(string libraryRoot, ImageNode image)
+    {
+        if (string.IsNullOrEmpty(image.ImageId)) 
+            return null;
+
+        var cached = LibraryPaths.ThumbnailPath(libraryRoot, image.ImageId);
+        return File.Exists(cached) ? cached : FindSiblingPreview(libraryRoot, image);
+    }
+    
+    /// <summary>
+    /// Attempts to locate a pre‑existing RGB preview image stored alongside the
+    /// source scene file. First looks for an image whose basename matches the
+    /// scene file (e.g. <c>raw.jpg</c>, <c>raw.png</c>). If none is found, expands
+    /// the search to any file with an acceptable preview extension
+    /// (<c>.jpg</c>, <c>.jpeg</c>, <c>.png</c>, <c>.bmp</c>). Returns <c>null</c>
+    /// if no suitable preview image is found.
+    /// </summary>
+    /// <param name="libraryRoot">The library root to search under.</param>
+    /// <param name="image">The image node whose preview is being resolved.</param>
+    /// <returns>The resolved preview image path, or <c>null</c> if none exists.</returns>
+    private static string? FindSiblingPreview(string libraryRoot, ImageNode image)
+    {
+        if (string.IsNullOrEmpty(image.CurrentRelPath)) return null;
+
+        var absPath = Path.Combine(libraryRoot, image.CurrentRelPath.Replace('/', Path.DirectorySeparatorChar));
+        var dir = Path.GetDirectoryName(absPath);
+        if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
+        
+        var baseName = Path.GetFileNameWithoutExtension(image.SceneFileName);
+        foreach (var ext in PreviewExtensions)
+        {
+            var candidate = Path.Combine(dir, baseName + ext);
+            if (File.Exists(candidate)) return candidate;
+        }
+        
+        foreach (var ext in PreviewExtensions)
+        {
+            var matches = Directory.GetFiles(dir, "*" + ext);
+            if (matches.Length == 1)
+                return matches[0];
+        }
+        
+        return null;
     }
 
     /// <summary>
