@@ -1,0 +1,20 @@
+# ResNet 3D CNN — originale parametre fra 20260402_203900-treningen.
+# dropout: 0.30, ingen block_dropout. Brukes av resnet_valloss.yaml for kfold-replikering.
+
+model:
+  name: "resnet_3dcnn"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  dropout: 0.30
+  stage_channels: [16, 32, 64]
+  num_blocks: [2, 2, 2]
+  kernel_size: 3
+
+input:
+  patch_h: 64
+  patch_w: 64
+
+# L2: train.yaml → optimizer.weight_decay
