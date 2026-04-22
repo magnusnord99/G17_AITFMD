@@ -46,6 +46,15 @@
                                 HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4" />
+                        
+                        <Button Content="Library"
+                                Command="{Binding NavigateToLibraryCommand}"
+                                Background="Transparent"
+                                Foreground="#AAAAAA"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="8,6"
+                                CornerRadius="4" />
 
                         <Button Content="Models"
                                 Command="{Binding NavigateToModelsCommand}"
