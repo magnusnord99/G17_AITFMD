@@ -23,17 +23,14 @@ public class ClassificationReport
     public int StrideW { get; init; }
     
     // Data
+    public int TotalPatches { get; init; }
+    public int EvaluatedPatches { get; init; }
+    public int SkippedPatches { get; init; }
+    public string ExecutionProvider { get; init; } = string.Empty;
+    
     public List<string> Classes { get; init; } = [];
     public List<ClassStatistics> Statistics { get; set; } = [];
     public List<PatchPrediction> Predictions { get; init; } = [];
-    
-    // ToDo: Remove this before deployment
-    [JsonIgnore] public string ExecutionProvider { get; init; } = "Unknown";
-    
-    // ToDo: Remove soon (debug window in imageViewmodel)
-    public int TotalPossible { get; init; }
-    public int Evaluated { get; init; }
-    public int Skipped { get; init; }
 }
 
 public class PatchPrediction

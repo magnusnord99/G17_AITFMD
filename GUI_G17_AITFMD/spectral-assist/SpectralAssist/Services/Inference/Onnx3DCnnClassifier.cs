@@ -66,9 +66,9 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             StrideW = grid.StrideW,
             Classes = _package.Manifest.OutputSpec.Classes,
             ModelName = _package.Manifest.Metadata.Name,
-            TotalPossible = grid.TotalPatches,
-            Evaluated = predictions.Count,
-            Skipped = grid.TotalPatches - predictions.Count,
+            TotalPatches = grid.TotalPatches,
+            EvaluatedPatches = predictions.Count,
+            SkippedPatches = grid.TotalPatches - predictions.Count,
             ExecutionProvider = _executionProvider.ToString(),
         });
     }

@@ -86,8 +86,8 @@ public class LibraryManager
     /// <returns>Returns found <c>ImageNode</c> if found; otherwise <c>null</c></returns>
     public ImageNode? FindImage(string imageId)
     {
-        return Manifest?.Folders
-            .SelectMany(f => f.Images)
+        if (Manifest == null) return null;
+        return LibraryScanner.FlattenImages(Manifest.Folders)
             .FirstOrDefault(i => i.ImageId == imageId);
     }
     
@@ -124,6 +124,10 @@ public class LibraryManager
             PatchW         = report.PatchW,
             StrideH        = report.StrideH,
             StrideW        = report.StrideW,
+            TotalPatches = report.TotalPatches,
+            EvaluatedPatches = report.EvaluatedPatches,
+            SkippedPatches = report.SkippedPatches,
+            ExecutionProvider = report.ExecutionProvider,
             Classes        = report.Classes,
             Statistics     = report.Statistics.Count > 0 ? report.Statistics : StatisticsCalculator.Compute(report),
             Predictions    = report.Predictions,

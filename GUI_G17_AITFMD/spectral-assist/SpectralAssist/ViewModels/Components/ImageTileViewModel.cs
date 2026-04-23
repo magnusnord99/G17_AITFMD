@@ -18,6 +18,9 @@ public partial class ImageTileViewModel : ObservableObject
         _onOpen = onOpen;
         Thumbnail = ThumbnailService.TryLoadThumbnail(libraryRoot, source);
     }
+    
+    [RelayCommand]
+    private void Open() => _onOpen(Source);
 
     // States __________________________________________________________
     private readonly Action<ImageNode> _onOpen;
@@ -35,9 +38,6 @@ public partial class ImageTileViewModel : ObservableObject
     public void RefreshActive(string? activeImageId)
         => IsActive = activeImageId is not null && Source.ImageId == activeImageId;
     
-    [RelayCommand]
-    private void Open() => _onOpen(Source);
-
     public string DisplayName
     {
         get
@@ -55,15 +55,15 @@ public partial class ImageTileViewModel : ObservableObject
     {
         get
         {
-            var worst = Source.MostSevereRun();
-            if (worst == null)
+            var mostSevereRun = Source.MostSevereRun();
+            if (mostSevereRun == null)
                 return "Not analyzed yet";
 
-            var name = string.IsNullOrWhiteSpace(worst.PositiveClassName)
+            var name = string.IsNullOrWhiteSpace(mostSevereRun.PositiveClassName)
                 ? "positive"
-                : worst.PositiveClassName;
+                : mostSevereRun.PositiveClassName;
 
-            return $"Peak: {worst.PositiveClassPercentAbove50:0}% {name}";
+            return $"Peak: {mostSevereRun.PositiveClassPercentAbove50:0}% {name}";
         }
     }
 
@@ -71,11 +71,8 @@ public partial class ImageTileViewModel : ObservableObject
     {
         get
         {
-            var latest = Source.Runs.MaxBy(r => r.DatePerformed);
-            if (latest == null)
-                return string.Empty;
-
-            var date = latest.DatePerformed.ToLocalTime().ToString("MMM d");
+            var latestRun = Source.LatestRun();
+            var date = latestRun?.DatePerformed.ToLocalTime().ToString("MMM d");
             return ReportCount == 1
                 ? $"1 report · {date}"
                 : $"{ReportCount} reports · Last {date}";

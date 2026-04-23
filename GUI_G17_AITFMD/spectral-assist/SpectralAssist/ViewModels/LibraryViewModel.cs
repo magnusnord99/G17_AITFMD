@@ -22,16 +22,15 @@ public partial class LibraryViewModel : ViewModelBase
 
     private readonly LibraryManager _manager;
     private readonly Action<ImageNode> _openImage;
-    private readonly Dictionary<string, Components.ImageTileViewModel> _tileCache = new();
-
-    private CancellationTokenSource? _scanCts;
     private List<ImageNode> _allImagesCache = [];
-
+    private CancellationTokenSource? _scanCts;
+    
     public LibraryViewModel(LibraryManager manager, Action<ImageNode> openImage)
     {
         _manager = manager;
         _openImage = openImage;
-        if (_manager.IsOpen) PopulateFromManifest();
+        if (_manager.IsOpen) 
+            PopulateFromManifest();
     }
 
     // Library State _______________________________________________________________
@@ -62,7 +61,7 @@ public partial class LibraryViewModel : ViewModelBase
     public int MissingCalibrationCount => _allImagesCache.Count(i => !i.HasCalibration);
 
     
-    // Tree and Gallery Stuff ___________________________________
+    // Tree and Image Collections ___________________________________
     public ObservableCollection<LibraryTreeItem> TreeRoots { get; } = [];
     public ObservableCollection<ImageTileViewModel> CurrentImages { get; } = [];
 
@@ -80,29 +79,21 @@ public partial class LibraryViewModel : ViewModelBase
         CurrentImages.Clear();
         if (value == null || _manager.Root == null) return;
 
-        // A branch shows every image in its subtree; a leaf image-folder shows just its own.
+        // Show every image in the selected folder's subtree.
         foreach (var image in LibraryScanner.FlattenImages([value.Source]))
-            CurrentImages.Add(GetOrCreateTile(image));
-    }
-
-    private ImageTileViewModel GetOrCreateTile(ImageNode image)
-    {
-        if (!_tileCache.TryGetValue(image.ImageId, out var tile))
         {
-            tile = new ImageTileViewModel(image, _manager.Root!, _openImage);
-            _tileCache[image.ImageId] = tile;
+            var tile = new ImageTileViewModel(image, _manager.Root!, _openImage);
+            tile.RefreshActive(ActiveImageId);
+            CurrentImages.Add(tile);
         }
-
-        tile.RefreshActive(ActiveImageId);
-        return tile;
     }
-
+    
+    
     // ---- Commands ----
     public async Task OpenFolderAsync(string rootPath)
     {
         // Stop existing scan if already in progress.
         _scanCts?.Cancel();
-        
         _scanCts = new CancellationTokenSource();
 
         State = LibraryState.Scanning;
@@ -114,7 +105,7 @@ public partial class LibraryViewModel : ViewModelBase
             await _manager.OpenAsync(rootPath, _scanCts.Token);
             PopulateFromManifest();
             State = LibraryState.Loaded;
-            StatusMessage = $"Loaded: {PatientCount} folder(s), {ScanCount} image(s)";
+            StatusMessage = $"Loaded: {PatientCount} folders(s), {ScanCount} image(s)";
         }
         catch (OperationCanceledException)
         {
@@ -161,7 +152,6 @@ public partial class LibraryViewModel : ViewModelBase
 
         TreeRoots.Clear();
         CurrentImages.Clear();
-        _tileCache.Clear();
         _allImagesCache = [];
 
         SelectedTreeItem = null;
@@ -171,15 +161,17 @@ public partial class LibraryViewModel : ViewModelBase
         NotifySummaryChanged();
     }
     
-    
     public void RefreshView()
     {
-        if (_manager.IsOpen) PopulateFromManifest();
+        if (_manager.IsOpen) 
+            PopulateFromManifest();
     }
 
     
-    
-    // Population from Manifest _______________________________________________
+    /// <summary>
+    /// Rebuilds <see cref="TreeRoots"/> and <see cref="CurrentImages"/> from the in-memory manifest,
+    /// preserving the currently-selected node across rescans/refreshes (matched by relpath).
+    /// </summary>
     private void PopulateFromManifest()
     {
         var previousPath = SelectedTreeItem?.RelPath;
@@ -187,17 +179,13 @@ public partial class LibraryViewModel : ViewModelBase
         TreeRoots.Clear();
         CurrentImages.Clear();
 
-        var folders = _manager.Manifest?.Folders ?? (IReadOnlyList<FolderNode>)Array.Empty<FolderNode>();
-        _allImagesCache = LibraryScanner.FlattenImages(folders).ToList();
-
-        // Drop cached tiles for images that no longer exist (e.g. after rescan).
-        var liveIds = _allImagesCache.Select(i => i.ImageId).ToHashSet();
-        foreach (var stale in _tileCache.Keys.Where(id => !liveIds.Contains(id)).ToList())
-            _tileCache.Remove(stale);
-
-        foreach (var f in folders)
-            TreeRoots.Add(new LibraryTreeItem(f));
-
+        if (_manager.Manifest != null)
+        {
+            _allImagesCache = LibraryScanner.FlattenImages(_manager.Manifest.Folders).ToList();
+            foreach (var f in _manager.Manifest.Folders)
+                TreeRoots.Add(new LibraryTreeItem(f));
+        }
+        
         SelectedTreeItem = previousPath != null
             ? FindByRelPath(TreeRoots, previousPath) ?? TreeRoots.FirstOrDefault()
             : TreeRoots.FirstOrDefault();

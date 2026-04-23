@@ -42,7 +42,7 @@ public class LibraryScanner
     {
         if (!Directory.Exists(libraryRoot))
             throw new DirectoryNotFoundException($"The library root {libraryRoot} was not found.");
-
+        
         LibraryPaths.EnsureSidecarExists(libraryRoot);
 
         var rootFullPath = Path.GetFullPath(libraryRoot);
@@ -180,10 +180,11 @@ public class LibraryScanner
             select new ImageNode
             {
                 ImageId = prior?.ImageId ?? NewImageId(),
-                Notes = prior?.Notes ?? string.Empty,
                 CurrentRelPath = imgRelPath,
                 SceneFileName = Path.GetFileName(hdrPath),
                 HasCalibration = hasCalibration,
+                Notes = prior?.Notes ?? string.Empty,
+                Runs = prior?.Runs ?? []
             });
 
         return new FolderNode
