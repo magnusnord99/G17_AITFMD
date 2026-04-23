@@ -201,6 +201,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             running = false;
             
             Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
+            await TryAutoSaveRunAsync(classificationResult, _cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -244,8 +245,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     
     
+    // Persistence Logic _______________________________
     
-    // --- Persistence: auto-save after inference, load on click, delete --- //
+    [ObservableProperty] private string? _activeRunId;
     
     /// <summary>
     /// Silently tries to save a thumbnail of the given bitmap.
@@ -257,8 +259,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         if (_libraryManager?.Root != null && !string.IsNullOrEmpty(_imageId))
             ThumbnailService.TrySaveFromBitmap(_libraryManager.Root, _imageId, bitmap);
     }
-    
-    [ObservableProperty] private string? _activeRunId;
     
     private async Task TryAutoSaveRunAsync(ClassificationReport report, CancellationToken ct = default)
     {

@@ -47,9 +47,9 @@
                         <TextBlock Opacity="0.6" FontSize="11">
                             <Run Text="{Binding PatientCount}" /><Run Text=" folder(s)" />
                             <Run Text=" · " />
-                            <Run Text="{Binding ScanCount}" /><Run Text=" scan(s)" />
+                            <Run Text="{Binding ScanCount}" /><Run Text=" images(s)" />
                             <Run Text=" · " />
-                            <Run Text="{Binding ReportedScanCount}" /><Run Text=" reported" />
+                            <Run Text="{Binding ReportedScanCount}" /><Run Text=" analyzed" />
                         </TextBlock>
                         <TextBlock FontSize="11" Foreground="#d97706"
                                    IsVisible="{Binding MissingCalibrationCount}">

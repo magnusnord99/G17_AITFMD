@@ -41,341 +41,424 @@
 
         <!-- Ready State -->
         <Grid IsVisible="{Binding IsReady}"
-              RowDefinitions="Auto,*,Auto,Auto">
+              ColumnDefinitions="260,*">
 
-            <!-- Top Metadata Bar -->
-            <Border Grid.Row="0"
-                    Background="#1E1E1E"
+            <!-- LEFT: Runs panel -->
+            <Border Grid.Column="0"
+                    Background="#161616"
                     BorderBrush="#2D2D2D"
-                    BorderThickness="0,0,0,1"
-                    Padding="12,6">
+                    BorderThickness="0,0,1,0">
+                <DockPanel LastChildFill="True">
 
-                <StackPanel Orientation="Horizontal" Spacing="20">
-                    <TextBlock Foreground="#888888" FontSize="11">
-                        <Run Text="Description: " Foreground="#888888" FontSize="11" />
-                        <Run Text="{Binding Cube.Header.Description}" Foreground="#CCCCCC" FontSize="11" />
-                    </TextBlock>
+                    <!-- Top Summary Block: Details -->
+                    <Border DockPanel.Dock="Top"
+                            Padding="12,10,12,6">
+                        <StackPanel Spacing="6"
+                                    IsVisible="{Binding Overlay.ClassificationResult,
+                                        Converter={x:Static ObjectConverters.IsNotNull}}">
 
-                    <TextBlock Foreground="#888888" FontSize="11">
-                        <Run Text="Dimensions: " Foreground="#888888" FontSize="11" />
-                        <Run Text="{Binding Cube.Header.Samples}" Foreground="#CCCCCC" FontSize="11" />
-                        <Run Text="×" Foreground="#888888" FontSize="11" />
-                        <Run Text="{Binding Cube.Header.Lines}" Foreground="#CCCCCC" FontSize="11" />
-                        <Run Text="×" Foreground="#888888" FontSize="11" />
-                        <Run Text="{Binding Cube.Header.Bands}" Foreground="#CCCCCC" FontSize="11" />
-                    </TextBlock>
-                </StackPanel>
+                            <Grid ColumnDefinitions="Auto,*"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                  Margin="0,2,0,0"
+                                  DataContext="{Binding Overlay.ClassificationResult}">
 
+                                <TextBlock Text="Analysis Details"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="#CCCCCC" />
+
+                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                           Text="Model:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,4" />
+                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                           Text="{Binding ModelName}"
+                                           Foreground="#CCCCCC" FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,4" />
+
+                                <TextBlock Grid.Row="2" Grid.Column="0"
+                                           Text="Classes:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,4" />
+                                <TextBlock Grid.Row="2" Grid.Column="1"
+                                           Text="{Binding Classes.Count, StringFormat='{}{0} classes'}"
+                                           Foreground="#CCCCCC" FontSize="11"
+                                           Margin="0,0,0,4" />
+
+                                <TextBlock Grid.Row="3" Grid.Column="0"
+                                           Text="Evaluated:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,4" />
+                                <TextBlock Grid.Row="3" Grid.Column="1"
+                                           Text="{Binding EvaluatedPatches, StringFormat='{}{0} patches'}"
+                                           Foreground="#CCCCCC" FontSize="11"
+                                           Margin="0,0,0,4" />
+
+                                <TextBlock Grid.Row="4" Grid.Column="0"
+                                           Text="Skipped:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,4" />
+                                <TextBlock Grid.Row="4" Grid.Column="1"
+                                           Text="{Binding SkippedPatches, StringFormat='{}{0} patches'}"
+                                           Foreground="#CCCCCC" FontSize="11"
+                                           Margin="0,0,0,4" />
+
+                                <TextBlock Grid.Row="5" Grid.Column="0"
+                                           Text="Patch size:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,4" />
+                                <TextBlock Grid.Row="5" Grid.Column="1"
+                                           Foreground="#CCCCCC" FontSize="11">
+                                    <Run Text="{Binding PatchW}" />
+                                    <Run Text="×" />
+                                    <Run Text="{Binding PatchH}" />
+                                    <Run Text="px" />
+                                </TextBlock>
+
+                                <TextBlock Grid.Row="6" Grid.Column="0"
+                                           Text="Stride size:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,4" />
+                                <TextBlock Grid.Row="6" Grid.Column="1"
+                                           Foreground="#CCCCCC" FontSize="11">
+                                    <Run Text="{Binding StrideW}" />
+                                    <Run Text="×" />
+                                    <Run Text="{Binding StrideH}" />
+                                    <Run Text="px" />
+                                </TextBlock>
+
+                                <TextBlock Grid.Row="7" Grid.Column="0"
+                                           Text="Provider:"
+                                           Foreground="#888888" FontSize="11"
+                                           Margin="0,0,12,0" />
+                                <TextBlock Grid.Row="7" Grid.Column="1"
+                                           Text="{Binding ExecutionProvider}"
+                                           Foreground="#CCCCCC" FontSize="11" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Bottom Action Button Block: Run / Notes / Export -->
+                    <Border DockPanel.Dock="Bottom"
+                            Padding="12,10"
+                            BorderBrush="#2D2D2D"
+                            BorderThickness="0,1,0,0">
+                        <StackPanel Spacing="6">
+
+                            <Button Content="▶ Run Inference"
+                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunInferenceCommand,
+                                                      FallbackValue={x:Null}}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Background="RoyalBlue"
+                                    Padding="8,8"
+                                    CornerRadius="4"
+                                    FontWeight="SemiBold" />
+
+                            <Button Content="📝 Toggle Notes"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="8,6"
+                                    CornerRadius="4" />
+
+                            <Button Content="⇩ Export to PDF"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="8,6"
+                                    CornerRadius="4" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Runs list header -->
+                    <Border DockPanel.Dock="Top"
+                            Padding="12,10,12,6">
+                        <TextBlock Text="Runs"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="#CCCCCC" />
+                    </Border>
+
+                    <!-- Runs list -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <!-- Empty state -->
+                            <TextBlock Text="No runs yet. Click Run Inference."
+                                       FontSize="11"
+                                       Foreground="#666"
+                                       TextWrapping="Wrap"
+                                       Margin="12,4,12,0"
+                                       IsVisible="{Binding !Reports.Count}" />
+
+                            <ItemsControl ItemsSource="{Binding Reports}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="models:RunSummary">
+                                        <Border Margin="8,3"
+                                                Padding="10,8"
+                                                Background="#1E1E1E"
+                                                BorderBrush="#2D2D2D"
+                                                BorderThickness="1"
+                                                CornerRadius="4">
+                                            <Border.Styles>
+
+                                                <!-- Active run highlight -->
+                                                <Style Selector="Border">
+                                                    <Setter Property="BorderBrush" Value="#2D2D2D" />
+                                                </Style>
+                                            </Border.Styles>
+                                            <StackPanel Spacing="3">
+
+                                                <!-- Header: model name + delete -->
+                                                <Grid ColumnDefinitions="*,Auto">
+
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding ModelName}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#E0E0E0"
+                                                               TextTrimming="CharacterEllipsis" />
+
+                                                    <Button Grid.Column="1"
+                                                            Content="🗑"
+                                                            Background="Transparent"
+                                                            Foreground="#888"
+                                                            Padding="4,0"
+                                                            FontSize="12"
+                                                            Command="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).DeleteRunCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Delete this run" />
+                                                </Grid>
+
+                                                <!-- Date -->
+                                                <TextBlock
+                                                    Text="{Binding DatePerformed, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                    FontSize="10"
+                                                    Foreground="#888" />
+
+                                                <!-- Positive-class stat -->
+                                                <TextBlock FontSize="11"
+                                                           Foreground="#CCCCCC">
+                                                    <Run
+                                                        Text="{Binding PositiveClassPercentAbove50, StringFormat='{}{0:0}%'}" />
+                                                    <Run Text=" " />
+                                                    <Run Text="{Binding PositiveClassName}" />
+                                                    <Run Text=" (≥50%)" Foreground="#888" />
+                                                </TextBlock>
+
+                                                <!-- Load button -->
+                                                <Button Content="View"
+                                                        FontSize="11"
+                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Center"
+                                                        Padding="6,4"
+                                                        Margin="0,4,0,0"
+                                                        Background="#2D2D2D"
+                                                        Foreground="#CCCCCC"
+                                                        CornerRadius="3"
+                                                        Command="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).LoadRunCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
             </Border>
 
-            <!-- Image Display -->
-            <paz:ZoomBorder x:Name="ZoomBorder" Grid.Row="1"
-                            Background="#121212"
-                            Stretch="None"
-                            BoundsMode="KeepContentVisible"
-                            ClipToBounds="True"
-                            EnableConstrains="True"
 
-                            EnablePan="True"
-                            PanButton="Left"
+            <!-- RIGHT: ImageContainer and Bottom Display Settings -->
+            <Grid Grid.Column="1" RowDefinitions="*, 56">
 
-                            ZoomSpeed="1.05"
-                            MinZoomX="1.0"
-                            MinZoomY="1.0"
-                            MaxZoomX="50"
-                            MaxZoomY="50">
-                <Grid>
-                    <Image Source="{Binding CurrentBitmap}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
-                    <Image Source="{Binding Overlay.OverlayBitmap}"
-                           Opacity="{Binding Overlay.OverlayOpacity}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           IsVisible="{Binding Overlay.ShowOverlay}" />
-                </Grid>
-            </paz:ZoomBorder>
+                <!-- Image Container -->
+                <paz:ZoomBorder x:Name="ZoomBorder" Grid.Row="0"
+                                Background="#121212"
+                                Stretch="None"
+                                BoundsMode="KeepContentVisible"
+                                ClipToBounds="True"
+                                EnableConstrains="True"
 
-            <!-- Info Panel Toggle Button (top-left of image area) -->
-            <ToggleButton Grid.Row="1"
-                          IsChecked="{Binding Overlay.ShowInfoPanel}"
-                          Content="ℹ"
-                          Background="#AA2D2D2D"
-                          Foreground="#CCCCCC"
-                          Padding="8,4"
-                          CornerRadius="4"
-                          FontSize="13"
-                          HorizontalAlignment="Left"
-                          VerticalAlignment="Top"
-                          Margin="16,16,0,0"
-                          ToolTip.Tip="Analysis details"
-                          IsVisible="{Binding Overlay.ClassificationResult,
-                                      Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                EnablePan="True"
+                                PanButton="Left"
 
-            <!-- Classification Info Panel (appears below the toggle button) -->
-            <Border Grid.Row="1"
+                                ZoomSpeed="1.05"
+                                MinZoomX="1.0"
+                                MinZoomY="1.0"
+                                MaxZoomX="50"
+                                MaxZoomY="50">
+                    <Grid>
+                        <Image Source="{Binding CurrentBitmap}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                        <Image Source="{Binding Overlay.OverlayBitmap}"
+                               Opacity="{Binding Overlay.OverlayOpacity}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding Overlay.ShowOverlay}" />
+                    </Grid>
+                </paz:ZoomBorder>
+                
+                <!-- Status Text -->
+                <TextBlock Grid.Row="0" Text="{Binding InferenceOutput}"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    Margin="16,52,0,0"
-                    Background="#DD1E1E1E"
-                    CornerRadius="6"
-                    Padding="14,10"
-                    MaxWidth="280"
-                    IsVisible="{Binding Overlay.ShowInfoPanel}">
-                <StackPanel Spacing="6"
-                            DataContext="{Binding Overlay.ClassificationResult}">
-                    <TextBlock Text="Analysis Details"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               Foreground="#E0E0E0" />
-
-                    <Border Height="1" Background="#3D3D3D" Margin="0,2" />
-
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                          Margin="0,2,0,0">
-
-                        <TextBlock Grid.Row="0" Grid.Column="0"
-                                   Text="Model:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,4" />
-                        <TextBlock Grid.Row="0" Grid.Column="1"
-                                   Text="{Binding ModelName}"
-                                   Foreground="#CCCCCC" FontSize="11"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,0,4" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0"
-                                   Text="Classes:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,4" />
-                        <TextBlock Grid.Row="1" Grid.Column="1"
-                                   Text="{Binding Classes.Count, StringFormat='{}{0} classes'}"
-                                   Foreground="#CCCCCC" FontSize="11"
-                                   Margin="0,0,0,4" />
-
-                        <TextBlock Grid.Row="2" Grid.Column="0"
-                                   Text="Evaluated:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,4" />
-                        <TextBlock Grid.Row="2" Grid.Column="1"
-                                   Text="{Binding Evaluated, StringFormat='{}{0} patches'}"
-                                   Foreground="#CCCCCC" FontSize="11"
-                                   Margin="0,0,0,4" />
-
-                        <TextBlock Grid.Row="3" Grid.Column="0"
-                                   Text="Skipped:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,4" />
-                        <TextBlock Grid.Row="3" Grid.Column="1"
-                                   Text="{Binding Skipped, StringFormat='{}{0} patches'}"
-                                   Foreground="#CCCCCC" FontSize="11"
-                                   Margin="0,0,0,4" />
-
-                        <TextBlock Grid.Row="4" Grid.Column="0"
-                                   Text="Patch size:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,4" />
-                        <TextBlock Grid.Row="4" Grid.Column="1"
-                                   Foreground="#CCCCCC" FontSize="11">
-                            <Run Text="{Binding PatchW}" />
-                            <Run Text="×" />
-                            <Run Text="{Binding PatchH}" />
-                            <Run Text="px" />
-                        </TextBlock>
-                        
-                        <TextBlock Grid.Row="5" Grid.Column="0"
-                                   Text="Stride size:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,4" />
-                        <TextBlock Grid.Row="5" Grid.Column="1"
-                                   Foreground="#CCCCCC" FontSize="11">
-                            <Run Text="{Binding StrideW}" />
-                            <Run Text="×" />
-                            <Run Text="{Binding StrideH}" />
-                            <Run Text="px" />
-                        </TextBlock>
-
-                        <TextBlock Grid.Row="6" Grid.Column="0"
-                                   Text="Provider:"
-                                   Foreground="#888888" FontSize="11"
-                                   Margin="0,0,12,0" />
-                        <TextBlock Grid.Row="6" Grid.Column="1"
-                                   Text="{Binding ExecutionProvider}"
-                                   Foreground="#CCCCCC" FontSize="11" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- Color Bar Legend -->
-            <Border Grid.Row="1"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Bottom"
-                    Margin="0,0,16,16"
-                    Background="#CC1E1E1E"
-                    CornerRadius="4"
-                    Padding="8,6"
-                    IsVisible="{Binding Overlay.ShowOverlay}">
-                <StackPanel
-                    IsVisible="{Binding Overlay.ClassificationResult,
+                    Margin="16,16,0,0" >
+                </TextBlock>
+                
+                <!-- Color Bar Legend -->
+                <Border Grid.Row="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,16,16"
+                        Background="#CC1E1E1E"
+                        CornerRadius="4"
+                        Padding="8,6"
+                        IsVisible="{Binding Overlay.ShowOverlay}">
+                    <StackPanel
+                        IsVisible="{Binding Overlay.ClassificationResult,
                                         Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <Image Source="{Binding Overlay.ColorBarBitmap}"
-                           Width="200" Height="14"
-                           Stretch="Fill" />
-                    <Grid Width="200" Margin="0,2,0,0">
-                        <TextBlock Text="{Binding Overlay.OverlayThreshold, StringFormat='{}{0:P0}'}"
-                                   HorizontalAlignment="Left"
-                                   Foreground="#AAAAAA"
-                                   FontSize="10" />
-                        <TextBlock Text="100%"
-                                   HorizontalAlignment="Right"
-                                   Foreground="#AAAAAA"
-                                   FontSize="10" />
-                    </Grid>
-                </StackPanel>
-            </Border>
+                        <Image Source="{Binding Overlay.ColorBarBitmap}"
+                               Width="200" Height="14"
+                               Stretch="Fill" />
+                        <Grid Width="200" Margin="0,2,0,0">
+                            <TextBlock Text="{Binding Overlay.OverlayThreshold, StringFormat='{}{0:P0}'}"
+                                       HorizontalAlignment="Left"
+                                       Foreground="#AAAAAA"
+                                       FontSize="10" />
+                            <TextBlock Text="100%"
+                                       HorizontalAlignment="Right"
+                                       Foreground="#AAAAAA"
+                                       FontSize="10" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
-            <!-- Inference Output (hidden when empty) -->
-            <Border Grid.Row="2"
-                    Background="#1A1A1A"
-                    BorderBrush="#2D2D2D"
-                    BorderThickness="0,1,0,0"
-                    Padding="12,8"
-                    MaxHeight="120"
-                    IsVisible="{Binding InferenceOutput, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <!-- Bottom Toolbar -->
+                <Border Grid.Row="1"
+                        Background="#1E1E1E"
+                        BorderBrush="#2D2D2D"
+                        BorderThickness="0,1,0,0"
+                        Padding="12,6">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" MinHeight="48">
 
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto">
-                    <TextBlock Text="{Binding InferenceOutput}"
-                               TextWrapping="Wrap"
-                               FontFamily="Consolas"
-                               FontSize="11"
-                               Foreground="#E0E0E0" />
-                </ScrollViewer>
-            </Border>
+                        <!-- Left: Display mode + Band info -->
+                        <StackPanel Grid.Column="0"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center">
 
-            <!-- Bottom Toolbar -->
-            <Border Grid.Row="3"
-                    Background="#1E1E1E"
-                    BorderBrush="#2D2D2D"
-                    BorderThickness="0,1,0,0"
-                    Padding="12,6">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto" MinHeight="48">
+                            <ComboBox ItemsSource="{Binding AvailableDisplayModes}"
+                                      SelectedItem="{Binding SelectedDisplayMode}"
+                                      FontSize="11"
+                                      MinWidth="160"
+                                      VerticalAlignment="Center">
+                            </ComboBox>
 
-                    <!-- Left: Display mode + Band info -->
-                    <StackPanel Grid.Column="0"
-                                Orientation="Horizontal"
-                                Spacing="8"
-                                VerticalAlignment="Center">
-                        
-                        <ComboBox ItemsSource="{Binding AvailableDisplayModes}"
-                                  SelectedItem="{Binding SelectedDisplayMode}"
-                                  FontSize="11"
-                                  MinWidth="160"
-                                  VerticalAlignment="Center">
-                        </ComboBox>
-                        
-                        <StackPanel Orientation="Horizontal"
-                                    IsVisible="{Binding IsSpectralMode}"
-                                    Spacing="4">
-                            <TextBlock Text="{Binding SelectedBand, StringFormat='Band: {0}'}"
+                            <StackPanel Orientation="Horizontal"
+                                        IsVisible="{Binding IsSpectralMode}"
+                                        Spacing="4">
+                                <TextBlock Text="{Binding SelectedBand, StringFormat='Band: {0}'}"
+                                           VerticalAlignment="Center"
+                                           Foreground="#CCCCCC"
+                                           FontSize="11"
+                                           Width="65"
+                                           TextAlignment="Right" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="#CCCCCC"
+                                           FontSize="11"
+                                           Width="75"
+                                           TextAlignment="Right">
+                                    <Run Text="λ: " />
+                                    <Run Text="{Binding SelectedBandWaveLength, StringFormat='{}{0:F1}'}" />
+                                    <Run Text="{Binding WavelengthUnit}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Center: Band Slider -->
+                        <Slider Grid.Column="1"
+                                IsVisible="{Binding IsSpectralMode}"
+                                Margin="12,0,12,0"
+                                Minimum="0"
+                                Maximum="{Binding MaxBandIndex}"
+                                Value="{Binding SelectedBand}"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                VerticalAlignment="Center" />
+
+                        <Border Grid.Column="2"
+                                Width="1"
+                                Background="#2D2D2D"
+                                Margin="12,4"
+                                IsVisible="{Binding Overlay.ClassificationResult,
+                                        Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                        <!-- Right: Overlay Controls (visible after inference) -->
+                        <StackPanel Grid.Column="3"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    VerticalAlignment="Center"
+                                    Margin="4,0,0,0"
+                                    IsVisible="{Binding Overlay.ClassificationResult,
+                                            Converter={x:Static ObjectConverters.IsNotNull}}">
+
+                            <TextBlock Text="Overlay"
+                                       VerticalAlignment="Center"
+                                       Foreground="#888888"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,4,0" />
+
+                            <ComboBox ItemsSource="{Binding Overlay.AvailableColorMaps}"
+                                      SelectedItem="{Binding Overlay.SelectedColorMapName}"
+                                      MinWidth="100"
+                                      FontSize="11"
+                                      VerticalAlignment="Center" />
+
+                            <TextBlock Text="O:"
+                                       VerticalAlignment="Center"
+                                       Foreground="#888888"
+                                       FontSize="11"
+                                       ToolTip.Tip="Opacity" />
+
+                            <Slider Value="{Binding Overlay.OverlayOpacity}"
+                                    Minimum="0" Maximum="1"
+                                    Width="80"
+                                    VerticalAlignment="Center"
+                                    IsEnabled="{Binding Overlay.ShowOverlay}"
+                                    ToolTip.Tip="Overlay opacity" />
+
+                            <TextBlock Text="{Binding Overlay.OverlayOpacity, StringFormat='{}{0:P0}'}"
                                        VerticalAlignment="Center"
                                        Foreground="#CCCCCC"
                                        FontSize="11"
-                                       Width="65"
-                                       TextAlignment="Right" />
-                            <TextBlock VerticalAlignment="Center"
+                                       Width="32" />
+
+                            <TextBlock Text="T:"
+                                       VerticalAlignment="Center"
+                                       Foreground="#888888"
+                                       FontSize="11"
+                                       ToolTip.Tip="Threshold" />
+
+                            <Slider Value="{Binding Overlay.OverlayThreshold}"
+                                    Minimum="0" Maximum="1"
+                                    Width="80"
+                                    VerticalAlignment="Center"
+                                    IsEnabled="{Binding Overlay.ShowOverlay}"
+                                    ToolTip.Tip="Classification threshold" />
+
+                            <TextBlock Text="{Binding Overlay.OverlayThreshold, StringFormat='{}{0:P0}'}"
+                                       VerticalAlignment="Center"
                                        Foreground="#CCCCCC"
                                        FontSize="11"
-                                       Width="75"
-                                       TextAlignment="Right">
-                                <Run Text="λ: " />
-                                <Run Text="{Binding SelectedBandWaveLength, StringFormat='{}{0:F1}'}" />
-                                <Run Text="{Binding WavelengthUnit}" />
-                            </TextBlock>
+                                       Width="32" />
                         </StackPanel>
-                    </StackPanel>
 
-                    <!-- Center: Band Slider -->
-                    <Slider Grid.Column="1"
-                            IsVisible="{Binding IsSpectralMode}"
-                            Margin="12,0,12,0"
-                            Minimum="0"
-                            Maximum="{Binding MaxBandIndex}"
-                            Value="{Binding SelectedBand}"
-                            TickFrequency="1"
-                            IsSnapToTickEnabled="True"
-                            VerticalAlignment="Center" />
-
-                    <Border Grid.Column="2"
-                            Width="1"
-                            Background="#2D2D2D"
-                            Margin="12,4"
-                            IsVisible="{Binding Overlay.ClassificationResult,
-                                        Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-                    <!-- Right: Overlay Controls (visible after inference) -->
-                    <StackPanel Grid.Column="3"
-                                Orientation="Horizontal"
-                                Spacing="6"
-                                VerticalAlignment="Center"
-                                Margin="4,0,0,0"
-                                IsVisible="{Binding Overlay.ClassificationResult,
-                                            Converter={x:Static ObjectConverters.IsNotNull}}">
-
-                        <TextBlock Text="Overlay"
-                                   VerticalAlignment="Center"
-                                   Foreground="#888888"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,4,0" />
-
-                        <ComboBox ItemsSource="{Binding Overlay.AvailableColorMaps}"
-                                  SelectedItem="{Binding Overlay.SelectedColorMapName}"
-                                  MinWidth="100"
-                                  FontSize="11"
-                                  VerticalAlignment="Center" />
-
-                        <TextBlock Text="O:"
-                                   VerticalAlignment="Center"
-                                   Foreground="#888888"
-                                   FontSize="11"
-                                   ToolTip.Tip="Opacity" />
-
-                        <Slider Value="{Binding Overlay.OverlayOpacity}"
-                                Minimum="0" Maximum="1"
-                                Width="80"
-                                VerticalAlignment="Center"
-                                IsEnabled="{Binding Overlay.ShowOverlay}"
-                                ToolTip.Tip="Overlay opacity" />
-
-                        <TextBlock Text="{Binding Overlay.OverlayOpacity, StringFormat='{}{0:P0}'}"
-                                   VerticalAlignment="Center"
-                                   Foreground="#CCCCCC"
-                                   FontSize="11"
-                                   Width="32" />
-
-                        <TextBlock Text="T:"
-                                   VerticalAlignment="Center"
-                                   Foreground="#888888"
-                                   FontSize="11"
-                                   ToolTip.Tip="Threshold" />
-
-                        <Slider Value="{Binding Overlay.OverlayThreshold}"
-                                Minimum="0" Maximum="1"
-                                Width="80"
-                                VerticalAlignment="Center"
-                                IsEnabled="{Binding Overlay.ShowOverlay}"
-                                ToolTip.Tip="Classification threshold" />
-
-                        <TextBlock Text="{Binding Overlay.OverlayThreshold, StringFormat='{}{0:P0}'}"
-                                   VerticalAlignment="Center"
-                                   Foreground="#CCCCCC"
-                                   FontSize="11"
-                                   Width="32" />
-                    </StackPanel>
-
-                </Grid>
-            </Border>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
     </Panel>
 </UserControl>

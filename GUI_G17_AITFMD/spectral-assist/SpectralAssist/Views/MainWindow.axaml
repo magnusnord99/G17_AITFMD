@@ -84,14 +84,11 @@
                                 Spacing="12"
                                 VerticalAlignment="Center">
                         
-                        <Button Content="Run Inference"
-                                Command="{Binding RunInferenceCommand}"
-                                Background="#2D2D2D"
-                                Foreground="#CCCCCC"
-                                Padding="8,6"
-                                CornerRadius="4"
-                                IsEnabled="{Binding HasImageView}" />
-
+                        <TextBlock Text="Active model:"
+                                   FontSize="11"
+                                   Foreground="#888888"
+                                   Margin="8,8,8,2"/>
+                        
                         <TextBlock Text="{Binding ActiveModel.DisplayName, FallbackValue='No model selected'}"
                                    FontSize="11"
                                    Foreground="#888"
