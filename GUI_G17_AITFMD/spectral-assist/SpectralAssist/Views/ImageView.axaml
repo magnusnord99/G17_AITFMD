@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
              xmlns:paz="using:Avalonia.Controls.PanAndZoom"
+             xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
              xmlns:models="clr-namespace:SpectralAssist.Models"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SpectralAssist.Views.ImageView"
@@ -41,7 +42,7 @@
 
         <!-- Ready State -->
         <Grid IsVisible="{Binding IsReady}"
-              RowDefinitions="Auto,*,Auto,Auto">
+              RowDefinitions="Auto,*,Auto,Auto,Auto">
 
             <!-- Top Metadata Bar -->
             <Border Grid.Row="0"
@@ -75,17 +76,16 @@
                             BoundsMode="KeepContentVisible"
                             ClipToBounds="True"
                             EnableConstrains="True"
-
-                            EnablePan="True"
+                            EnablePan="{Binding IsPanEnabled}"
                             PanButton="Left"
-
                             ZoomSpeed="1.05"
-                            MinZoomX="1.0"
-                            MinZoomY="1.0"
-                            MaxZoomX="50"
-                            MaxZoomY="50">
-                <Grid>
-                    <Image Source="{Binding CurrentBitmap}"
+                            MinZoomX="{Binding MinZoomLevel}"
+                            MinZoomY="{Binding MinZoomLevel}"
+                            MaxZoomX="{Binding MaxZoomLevel}"
+                            MaxZoomY="{Binding MaxZoomLevel}">
+                <Grid PointerPressed="ImageContainer_OnPointerPressed">
+                    <Image x:Name="DisplayImage"
+                           Source="{Binding CurrentBitmap}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
                     <Image Source="{Binding Overlay.OverlayBitmap}"
@@ -95,6 +95,54 @@
                            IsVisible="{Binding Overlay.ShowOverlay}" />
                 </Grid>
             </paz:ZoomBorder>
+
+            <Border Grid.Row="2"
+                    Background="#1A1A1A"
+                    BorderBrush="#2D2D2D"
+                    BorderThickness="0,1,0,0"
+                    Padding="12,10"
+                    IsVisible="{Binding IsPixelSpectrumMode}">
+                <Grid ColumnDefinitions="Auto,*"
+                      ColumnSpacing="10">
+                    <StackPanel Grid.Column="0"
+                                Width="120"
+                                Spacing="4">
+                        <TextBlock Text="{Binding PixelSpectrumInfo}"
+                                   Foreground="#D6D6D6"
+                                   FontSize="11" />
+                        <TextBlock Text="{Binding SpectrumValueMaxLabel, StringFormat='Max: {0}'}"
+                                   Foreground="#AAAAAA"
+                                   FontSize="10" />
+                        <TextBlock Text="{Binding SpectrumValueMinLabel, StringFormat='Min: {0}'}"
+                                   Foreground="#AAAAAA"
+                                   FontSize="10" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Spacing="4">
+                        <Canvas Width="{Binding SpectrumChartWidth}"
+                                Height="{Binding SpectrumChartHeight}"
+                                Background="#101010">
+                            <shapes:Polyline Points="{Binding PixelSpectrumPoints}"
+                                             Stroke="#63B3ED"
+                                             StrokeThickness="1.8"
+                                             IsVisible="{Binding HasSelectedSpectrum}" />
+                        </Canvas>
+                        <Grid Width="{Binding SpectrumChartWidth}"
+                              ColumnDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding SpectrumAxisMinLabel}"
+                                       Foreground="#999999"
+                                       FontSize="10" />
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding SpectrumAxisMaxLabel}"
+                                       HorizontalAlignment="Right"
+                                       Foreground="#999999"
+                                       FontSize="10" />
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
             <!-- Info Panel Toggle Button (top-left of image area) -->
             <ToggleButton Grid.Row="1"
@@ -235,7 +283,7 @@
             </Border>
 
             <!-- Inference Output (hidden when empty) -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Background="#1A1A1A"
                     BorderBrush="#2D2D2D"
                     BorderThickness="0,1,0,0"
@@ -254,7 +302,7 @@
             </Border>
 
             <!-- Bottom Toolbar -->
-            <Border Grid.Row="3"
+            <Border Grid.Row="4"
                     Background="#1E1E1E"
                     BorderBrush="#2D2D2D"
                     BorderThickness="0,1,0,0"
@@ -273,6 +321,12 @@
                                   MinWidth="160"
                                   VerticalAlignment="Center">
                         </ComboBox>
+
+                        <ToggleButton IsChecked="{Binding IsPixelSpectrumMode}"
+                                      Content="Piksel-spektral"
+                                      FontSize="11"
+                                      Padding="8,4"
+                                      VerticalAlignment="Center" />
                         
                         <StackPanel Orientation="Horizontal"
                                     IsVisible="{Binding IsSpectralMode}"

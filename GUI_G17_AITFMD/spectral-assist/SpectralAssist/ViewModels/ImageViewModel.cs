@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -75,6 +77,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _progress;
     [ObservableProperty] private WriteableBitmap? _currentBitmap;
     [ObservableProperty] private string _inferenceOutput = "";
+    [ObservableProperty] private bool _isPixelSpectrumMode;
+    [ObservableProperty] private int _selectedPixelX = -1;
+    [ObservableProperty] private int _selectedPixelY = -1;
+    [ObservableProperty] private bool _hasSelectedSpectrum;
+    [ObservableProperty] private IList<Point> _pixelSpectrumPoints = new List<Point>();
+    [ObservableProperty] private string _pixelSpectrumInfo = "Klikk på et piksel for spektral signatur";
+    [ObservableProperty] private string _spectrumAxisMinLabel = "";
+    [ObservableProperty] private string _spectrumAxisMaxLabel = "";
+    [ObservableProperty] private string _spectrumValueMinLabel = "";
+    [ObservableProperty] private string _spectrumValueMaxLabel = "";
 
     // -- Computed properties -- //
     public bool IsLoading => LoadingState == LoadingState.Loading;
@@ -83,6 +95,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public int MaxBandIndex => Cube?.Bands - 1 ?? 0;
     public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "??";
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
+    public bool IsPanEnabled => !IsPixelSpectrumMode;
+    public double MinZoomLevel => 1.0;
+    public double MaxZoomLevel => IsPixelSpectrumMode ? 1.0 : 50.0;
+    public double SpectrumChartWidth => 320;
+    public double SpectrumChartHeight => 120;
     
     // -- Property change handlers -- //
     public bool IsSpectralMode => SelectedDisplayMode.DisplayMode == DisplayMode.SpectralBand;
@@ -91,6 +108,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(IsSpectralMode));
         UpdateBitmap();
+    }
+    partial void OnIsPixelSpectrumModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsPanEnabled));
+        OnPropertyChanged(nameof(MaxZoomLevel));
     }
     
     public ImageViewModel(
@@ -392,6 +414,62 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     {
         _cachedSyntheticRgb ??= CubeRenderer.SyntheticRgbToBitmap(cube, SyntheticRgbParameters.HistologyBalanced);
         return _cachedSyntheticRgb;
+    }
+
+    public void SelectPixelSpectrumAt(int x, int y)
+    {
+        if (Cube == null || !IsPixelSpectrumMode) return;
+
+        SelectedPixelX = x;
+        SelectedPixelY = y;
+
+        var spectrum = Cube.GetSpectrumAt(x, y);
+        BuildSpectrumPlot(spectrum);
+        HasSelectedSpectrum = true;
+        PixelSpectrumInfo = $"Piksel ({x}, {y})";
+    }
+
+    private void BuildSpectrumPlot(float[] spectrum)
+    {
+        if (spectrum.Length == 0)
+        {
+            PixelSpectrumPoints = new List<Point>();
+            return;
+        }
+
+        var wavelengths = Cube?.Header.WavelengthValues;
+        var hasWavelengths = wavelengths != null && wavelengths.Length == spectrum.Length;
+
+        var minValue = spectrum.Min();
+        var maxValue = spectrum.Max();
+        var valueRange = Math.Max(maxValue - minValue, 1e-8f);
+        var width = SpectrumChartWidth;
+        var height = SpectrumChartHeight;
+
+        var points = new List<Point>(spectrum.Length);
+        for (var i = 0; i < spectrum.Length; i++)
+        {
+            var t = spectrum.Length == 1 ? 0.0 : (double)i / (spectrum.Length - 1);
+            var px = Math.Clamp(t * (width - 1), 0, width - 1);
+            var py = Math.Clamp(height - 1 - ((spectrum[i] - minValue) / valueRange * (height - 1)), 0, height - 1);
+            points.Add(new Point(px, py));
+        }
+
+        PixelSpectrumPoints = points;
+
+        if (hasWavelengths)
+        {
+            SpectrumAxisMinLabel = $"{wavelengths![0]:F1} {WavelengthUnit}";
+            SpectrumAxisMaxLabel = $"{wavelengths[^1]:F1} {WavelengthUnit}";
+        }
+        else
+        {
+            SpectrumAxisMinLabel = "Band 0";
+            SpectrumAxisMaxLabel = $"Band {Math.Max(0, spectrum.Length - 1)}";
+        }
+
+        SpectrumValueMinLabel = minValue.ToString("F4", CultureInfo.InvariantCulture);
+        SpectrumValueMaxLabel = maxValue.ToString("F4", CultureInfo.InvariantCulture);
     }
 
     public void Dispose()
