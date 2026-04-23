@@ -69,7 +69,8 @@ def preprocessing_from_pipeline_yaml(path: Path) -> dict[str, Any]:
     p = _load_pipeline_dict(path)
     steps: list[str] = []
     params: dict[str, Any] = {
-        "neighbor_average_out_bands": 0,
+        "band_reduce_out_bands": 0,
+        "band_reduce_strategy": "",
     }
 
     if _step_enabled(p.get("calibration")):
@@ -98,6 +99,16 @@ def preprocessing_from_pipeline_yaml(path: Path) -> dict[str, Any]:
         params["tissue_mask_min_hole_size"] = int(t.get("min_hole_size", 1000))
         if "tissue_side" in t:
             params["tissue_mask_tissue_side"] = str(t["tissue_side"])
+
+    sr = p.get("spectral_reduction") or {}
+    if _step_enabled(sr):
+        reducer = str(sr.get("reducer", "none")).lower().strip()
+        if reducer != "none":
+            steps.append(reducer)
+            params["band_reduce_strategy"] = reducer
+            if reducer == "wavelet":
+                wav = sr.get("wavelet") or {}
+                params["band_reduce_out_bands"] = int(wav.get("target_bands", 0))
 
     return {"steps": steps, "params": params}
 
@@ -146,19 +157,154 @@ def _load_checkpoint(path: Path, device: torch.device) -> dict:
     return ckpt
 
 
-def _layer_sequence_ordered(model: torch.nn.Module) -> list[str]:
-    seq: list[str] = []
+def _layer_counts(model: torch.nn.Module) -> dict[str, int]:
+    counts: dict[str, int] = {}
     for name, m in model.named_modules():
         if not name:
             continue
         if len(list(m.children())) > 0:
             continue
-        seq.append(m.__class__.__name__)
-    return seq
+        cls = m.__class__.__name__
+        counts[cls] = counts.get(cls, 0) + 1
+    return counts
 
 
 def _load_model_yaml(cfg_path: Path) -> dict[str, Any]:
     return yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+
+
+def _resolve_path_from_project(raw: str | None) -> Path | None:
+    if raw is None:
+        return None
+    p = Path(str(raw)).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    return (PROJECT_ROOT / p).resolve()
+
+
+def _to_float_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_json_if_exists(path: Path | None) -> dict[str, Any] | None:
+    if path is None or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _pick_history_row(ckpt: dict[str, Any]) -> dict[str, Any] | None:
+    history = ckpt.get("history")
+    if not isinstance(history, list) or not history:
+        return None
+    rows = [row for row in history if isinstance(row, dict)]
+    if not rows:
+        return None
+    best_epoch = ckpt.get("best_epoch")
+    if isinstance(best_epoch, int):
+        for row in rows:
+            if row.get("epoch") == best_epoch:
+                return row
+    return rows[-1]
+
+
+def _derive_dataset_label(
+    train_cfg: dict[str, Any] | None,
+    train_report: dict[str, Any] | None,
+) -> str | None:
+    if isinstance(train_cfg, dict):
+        data = train_cfg.get("data") or {}
+        explicit = str(data.get("dataset_name", "")).strip()
+        if explicit:
+            return explicit
+        cube_root = str(data.get("cube_root", "")).strip()
+        if cube_root:
+            root_name = Path(cube_root).name
+            if root_name:
+                return root_name
+        manifest_csv = str(data.get("cube_manifest_csv", "")).strip()
+        if manifest_csv:
+            return Path(manifest_csv).stem
+
+    if isinstance(train_report, dict):
+        manifest_path = str(train_report.get("manifest_path", "")).strip()
+        if manifest_path:
+            return Path(manifest_path).stem
+    return None
+
+
+def _resolve_training_for_manifest(
+    *,
+    ckpt: dict[str, Any],
+    train_report: dict[str, Any] | None,
+    train_cfg: dict[str, Any] | None,
+) -> dict[str, Any]:
+    metrics: dict[str, float | None] = {
+        "accuracy": None,
+        "precision": None,
+        "recall": None,
+        "f1": None,
+    }
+    extra_metric_keys = (
+        "val_auc_roi",
+        "val_avg_precision_roi",
+        "val_f1_at_0.5_roi",
+        "val_f1_at_opt_roi",
+        "val_threshold_opt_roi",
+        "auc_roc",
+    )
+
+    row = _pick_history_row(ckpt)
+    if row is not None:
+        metrics["accuracy"] = _to_float_or_none(row.get("val_acc"))
+        metrics["precision"] = _to_float_or_none(row.get("val_precision"))
+        metrics["recall"] = _to_float_or_none(row.get("val_recall"))
+        metrics["f1"] = _to_float_or_none(row.get("val_f1"))
+        for k in extra_metric_keys:
+            v = _to_float_or_none(row.get(k))
+            if v is not None:
+                metrics[k] = v
+    else:
+        val_metrics = ckpt.get("val_metrics")
+        if isinstance(val_metrics, dict):
+            metrics["accuracy"] = _to_float_or_none(val_metrics.get("accuracy"))
+            metrics["precision"] = _to_float_or_none(val_metrics.get("precision"))
+            metrics["recall"] = _to_float_or_none(val_metrics.get("recall"))
+            metrics["f1"] = _to_float_or_none(val_metrics.get("f1"))
+            for k in extra_metric_keys:
+                v = _to_float_or_none(val_metrics.get(k))
+                if v is not None:
+                    metrics[k] = v
+
+    samples: int | None = None
+    if isinstance(train_report, dict):
+        raw_samples = train_report.get("train_samples")
+        if isinstance(raw_samples, int):
+            samples = raw_samples
+        else:
+            try:
+                if raw_samples is not None:
+                    samples = int(raw_samples)
+            except (TypeError, ValueError):
+                samples = None
+
+    training: dict[str, Any] = {
+        "dataset": _derive_dataset_label(train_cfg, train_report),
+        "samples": samples,
+        "epochs": ckpt.get("epoch"),
+        "metrics": metrics,
+    }
+    if isinstance(ckpt.get("best_epoch"), int):
+        training["best_epoch"] = ckpt["best_epoch"]
+    return training
 
 
 def _build_gui_manifest(
@@ -175,8 +321,7 @@ def _build_gui_manifest(
     patch_w: int,
     onnx_name: str,
     description: str | None,
-    dataset: str | None,
-    train_samples: int | None,
+    training: dict[str, Any],
     reducer_method: str,
     embedded_reducer_in_onnx: bool,
     reducer_input_bands: int,
@@ -219,20 +364,18 @@ def _build_gui_manifest(
     meta["author"] = meta.get("author", "ML Pipeline")
     meta["description"] = desc
 
-    # Set raw band count on neighbor_average step and add reducer to steps
-    pipe["preprocessing"]["params"]["neighbor_average_out_bands"] = reducer_input_bands
-    if reducer_method != "none" and reducer_method not in pipe["preprocessing"]["steps"]:
-        pipe["preprocessing"]["steps"].append(reducer_method)
-    pipe["preprocessing"]["params"]["spectral_reducer_method"] = reducer_method
-    pipe["preprocessing"]["params"]["spectral_reducer_embedded_in_onnx"] = embedded_reducer_in_onnx
-    pipe["preprocessing"]["params"]["spectral_reducer_input_bands"] = reducer_input_bands
-    pipe["preprocessing"]["params"]["spectral_reducer_output_bands"] = reducer_output_bands
+    pipe["spectral_reducer"] = {
+        "method": reducer_method,
+        "embedded_in_onnx": embedded_reducer_in_onnx,
+        "input_bands": reducer_input_bands,
+        "output_bands": reducer_output_bands,
+    }
     pipe["model"] = {
         "architecture": arch_name,
         "task": "classification",
         "total_parameters": total_params,
         "trainable_parameters": trainable_params,
-        "layers": _layer_sequence_ordered(layer_src),
+        "layers": _layer_counts(layer_src),
     }
 
     out["input_spec"] = {
@@ -241,6 +384,7 @@ def _build_gui_manifest(
         "input_shape": [1, 1, input_spec_bands, patch_h, patch_w],
         "spectral_bands": input_spec_bands,
         "spatial_patch_size": [patch_h, patch_w],
+        "default_stride": [patch_h // 2, patch_w // 2],
         "dtype": "float32",
     }
     out["output_spec"] = {
@@ -248,17 +392,26 @@ def _build_gui_manifest(
         "num_classes": num_classes,
         "classes": class_names[:num_classes] if len(class_names) >= num_classes else class_names,
     }
-    out["training"] = {
-        "dataset": dataset,
-        "samples": train_samples,
-        "epochs": ckpt.get("epoch"),
-        "metrics": {"accuracy": None, "precision": None, "recall": None, "f1": None},
+    out["training"] = copy.deepcopy(training)
+    out["artifacts"] = {"model_onnx": onnx_name, "architecture_diagram": None}
+    out["validation"] = {
+        "status": "pending",
+        "tolerance": validation_tolerance,
+        "roi_dir": None,
+        "patch_coords": None,
+        "expected_output": None,
     }
-    out["artifacts"] = {"model_onnx": onnx_name}
-    out["validation"] = {"status": "pending", "tolerance": validation_tolerance, "result": None}
-    out["schema_version"] = out.get("schema_version", "1.0")
 
-    return out
+    return {
+        "schema_version": out.get("schema_version", "1.0"),
+        "metadata": out["metadata"],
+        "input_spec": out["input_spec"],
+        "output_spec": out["output_spec"],
+        "pipeline": out["pipeline"],
+        "training": out["training"],
+        "artifacts": out["artifacts"],
+        "validation": out["validation"],
+    }
 
 
 def _slice_envi_to_disk(
@@ -474,6 +627,12 @@ def main() -> None:
     parser.add_argument("--dataset", type=str, default=None, help="training.dataset")
     parser.add_argument("--train-samples", type=int, default=None, help="training.samples")
     parser.add_argument(
+        "--train-report",
+        type=Path,
+        default=None,
+        help="Valgfri sti til train_report.json (default: ved siden av checkpoint hvis den finnes)",
+    )
+    parser.add_argument(
         "--reducer-method",
         type=str,
         default=None,
@@ -519,6 +678,36 @@ def main() -> None:
         raise FileNotFoundError(ckpt_path)
 
     ckpt = _load_checkpoint(ckpt_path, device)
+
+    train_report_path: Path | None = args.train_report
+    if train_report_path is not None and not train_report_path.is_absolute():
+        train_report_path = (PROJECT_ROOT / train_report_path).resolve()
+    if train_report_path is None:
+        candidate = ckpt_path.parent / "train_report.json"
+        if candidate.is_file():
+            train_report_path = candidate
+    train_report = _load_json_if_exists(train_report_path)
+
+    train_cfg: dict[str, Any] | None = None
+    train_cfg_path = _resolve_path_from_project(ckpt.get("train_config_path"))
+    if train_cfg_path is not None and train_cfg_path.is_file():
+        try:
+            loaded = yaml.safe_load(train_cfg_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                train_cfg = loaded
+        except (OSError, yaml.YAMLError):
+            train_cfg = None
+
+    training_block = _resolve_training_for_manifest(
+        ckpt=ckpt,
+        train_report=train_report,
+        train_cfg=train_cfg,
+    )
+    if args.dataset is not None:
+        training_block["dataset"] = args.dataset
+    if args.train_samples is not None:
+        training_block["samples"] = args.train_samples
+
     cfg_path = args.model_config
     if cfg_path is None:
         raw = ckpt.get("model_config_path")
@@ -615,8 +804,7 @@ def main() -> None:
         patch_w=w,
         onnx_name=args.onnx_name,
         description=args.description,
-        dataset=args.dataset,
-        train_samples=args.train_samples,
+        training=training_block,
         reducer_method=reducer_method,
         embedded_reducer_in_onnx=embedded_in_onnx,
         reducer_input_bands=reducer_in,
@@ -659,7 +847,6 @@ def main() -> None:
                 "h": h,
                 "w": w,
             },
-            "source_roi": roi_meta["source_roi"],
             "expected_output": expected,
         }
         print(

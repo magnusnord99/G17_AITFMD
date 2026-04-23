@@ -58,7 +58,32 @@ def _write_dummy_checkpoint(model_yaml: Path) -> Path:
         {
             "model_state_dict": model.state_dict(),
             "model_config_path": rel,
+            "train_config_path": "configs/train/wavelet/baseline.yaml",
             "epoch": 3,
+            "best_epoch": 2,
+            "val_metrics": {
+                "accuracy": 0.80,
+                "precision": 0.75,
+                "recall": 0.70,
+                "f1": 0.72,
+            },
+            "history": [
+                {
+                    "epoch": 1,
+                    "val_acc": 0.70,
+                    "val_precision": 0.68,
+                    "val_recall": 0.65,
+                    "val_f1": 0.66,
+                },
+                {
+                    "epoch": 2,
+                    "val_acc": 0.82,
+                    "val_precision": 0.79,
+                    "val_recall": 0.76,
+                    "val_f1": 0.77,
+                    "val_auc_roi": 0.88,
+                },
+            ],
             "classes": ["normal", "anomaly"],
         },
         DUMMY_CKPT,
@@ -74,6 +99,11 @@ def _run_manifest_only_checks(model_yaml: Path) -> None:
     model_yaml_dict = mod._load_model_yaml(cfg_path)
     model = build_model_from_config(cfg_path)
     model.load_state_dict(ckpt["model_state_dict"], strict=True)
+    training = mod._resolve_training_for_manifest(
+        ckpt=ckpt,
+        train_report=None,
+        train_cfg=None,
+    )
 
     manifest = mod._build_gui_manifest(
         base=None,
@@ -88,8 +118,7 @@ def _run_manifest_only_checks(model_yaml: Path) -> None:
         patch_w=64,
         onnx_name="model.onnx",
         description="Test manifest-only",
-        dataset="wavelet_manifest.csv",
-        train_samples=20544,
+        training=training,
         reducer_method="wavelet",
         embedded_reducer_in_onnx=False,
         reducer_input_bands=16,
@@ -102,8 +131,10 @@ def _run_manifest_only_checks(model_yaml: Path) -> None:
 
     assert manifest["artifacts"]["model_onnx"] == "model.onnx"
     assert manifest["pipeline"]["spectral_reducer"]["method"] == "wavelet"
-    assert isinstance(manifest["pipeline"]["model"]["layers"], list)
+    assert isinstance(manifest["pipeline"]["model"]["layers"], dict)
     assert len(manifest["pipeline"]["model"]["layers"]) > 0
+    assert manifest["training"]["metrics"]["accuracy"] == 0.82
+    assert manifest["training"]["metrics"]["f1"] == 0.77
 
     print("[test] manifest-only: OK")
     print("      pipeline.preprocessing.steps:", pre_m["steps"])
