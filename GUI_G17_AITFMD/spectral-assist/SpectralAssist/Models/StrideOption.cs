@@ -13,7 +13,6 @@ public record StrideOption(string Name, int Divisor)
         new("0% overlap (fast)", 1),
         new("50% overlap (standard)", 2),
         new("75% overlap (fine)", 4),
-        new("87.5% overlap (ultra)", 8),
-        new("Pixel-perfect (slow)", -1),
+        new("87.5% overlap (ultra)", 8)
     ];
 }

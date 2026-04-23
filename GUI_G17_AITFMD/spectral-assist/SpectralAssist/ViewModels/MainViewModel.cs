@@ -103,7 +103,6 @@ public partial class MainViewModel : ViewModelBase
         var stride = SelectedStride.Divisor switch
         {
             0  => spec.Stride.FirstOrDefault(patchSize),
-            -1 => 1,
             var divisor => patchSize / divisor,
         };
         

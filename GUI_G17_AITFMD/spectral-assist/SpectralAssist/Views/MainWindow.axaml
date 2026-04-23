@@ -3,7 +3,7 @@
         xmlns:vm="using:SpectralAssist.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="SpectralAssist.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
@@ -17,42 +17,44 @@
 
     <Grid>
         <!-- Main Layout -->
-        <Grid ColumnDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,*">
 
-            <!-- LEFT: Sidebar -->
-            <Border Grid.Column="0"
+            <!-- Top Bar -->
+            <Border Grid.Row="0"
                     Background="#1A1A1A"
                     BorderBrush="#2D2D2D"
                     BorderThickness="0,0,1,0"
-                    Padding="8,12">
-                <DockPanel LastChildFill="False">
+                    Padding="10">
 
-                    <!-- App Logo -->
-                    <StackPanel DockPanel.Dock="Top" Spacing="4">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+
+                    <!-- Left Section -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                HorizontalAlignment="Left"
+                                Spacing="4">
+                        
+                        <!-- App Logo -->
                         <TextBlock Text="SpectralAssist"
                                    FontSize="13"
                                    FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
                                    Foreground="#CCCCCC"
-                                   Margin="4,0,4,8" />
+                                   Margin="4,0,4,0" />
 
-                        <Border Height="1" Background="#2D2D2D" Margin="0,0,0,4" />
+                        <Border Width="1" Background="#2D2D2D" Margin="0,0,0,4" />
 
                         <!-- Navigational -->
                         <Button Content="Home"
                                 Command="{Binding NavigateToHomeCommand}"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4" />
-                        
+
                         <Button Content="Library"
                                 Command="{Binding NavigateToLibraryCommand}"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4" />
 
@@ -60,29 +62,32 @@
                                 Command="{Binding NavigateToModelsCommand}"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4" />
 
-                        <Border Height="1" Background="#2D2D2D" Margin="0,8,0,4" />
+                        <Border Width="1" Background="#2D2D2D" Margin="0,8,0,4" />
 
-                        <!-- Actions -->
                         <Button Content="Open HSI"
                                 Click="OpenHSIButton_Clicked"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4" />
+                    </StackPanel>
+
+                    <!-- Middle Spacer-->
+                    <TextBlock Grid.Column="1" />
+
+                    <!-- Right Section-->
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="12"
+                                VerticalAlignment="Center">
                         
                         <Button Content="Run Inference"
                                 Command="{Binding RunInferenceCommand}"
                                 Background="#2D2D2D"
                                 Foreground="#CCCCCC"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
                                 Padding="8,6"
                                 CornerRadius="4"
                                 IsEnabled="{Binding HasImageView}" />
@@ -90,8 +95,8 @@
                         <TextBlock Text="{Binding ActiveModel.DisplayName, FallbackValue='No model selected'}"
                                    FontSize="11"
                                    Foreground="#888"
-                                   Margin="16,0,16,4" />
-                        
+                                   Margin="8,8,8,2" />
+
                         <!-- Stride Dropdown -->
                         <TextBlock Text="Stride:"
                                    FontSize="11"
@@ -105,14 +110,13 @@
                                   FontSize="11"
                                   Margin="8,0"
                                   ToolTip.Tip="Controls smoothness vs. speed of inference overlay" />
-                        
                     </StackPanel>
 
-                </DockPanel>
+                </Grid>
             </Border>
 
-            <!-- RIGHT: Dynamic Content -->
-            <ContentControl Grid.Column="1" Content="{Binding CurrentView}" />
+            <!-- Bottom: Dynamic Content -->
+            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" />
         </Grid>
 
 
