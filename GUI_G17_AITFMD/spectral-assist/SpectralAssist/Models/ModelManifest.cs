@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
+using SpectralAssist.Services;
 using SpectralAssist.Services.Preprocessing;
 
 namespace SpectralAssist.Models;
@@ -10,7 +11,7 @@ namespace SpectralAssist.Models;
 /// Root DTO for the model package manifest, <c>manifest.json</c>.
 /// Mirrors the JSON contract between the Python export pipeline and the C# application.
 /// The added <see cref="Id"/> and <see cref="DirectoryPath"/> properties are added
-/// by <see cref="Services.ModelPackageService"/> for runtime use.
+/// by <see cref="ModelPackageManager"/> for runtime use.
 /// </summary>
 public class ModelManifest
 {

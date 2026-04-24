@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace SpectralAssist.Utils;
+namespace SpectralAssist.Extensions;
 
 public class PathHelper
 {
