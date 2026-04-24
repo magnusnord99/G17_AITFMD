@@ -55,8 +55,7 @@
                     <Border DockPanel.Dock="Top"
                             Padding="12,10,12,6">
                         <StackPanel Spacing="6"
-                                    IsVisible="{Binding Overlay.ClassificationResult,
-                                        Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    IsVisible="{Binding Overlay.ShowInfoPanel}">
 
                             <Grid ColumnDefinitions="Auto,*"
                                   RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
@@ -477,12 +476,6 @@
                                     Margin="4,0,0,0"
                                     IsVisible="{Binding Overlay.ClassificationResult,
                                             Converter={x:Static ObjectConverters.IsNotNull}}">
-
-                            <Button Content="Eksporter PDF"
-                                    Command="{Binding ExportPdfCommand}"
-                                    FontSize="11"
-                                    Padding="10,4"
-                                    Margin="0,0,8,0" />
 
                             <TextBlock Text="Overlay"
                                        VerticalAlignment="Center"

@@ -336,7 +336,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         var accDisplay = accuracy is { } a ? $"{a:P1}" : "—";
 
         var rgb = CubeRenderer.SyntheticRgbToBitmap(Cube, SyntheticRgbParameters.HistologyBalanced);
-        WriteableBitmap? c0 = null, c1 = null, c2 = null;
+        Bitmap? c0 = null, c1 = null, c2 = null;
         try
         {
             using var ol0 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0f);
