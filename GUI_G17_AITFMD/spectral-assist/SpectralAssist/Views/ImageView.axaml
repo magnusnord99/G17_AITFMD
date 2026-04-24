@@ -145,10 +145,13 @@
                             BorderBrush="#2D2D2D"
                             BorderThickness="0,1,0,0">
                         <StackPanel Spacing="6">
+                            
+                            <Button Command="{Binding RunInferenceCancelCommand}"
+                                    IsVisible="{Binding RunInferenceCommand.IsRunning}" Content="Cancel"/>
+                            <ProgressBar IsIndeterminate="True" IsVisible="{Binding RunInferenceCommand.IsRunning}"/>
 
                             <Button Content="▶ Run Inference"
-                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunInferenceCommand,
-                                                      FallbackValue={x:Null}}"
+                                    Command="{Binding RunInferenceCommand}" IsEnabled="{Binding !RunInferenceCommand.IsRunning}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center"
                                     Background="RoyalBlue"

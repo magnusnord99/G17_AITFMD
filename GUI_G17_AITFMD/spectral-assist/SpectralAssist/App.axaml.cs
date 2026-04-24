@@ -5,6 +5,7 @@ using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using SpectralAssist.Services;
 using SpectralAssist.ViewModels;
 using SpectralAssist.Views;
 
@@ -20,13 +21,17 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         // Register all the services needed for the application to run
-        var collection = new ServiceCollection();
-        collection.AddCommonServices();
+        var services = new ServiceCollection();
+        services.AddCommonServices();
+        var provider = services.BuildServiceProvider();
+        
+        // Init setup
+        var modelManager = provider.GetRequiredService<ModelPackageManager>();
+        var session = provider.GetRequiredService<SessionService>();
 
-        // Creates a ServiceProvider containing services from the provided IServiceCollection
-        var services = collection.BuildServiceProvider();
-
-        var vm = services.GetRequiredService<MainViewModel>();
+        modelManager.Refresh();
+        session.ActiveModel = modelManager.AvailableModels.FirstOrDefault();
+        
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
@@ -34,7 +39,7 @@ public partial class App : Application
             DisableAvaloniaDataAnnotationValidation();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = vm
+                DataContext = provider.GetRequiredService<MainViewModel>()
             };
         }
 

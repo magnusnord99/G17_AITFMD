@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,28 +10,38 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Extensions;
 using SpectralAssist.Models;
+using SpectralAssist.Services;
 using SpectralAssist.Services.Library;
 using SpectralAssist.ViewModels.Components;
 
 namespace SpectralAssist.ViewModels;
 
-public enum LibraryState { Empty, Scanning, Loaded, Failed }
+public enum LibraryState
+{
+    Empty,
+    Scanning,
+    Loaded,
+    Failed
+}
 
 public partial class LibraryViewModel : ViewModelBase
 {
     private const string UncategorizedName = "Uncategorized";
 
     private readonly LibraryManager _manager;
-    private readonly Action<ImageNode> _openImage;
+
+    private SessionService Session { get; }
     private List<ImageNode> _allImagesCache = [];
     private CancellationTokenSource? _scanCts;
-    
-    public LibraryViewModel(LibraryManager manager, Action<ImageNode> openImage)
+
+    public event Action<ImageNode>? ImageSelected;
+
+    public LibraryViewModel(LibraryManager manager, SessionService session)
     {
         _manager = manager;
-        _openImage = openImage;
-        if (_manager.IsOpen) 
-            PopulateFromManifest();
+        Session = session;
+        _manager.ImageUpdated += OnImageUpdated;
+        session.PropertyChanged += OnSessionChanged;
     }
 
     // Library State _______________________________________________________________
@@ -48,47 +59,56 @@ public partial class LibraryViewModel : ViewModelBase
 
     public string? LibraryRoot => _manager.Root;
 
-    
     // Header Summary _____________________________________
     public string DatasetName =>
         string.IsNullOrEmpty(_manager.Root)
             ? string.Empty
             : Path.GetFileName(_manager.Root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-    
+
     public int PatientCount => _manager.Manifest?.Folders.Count(f => f.Name != UncategorizedName) ?? 0;
     public int ScanCount => _allImagesCache.Count;
     public int ReportedScanCount => _allImagesCache.Count(i => i.Runs.Count > 0);
     public int MissingCalibrationCount => _allImagesCache.Count(i => !i.HasCalibration);
 
-    
-    // Tree and Image Collections ___________________________________
+
+    // Tree and Image Tiles ___________________________________
     public ObservableCollection<LibraryTreeItem> TreeRoots { get; } = [];
     public ObservableCollection<ImageTileViewModel> CurrentImages { get; } = [];
-
-    [ObservableProperty] private LibraryTreeItem? _selectedTreeItem;
-    [ObservableProperty] private string? _activeImageId;
-
-    partial void OnActiveImageIdChanged(string? value)
+    
+    private LibraryTreeItem? _selectedTreeItem;
+    public LibraryTreeItem? SelectedTreeItem
     {
-        foreach (var tile in CurrentImages)
-            tile.RefreshActive(value);
-    }
-
-    partial void OnSelectedTreeItemChanged(LibraryTreeItem? value)
-    {
-        CurrentImages.Clear();
-        if (value == null || _manager.Root == null) return;
-
-        // Show every image in the selected folder's subtree.
-        foreach (var image in LibraryScanner.FlattenImages([value.Source]))
+        get => _selectedTreeItem;
+        set
         {
-            var tile = new ImageTileViewModel(image, _manager.Root!, _openImage);
-            tile.RefreshActive(ActiveImageId);
-            CurrentImages.Add(tile);
+            if (value == null && _selectedTreeItem != null) return;
+            if (!SetProperty(ref _selectedTreeItem, value)) return;
+            OnSelectedTreeItemChanged(value);
         }
     }
     
-    
+    private void OnTileClicked(ImageNode node) => ImageSelected?.Invoke(node);
+
+    private void OnSelectedTreeItemChanged(LibraryTreeItem? value)
+    {
+        CurrentImages.Clear();
+        if (value == null) return;
+
+        foreach (var image in LibraryScanner.FlattenImages([value.Source]))
+        {
+            var tile = new ImageTileViewModel(image, _manager.Root!, OnTileClicked);
+            tile.RefreshActive(Session.ActiveImageId);
+            CurrentImages.Add(tile);
+        }
+    }
+
+    private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SessionService.ActiveImageId))
+            foreach (var tile in CurrentImages)
+                tile.RefreshActive(Session.ActiveImageId);
+    }
+
     // ---- Commands ----
     public async Task OpenFolderAsync(string rootPath)
     {
@@ -152,47 +172,57 @@ public partial class LibraryViewModel : ViewModelBase
 
         TreeRoots.Clear();
         CurrentImages.Clear();
-        _allImagesCache = [];
-
-        SelectedTreeItem = null;
+        _allImagesCache.Clear();
+        
+        if (SetProperty(ref _selectedTreeItem, null, nameof(SelectedTreeItem)))
+            OnSelectedTreeItemChanged(null);
+        
         StatusMessage = string.Empty;
         State = LibraryState.Empty;
+
         OnPropertyChanged(nameof(LibraryRoot));
         NotifySummaryChanged();
     }
     
-    public void RefreshView()
-    {
-        if (_manager.IsOpen) 
-            PopulateFromManifest();
-    }
-
     
+    private void OnImageUpdated(ImageNode updated)
+    {
+        for (var i = 0; i < _allImagesCache.Count; i++)
+        {
+            if (_allImagesCache[i].ImageId == updated.ImageId)
+            {
+                _allImagesCache[i] = updated;
+                break;
+            }
+        }
+
+        foreach (var tile in CurrentImages.Where(t => t.Source.ImageId == updated.ImageId))
+            tile.UpdateFrom(updated, _manager.Root!);
+
+        NotifySummaryChanged();
+    }
+    
+
     /// <summary>
     /// Rebuilds <see cref="TreeRoots"/> and <see cref="CurrentImages"/> from the in-memory manifest,
     /// preserving the currently-selected node across rescans/refreshes (matched by relpath).
     /// </summary>
     private void PopulateFromManifest()
     {
-        var previousPath = SelectedTreeItem?.RelPath;
-
         TreeRoots.Clear();
         CurrentImages.Clear();
+        _allImagesCache = _manager.Manifest != null
+            ? LibraryScanner.FlattenImages(_manager.Manifest.Folders).ToList()
+            : [];
 
-        if (_manager.Manifest != null)
-        {
-            _allImagesCache = LibraryScanner.FlattenImages(_manager.Manifest.Folders).ToList();
-            foreach (var f in _manager.Manifest.Folders)
+        if (_manager.Manifest != null) 
+            foreach (var f in _manager.Manifest.Folders) 
                 TreeRoots.Add(new LibraryTreeItem(f));
-        }
         
-        SelectedTreeItem = previousPath != null
-            ? FindByRelPath(TreeRoots, previousPath) ?? TreeRoots.FirstOrDefault()
-            : TreeRoots.FirstOrDefault();
-
+        SelectedTreeItem = TreeRoots.FirstOrDefault();
         NotifySummaryChanged();
     }
-
+    
     private void NotifySummaryChanged()
     {
         OnPropertyChanged(nameof(DatasetName));
@@ -200,18 +230,6 @@ public partial class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(ScanCount));
         OnPropertyChanged(nameof(ReportedScanCount));
         OnPropertyChanged(nameof(MissingCalibrationCount));
-    }
-
-    private static LibraryTreeItem? FindByRelPath(IEnumerable<LibraryTreeItem> items, string relPath)
-    {
-        foreach (var item in items)
-        {
-            if (item.RelPath == relPath) return item;
-            var hit = FindByRelPath(item.Children, relPath);
-            if (hit != null) return hit;
-        }
-
-        return null;
     }
 }
 
@@ -221,14 +239,18 @@ public partial class LibraryViewModel : ViewModelBase
 /// as expandable nodes, while leaf folders (those containing only images)
 /// appear as non‑expandable items.
 /// </summary>
-public sealed class LibraryTreeItem
+public sealed partial class LibraryTreeItem : ObservableObject
 {
     public FolderNode Source { get; }
     public string Name => Source.Name;
     public string RelPath => Source.CurrentRelPath;
-    public int ImageCount  => Source.TotalImageCount();
+    public int ImageCount => Source.TotalImageCount();
     public int ReportCount => Source.TotalReportCount();
     public ObservableCollection<LibraryTreeItem> Children { get; }
+
+    [ObservableProperty] private bool _isExpanded;
+    //[ObservableProperty] private bool _isSelected;
+
     public LibraryTreeItem(FolderNode source)
     {
         Source = source;

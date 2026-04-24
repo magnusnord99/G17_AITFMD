@@ -8,7 +8,7 @@
              x:Class="SpectralAssist.Views.LibraryView"
              x:DataType="viewModels:LibraryViewModel">
 
-<Grid>
+    <Grid>
         <!-- Empty state -->
         <StackPanel IsVisible="{Binding IsEmpty}"
                     VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
@@ -65,15 +65,20 @@
                 </DockPanel>
             </Border>
 
-            <!-- Left folder tree + right gallery -->
+            <!-- Left folder tree and right gallery -->
             <Grid ColumnDefinitions="280,*">
                 <TreeView Grid.Column="0"
                           ItemsSource="{Binding TreeRoots}"
-                          SelectedItem="{Binding SelectedTreeItem}"
+                          SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
                           BorderThickness="0,0,1,0" BorderBrush="#22000000">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="IsExpanded"
+                                    Value="{Binding IsExpanded, Mode=TwoWay, DataType=viewModels:LibraryTreeItem}" />
+                        </Style>
+                    </TreeView.Styles>
+                    
                     <TreeView.ItemTemplate>
-                        <!-- Folder-only tree. Leaf folders have no expander (Children empty);
-                             clicking any node populates the gallery with its subtree's images. -->
                         <TreeDataTemplate DataType="viewModels:LibraryTreeItem"
                                           ItemsSource="{Binding Children}">
                             <StackPanel Margin="0,3">
@@ -104,8 +109,6 @@
                                         Classes.active="{Binding IsActive}"
                                         Padding="0" Margin="6" Background="Transparent" CornerRadius="6">
                                     <Button.Styles>
-                                        <!-- Defaults live in a style so the .active style can override them.
-                                             Thickness stays at 2 across states to avoid a 1px layout shift. -->
                                         <Style Selector="Button.tile">
                                             <Setter Property="BorderBrush" Value="#22000000" />
                                             <Setter Property="BorderThickness" Value="2" />
@@ -135,13 +138,13 @@
                                                        IsVisible="{Binding MissingCalibration}"
                                                        Foreground="#d97706" FontSize="11" />
 
-                                            <!-- Not-yet-analyzed state: dim placeholder -->
+                                            <!-- Not-yet-analyzed state -->
                                             <TextBlock Text="Not analyzed yet"
                                                        IsVisible="{Binding IsNotAnalyzed}"
                                                        Opacity="0.5" FontSize="11"
                                                        FontStyle="Italic" />
 
-                                            <!-- Analyzed state: max-severity metric + report count/date -->
+                                            <!-- Analyzed state -->
                                             <StackPanel IsVisible="{Binding HasReports}" Spacing="2">
                                                 <TextBlock Text="{Binding PrimarySummary}"
                                                            FontSize="12"

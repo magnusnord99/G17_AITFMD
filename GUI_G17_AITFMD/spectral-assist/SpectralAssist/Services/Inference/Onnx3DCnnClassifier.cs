@@ -15,7 +15,7 @@ namespace SpectralAssist.Services.Inference;
 /// Uses IOBinding to keep tensors on GPU between patch inferences, eliminating per-patch
 /// CPU ↔ GPU copies. Falls back to CPU-side Run() when no GPU execution provider is active.
 /// </summary>
-public class Onnx3DCnnClassifier : IClassifier, IDisposable
+public class Onnx3DCnnClassifier : IDisposable
 {
     private ModelPackage? _package;
     private ExecutionProvider _executionProvider;

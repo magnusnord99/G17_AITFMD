@@ -17,7 +17,10 @@ namespace SpectralAssist.ViewModels;
 
 public enum LoadingState
 {
-    Idle, Loading, Ready, Error
+    Idle,
+    Loading,
+    Ready,
+    Error
 }
 
 /// <summary>
@@ -43,24 +46,27 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
     // Library mode constructor: library context aware with persistence
-    public ImageViewModel(string hdrPath, InferenceService inferenceService, 
+    public ImageViewModel(string hdrPath, InferenceService inferenceService,
         string imageId, LibraryManager libraryManager) : this(hdrPath, inferenceService)
     {
         _imageId = imageId;
         _libraryManager = libraryManager;
 
-        foreach (var r in libraryManager.FindImage(imageId)?.Runs ?? Enumerable.Empty<RunSummary>())
+        var imageNode = libraryManager.FindImage(imageId);
+        _imageNode = imageNode;
+        foreach (var r in imageNode?.Runs ?? Enumerable.Empty<RunSummary>())
             Reports.Add(r);
     }
-    
+
+    private readonly ImageNode? _imageNode;
     private readonly string? _imageId;
     private readonly LibraryManager? _libraryManager;
     public ObservableCollection<RunSummary> Reports { get; } = [];
-    public bool IsInLibrary => _libraryManager != null && _imageId != null;
-    
+    private bool InLibraryMode => _libraryManager != null && _imageId != null;
+
     private readonly string _hdrPath;
     private bool _hasCalibration;
-    
+
     private readonly InferenceService _inferenceService;
     public OverlayViewModel Overlay { get; } = new();
 
@@ -131,7 +137,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
             UpdateBitmap();
-            TrySaveThumbnail(_cachedSyntheticRgb);
+            TrySaveThumbnail(_cachedSyntheticRgb!);
         }
         catch (OperationCanceledException)
         {
@@ -154,10 +160,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private ModelPackage? _lastPackage;
 
     /// <summary>
-    /// Runs inference using the given model package and the chosen stride.
-    /// Invoked by the MainViewModel when inference button is clicked.
+    /// Runs inference using the set model package optional stride override.
     /// </summary>
-    public async Task RunInference(ModelPackage modelPackage, int stride)
+    [RelayCommand(IncludeCancelCommand = true)]
+    private async Task RunInference(CancellationToken ct)
     {
         if (Cube == null || string.IsNullOrEmpty(_hdrPath))
         {
@@ -172,36 +178,36 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        var package = _inferenceService.GetActivePackage();
+        if (package == null)
+        {
+            InferenceOutput = "No model available. Import one via the Models page.";
+            return;
+        }
+
         try
         {
-            var running = true;
-            var progress = new Progress<string>(s =>
-            {
-                if (running) InferenceOutput = s;
-            });
+            //var running = true;
+            var progress = new Progress<string>(s => { InferenceOutput = s; });
 
             // Perform preprocessing if fresh session or different modelPackage
-            if (_cachedPreprocessing == null || _lastPackage != modelPackage)
+            if (_cachedPreprocessing == null || _lastPackage != package)
             {
                 InferenceOutput = "Performing preprocessing...";
-                var preprocessing = modelPackage.Manifest.Pipeline.Preprocessing;
                 _cachedPreprocessing = await Task.Run(
-                    () => PreprocessingService.RunFromCalibrated(Cube!, preprocessing), _cts.Token);
-                _lastPackage = modelPackage;
+                    () => PreprocessingService.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing), ct);
+                _lastPackage = package;
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
             }
-            else
-            {
-                InferenceOutput = "Using cached preprocessing...";
-            }
-
-            // Perform inference on preprocessed cube
-            var classificationResult = await _inferenceService.RunAsync(
-                _cachedPreprocessing.Value, modelPackage, stride, progress, _cts.Token);
-            running = false;
             
-            Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
-            await TryAutoSaveRunAsync(classificationResult, _cts.Token);
+            // Perform inference on preprocessed cube
+            var runResult = await _inferenceService.RunAsync(
+                _cachedPreprocessing.Value, package, progress, ct);
+            //running = false;
+            InferenceOutput = "";
+
+            Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
+            await TryAutoSaveRunAsync(runResult, ct);
         }
         catch (OperationCanceledException)
         {
@@ -212,8 +218,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Error: {ex.Message}";
         }
     }
-
     
+    private bool CanRunInference() => Cube != null && _hasCalibration;
+
+
     // -- Display -- //
     private void UpdateBitmap()
     {
@@ -241,14 +249,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cachedSyntheticRgb ??= CubeRenderer.SyntheticRgbToBitmap(cube, SyntheticRgbParameters.HistologyBalanced);
         return _cachedSyntheticRgb;
     }
-    
 
-    
-    
+
     // Persistence Logic _______________________________
-    
+
     [ObservableProperty] private string? _activeRunId;
-    
+
     /// <summary>
     /// Silently tries to save a thumbnail of the given bitmap.
     /// Only works when loading images through the library (in library mode).
@@ -256,10 +262,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     /// <param name="bitmap">The bitmap to save as a thumbnail</param>
     private void TrySaveThumbnail(Bitmap bitmap)
     {
-        if (_libraryManager?.Root != null && !string.IsNullOrEmpty(_imageId))
-            ThumbnailService.TrySaveFromBitmap(_libraryManager.Root, _imageId, bitmap);
+        if (_libraryManager == null || _imageNode == null) return;
+        
+        ThumbnailService.TrySaveFromBitmap(_libraryManager.Root!, _imageNode.ImageId, bitmap);
+        _libraryManager.NotifyImageUpdated(_imageNode);
     }
-    
+
     private async Task TryAutoSaveRunAsync(ClassificationReport report, CancellationToken ct = default)
     {
         if (_libraryManager == null || string.IsNullOrEmpty(_imageId)) return;
@@ -274,7 +282,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Inference succeeded but save failed: {ex.Message}";
         }
     }
-    
+
 
     [RelayCommand]
     private async Task LoadRun(RunSummary? summary)
@@ -297,7 +305,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         ActiveRunId = summary.RunId;
         InferenceOutput = $"Loaded report from {summary.DatePerformed:yyyy-MM-dd} ({summary.ModelName})";
     }
-    
+
     /// <summary>
     /// Deletes a saved run from disk and the library manifest, and removes it from the
     /// runs list. If the deleted run was currently displayed, clears the overlay.
@@ -322,8 +330,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    
-    
+
     public void Dispose()
     {
         _cts.Cancel();
@@ -336,8 +343,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    
-    
 
     // ToDo: Split view?
     // Export:

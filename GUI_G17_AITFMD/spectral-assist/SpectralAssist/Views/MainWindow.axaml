@@ -77,38 +77,46 @@
 
                     <!-- Middle Spacer-->
                     <TextBlock Grid.Column="1" />
-
-                    <!-- Right Section-->
+                    
+                    <!-- Right Section -->
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 Spacing="12"
                                 VerticalAlignment="Center">
-                        
-                        <TextBlock Text="Active model:"
+
+                        <!-- Model picker -->
+                        <TextBlock Text="Model:"
                                    FontSize="11"
                                    Foreground="#888888"
-                                   Margin="8,8,8,2"/>
-                        
-                        <TextBlock Text="{Binding ActiveModel.DisplayName, FallbackValue='No model selected'}"
-                                   FontSize="11"
-                                   Foreground="#888"
-                                   Margin="8,8,8,2" />
+                                   VerticalAlignment="Center"
+                                   ToolTip.Tip="Active model used for inference" />
 
-                        <!-- Stride Dropdown -->
+                        <ComboBox ItemsSource="{Binding AvailableModels}"
+                                  SelectedItem="{Binding Session.ActiveModel}"
+                                  MinWidth="180"
+                                  FontSize="11"
+                                  PlaceholderText="No model selected"
+                                  ToolTip.Tip="Active model used for inference">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <!-- Stride picker -->
                         <TextBlock Text="Stride:"
                                    FontSize="11"
                                    Foreground="#888888"
-                                   Margin="8,8,8,2"
+                                   VerticalAlignment="Center"
                                    ToolTip.Tip="Patch overlap for inference (higher overlap is smoother but slower)" />
 
-                        <ComboBox ItemsSource="{Binding AvailableStrides}"
-                                  SelectedItem="{Binding SelectedStride}"
-                                  HorizontalAlignment="Stretch"
+                        <ComboBox ItemsSource="{Binding Session.AvailableStrides}"
+                                  SelectedItem="{Binding Session.SelectedStride}"
+                                  MinWidth="110"
                                   FontSize="11"
-                                  Margin="8,0"
                                   ToolTip.Tip="Controls smoothness vs. speed of inference overlay" />
                     </StackPanel>
-
                 </Grid>
             </Border>
 

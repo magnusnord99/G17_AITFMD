@@ -22,6 +22,9 @@ public class LibraryManager
     public LibraryManifest ? Manifest { get; private set; }
     public bool IsOpen => Root != null && Manifest != null;
     
+    public event Action<ImageNode>? ImageUpdated;
+    public void NotifyImageUpdated(ImageNode node) => ImageUpdated?.Invoke(node);
+    
     /// <summary>
     /// Opens a library folder, loads or generates its manifest, and initializes the manager's state.
     /// If a manifest already exists, its image IDs and notes are preserved during the scan.
@@ -102,7 +105,6 @@ public class LibraryManager
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A summary of the saved run.</returns>
     /// <exception cref="InvalidOperationException">Thrown if no library is open.</exception>
-
     public async Task<RunSummary> SaveRunAsync(string imageId, ClassificationReport report, CancellationToken ct = default)
     {
         if (Root == null || Manifest == null)
@@ -157,6 +159,7 @@ public class LibraryManager
                 image.Runs.RemoveAll(r => r.RunId == runId);
                 image.Runs.Add(summary);
                 image.Runs.Sort((a, b) => b.DatePerformed.CompareTo(a.DatePerformed));
+                ImageUpdated?.Invoke(image);
             }
             await WriteManifestAsync(Root, Manifest, ct);
         }
@@ -209,6 +212,7 @@ public class LibraryManager
         {
             var image = FindImage(imageId);
             image?.Runs.RemoveAll(r => r.RunId == runId);
+            ImageUpdated?.Invoke(image!);
             await WriteManifestAsync(Root, Manifest, ct);
         }
         finally

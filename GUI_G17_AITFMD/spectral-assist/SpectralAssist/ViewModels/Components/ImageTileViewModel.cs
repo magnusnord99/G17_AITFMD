@@ -19,9 +19,6 @@ public partial class ImageTileViewModel : ObservableObject
         Thumbnail = ThumbnailService.TryLoadThumbnail(libraryRoot, source);
     }
     
-    [RelayCommand]
-    private void Open() => _onOpen(Source);
-
     // States __________________________________________________________
     private readonly Action<ImageNode> _onOpen;
     [ObservableProperty] private ImageNode _source;
@@ -77,5 +74,25 @@ public partial class ImageTileViewModel : ObservableObject
                 ? $"1 report · {date}"
                 : $"{ReportCount} reports · Last {date}";
         }
+    }
+    
+    // Methods ____________________________________________
+    
+    [RelayCommand]
+    private void Open() => _onOpen(Source);
+    
+    public void UpdateFrom(ImageNode updated, string libraryRoot)
+    {
+        Source = updated;
+        Thumbnail = ThumbnailService.TryLoadThumbnail(libraryRoot, updated);
+
+        OnPropertyChanged(nameof(FileName));
+        OnPropertyChanged(nameof(MissingCalibration));
+        OnPropertyChanged(nameof(ReportCount));
+        OnPropertyChanged(nameof(HasReports));
+        OnPropertyChanged(nameof(IsNotAnalyzed));
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(PrimarySummary));
+        OnPropertyChanged(nameof(SecondarySummary));
     }
 }
