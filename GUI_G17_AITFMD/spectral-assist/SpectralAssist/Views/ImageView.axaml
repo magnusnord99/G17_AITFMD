@@ -145,13 +145,14 @@
                             BorderBrush="#2D2D2D"
                             BorderThickness="0,1,0,0">
                         <StackPanel Spacing="6">
-                            
+
                             <Button Command="{Binding RunInferenceCancelCommand}"
-                                    IsVisible="{Binding RunInferenceCommand.IsRunning}" Content="Cancel"/>
-                            <ProgressBar IsIndeterminate="True" IsVisible="{Binding RunInferenceCommand.IsRunning}"/>
+                                    IsVisible="{Binding RunInferenceCommand.IsRunning}" Content="Cancel" />
+                            <ProgressBar IsIndeterminate="True" IsVisible="{Binding RunInferenceCommand.IsRunning}" />
 
                             <Button Content="▶ Run Inference"
-                                    Command="{Binding RunInferenceCommand}" IsEnabled="{Binding !RunInferenceCommand.IsRunning}"
+                                    Command="{Binding RunInferenceCommand}"
+                                    IsEnabled="{Binding !RunInferenceCommand.IsRunning}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center"
                                     Background="RoyalBlue"
@@ -276,40 +277,69 @@
             <Grid Grid.Column="1" RowDefinitions="*, 56">
 
                 <!-- Image Container -->
-                <paz:ZoomBorder x:Name="ZoomBorder" Grid.Row="0"
-                                Background="#121212"
-                                Stretch="None"
-                                BoundsMode="KeepContentVisible"
-                                ClipToBounds="True"
-                                EnableConstrains="True"
+                <Grid Grid.Row="0" ColumnDefinitions="*, *">
 
-                                EnablePan="True"
-                                PanButton="Left"
+                    <paz:ZoomBorder Grid.Column="0" x:Name="ZoomBorderLeft"
+                                    Background="#121212" Stretch="None"
+                                    BoundsMode="KeepContentVisible" ClipToBounds="True"
+                                    EnableConstrains="True" EnablePan="True" PanButton="Left"
+                                    ZoomSpeed="1.05" MinZoomX="0.5" MinZoomY="0.5"
+                                    MaxZoomX="50" MaxZoomY="50">
+                        <Canvas Width="{Binding ImageWidth}" Height="{Binding ImageHeight}">
+                            <Image Source="{Binding CurrentBitmap}"
+                                   PointerPressed="OnImagePointerPressed"/>
 
-                                ZoomSpeed="1.05"
-                                MinZoomX="1.0"
-                                MinZoomY="1.0"
-                                MaxZoomX="50"
-                                MaxZoomY="50">
-                    <Grid>
-                        <Image Source="{Binding CurrentBitmap}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
-                        <Image Source="{Binding Overlay.OverlayBitmap}"
-                               Opacity="{Binding Overlay.OverlayOpacity}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               IsVisible="{Binding Overlay.ShowOverlay}" />
-                    </Grid>
-                </paz:ZoomBorder>
-                
+                            <Ellipse Width="12" Height="12"
+                                     Stroke="Yellow" StrokeThickness="2"
+                                     Fill="Transparent"
+                                     IsHitTestVisible="False"
+                                     IsVisible="{Binding HasSelection}"
+                                     Canvas.Left="{Binding SelectedX}"
+                                     Canvas.Top="{Binding SelectedY}">
+                                <Ellipse.RenderTransform>
+                                    <TranslateTransform X="-6" Y="-6"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Canvas>
+                    </paz:ZoomBorder>
+
+                    <paz:ZoomBorder Grid.Column="1" x:Name="ZoomBorderRight"
+                                    Background="#121212" Stretch="None"
+                                    BoundsMode="KeepContentVisible" ClipToBounds="True"
+                                    EnableConstrains="True" EnablePan="True" PanButton="Left"
+                                    ZoomSpeed="1.05" MinZoomX="0.5" MinZoomY="0.5"
+                                    MaxZoomX="50" MaxZoomY="50">
+                        <Canvas Width="{Binding ImageWidth}" Height="{Binding ImageHeight}">
+                            <Image Source="{Binding CurrentBitmap}"
+                                   PointerPressed="OnImagePointerPressed"/>
+                            
+                            <Image Source="{Binding Overlay.OverlayBitmap}"
+                                   Opacity="{Binding Overlay.OverlayOpacity}"
+                                   IsVisible="{Binding Overlay.ShowOverlay}"
+                                   IsHitTestVisible="False"/>
+
+                            <Ellipse Width="12" Height="12"
+                                     Stroke="Yellow" StrokeThickness="2"
+                                     Fill="Transparent"
+                                     IsHitTestVisible="False"
+                                     IsVisible="{Binding HasSelection}"
+                                     Canvas.Left="{Binding SelectedX}"
+                                     Canvas.Top="{Binding SelectedY}">
+                                <Ellipse.RenderTransform>
+                                    <TranslateTransform X="-6" Y="-6"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Canvas>
+                    </paz:ZoomBorder>
+                </Grid>
+
                 <!-- Status Text -->
                 <TextBlock Grid.Row="0" Text="{Binding InferenceOutput}"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Margin="16,16,0,0" >
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"
+                           Margin="16,16,0,0">
                 </TextBlock>
-                
+
                 <!-- Color Bar Legend -->
                 <Border Grid.Row="0"
                         HorizontalAlignment="Right"

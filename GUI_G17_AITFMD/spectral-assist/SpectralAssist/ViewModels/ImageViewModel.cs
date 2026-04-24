@@ -37,7 +37,7 @@ public enum LoadingState
 public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     // Single-file mode constructor: FilePicker and Drag&Drop without persistence
-    public ImageViewModel(
+    private ImageViewModel(
         string hdrPath, InferenceService inferenceService)
     {
         _hdrPath = hdrPath;
@@ -84,6 +84,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(MaxBandIndex))]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
+    [NotifyPropertyChangedFor(nameof(ImageWidth))]
+    [NotifyPropertyChangedFor(nameof(ImageHeight))]
     private HsiCube? _cube;
 
     [ObservableProperty] private DisplayOption _selectedDisplayMode = DisplayOption.Default;
@@ -199,7 +201,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 _lastPackage = package;
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
             }
-            
+
             // Perform inference on preprocessed cube
             var runResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, package, progress, ct);
@@ -218,7 +220,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Error: {ex.Message}";
         }
     }
-    
+
     private bool CanRunInference() => Cube != null && _hasCalibration;
 
 
@@ -263,7 +265,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private void TrySaveThumbnail(Bitmap bitmap)
     {
         if (_libraryManager == null || _imageNode == null) return;
-        
+
         ThumbnailService.TrySaveFromBitmap(_libraryManager.Root!, _imageNode.ImageId, bitmap);
         _libraryManager.NotifyImageUpdated(_imageNode);
     }
@@ -351,6 +353,21 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     // 2: RGB med overlay?
     // 3: RGB med overlay med en viss threshold 80%?
     // 4: RGB med overlay med en viss threshold 50%?
+    
+    public int ImageWidth => Cube?.Samples ?? 0;
+    public int ImageHeight => Cube?.Lines ?? 0;
+    [ObservableProperty] private int? _selectedX;
+    [ObservableProperty] private int? _selectedY;
+    public bool HasSelection => SelectedX.HasValue && SelectedY.HasValue;
+
+    public void OnPixelClicked(int x, int y)
+    {
+        if (Cube == null || x < 0 || y < 0 || x >= Cube.Samples || y >= Cube.Lines) return;
+        SelectedX = x;
+        SelectedY = y;
+        OnPropertyChanged(nameof(HasSelection));
+        // ToDo: SelectedSpectrum = Cube.GetSpectrum(x, y);
+    }
 
 
     /// <summary>Design preview constructor filled with dummy data.</summary>
