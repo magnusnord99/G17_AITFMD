@@ -15,11 +15,8 @@ public partial class ImageView : UserControl
     public ImageView()
     {
         InitializeComponent();
-        ZoomBorderSingle.ZoomChanged += (s, _) => SyncAll((ZoomBorder)s);
-        ZoomBorderLeft.ZoomChanged   += (s, _) => SyncAll((ZoomBorder)s);
-        ZoomBorderRight.ZoomChanged  += (s, _) => SyncAll((ZoomBorder)s);
-        //ZoomBorderLeft.ZoomChanged += (_, e) => Sync(ZoomBorderRight, e);
-        //ZoomBorderRight.ZoomChanged += (_, e) => Sync(ZoomBorderLeft, e);
+        ZoomBorderLeft.ZoomChanged += (_, e) => Sync(ZoomBorderRight, e);
+        ZoomBorderRight.ZoomChanged += (_, e) => Sync(ZoomBorderLeft, e);
     }
     
     private void Sync(ZoomBorder target, ZoomChangedEventArgs e)
@@ -29,20 +26,6 @@ public partial class ImageView : UserControl
         try
         {
             target.SetMatrix(new Matrix(e.ZoomX, 0, 0, e.ZoomY, e.OffsetX, e.OffsetY));
-        }
-        finally { _syncing = false; }
-    }
-    
-    private void SyncAll(ZoomBorder source)
-    {
-        if (_syncing) return;
-        _syncing = true;
-        try
-        {
-            var matrix = source.Matrix;
-            if (source != ZoomBorderSingle) ZoomBorderSingle.SetMatrix(matrix);
-            if (source != ZoomBorderLeft)   ZoomBorderLeft.SetMatrix(matrix);
-            if (source != ZoomBorderRight)  ZoomBorderRight.SetMatrix(matrix);
         }
         finally { _syncing = false; }
     }

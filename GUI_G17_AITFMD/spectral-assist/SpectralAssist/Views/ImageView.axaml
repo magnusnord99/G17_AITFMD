@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
              xmlns:paz="using:Avalonia.Controls.PanAndZoom"
              xmlns:models="clr-namespace:SpectralAssist.Models"
+             xmlns:extensions="clr-namespace:SpectralAssist.Extensions"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SpectralAssist.Views.ImageView"
              x:DataType="vm:ImageViewModel">
@@ -271,53 +272,46 @@
                     </ScrollViewer>
                 </DockPanel>
             </Border>
-
-
+            
             <!-- RIGHT: ImageContainer and Bottom Display Settings -->
             <Grid Grid.Column="1" RowDefinitions="*, 56">
-
-                <!-- Single Image Container -->
-                <paz:ZoomBorder Grid.Column="0" IsVisible="{Binding !IsSplitViewEnabled}"
-                                x:Name="ZoomBorderSingle"
-                                Background="#121212" Stretch="None"
-                                BoundsMode="KeepContentVisible" ClipToBounds="True"
-                                EnableConstrains="True" EnablePan="True" PanButton="Left"
-                                ZoomSpeed="1.05" MinZoomX="0.5" MinZoomY="0.5"
-                                MaxZoomX="50" MaxZoomY="50">
-                    <Canvas Width="{Binding ImageWidth}"
-                            Height="{Binding ImageHeight}">
-                        <Image Source="{Binding CurrentBitmap}"
-                               PointerPressed="OnImagePointerPressed" />
-                        <Image Source="{Binding Overlay.OverlayBitmap}"
-                               Opacity="{Binding Overlay.OverlayOpacity}"
-                               IsVisible="{Binding Overlay.ShowOverlay}"
-                               IsHitTestVisible="False" />
-                        <Ellipse Width="12" Height="12"
-                                 Stroke="Yellow" StrokeThickness="2"
-                                 Fill="Transparent"
-                                 IsHitTestVisible="False"
-                                 IsVisible="{Binding HasSelection}"
-                                 Canvas.Left="{Binding SelectedX}"
-                                 Canvas.Top="{Binding SelectedY}">
-                            <Ellipse.RenderTransform>
-                                <TranslateTransform X="-6" Y="-6" />
-                            </Ellipse.RenderTransform>
-                        </Ellipse>
-                    </Canvas>
-                </paz:ZoomBorder>
-
-                <!-- Double Split Image Containers -->
-                <Grid Grid.Row="0" ColumnDefinitions="*, 2, *" IsVisible="{Binding IsSplitViewEnabled}">
+                
+                <!-- Single vs SplitView Grid  -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="{Binding IsSplitViewEnabled,
+                             Converter={x:Static extensions:BoolToGridLengthConverter.Instance},
+                             ConverterParameter=2}"/>
+                        <ColumnDefinition Width="{Binding IsSplitViewEnabled,
+                             Converter={x:Static extensions:BoolToGridLengthConverter.Instance},
+                             ConverterParameter=*}"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Single Image or Left Side Split -->
                     <paz:ZoomBorder Grid.Column="0" x:Name="ZoomBorderLeft"
                                     Background="#121212" Stretch="None"
                                     BoundsMode="KeepContentVisible" ClipToBounds="True"
                                     EnableConstrains="True" EnablePan="True" PanButton="Left"
                                     ZoomSpeed="1.05" MinZoomX="0.5" MinZoomY="0.5"
-                                    MaxZoomX="50" MaxZoomY="50">
-                        <Canvas Width="{Binding ImageWidth}"
+                                    MaxZoomX="40" MaxZoomY="40">
+                        <Canvas Width="{Binding ImageWidth}" 
                                 Height="{Binding ImageHeight}">
+                            
                             <Image Source="{Binding CurrentBitmap}"
                                    PointerPressed="OnImagePointerPressed" />
+                            
+                            <Image Source="{Binding Overlay.OverlayBitmap}"
+                                   Opacity="{Binding Overlay.OverlayOpacity}"
+                                   IsHitTestVisible="False">
+                                <Image.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="Overlay.ShowOverlay"/>
+                                        <Binding Path="!IsSplitViewEnabled"/>
+                                    </MultiBinding>
+                                </Image.IsVisible>
+                            </Image>
+                            
                             <Ellipse Width="12" Height="12"
                                      Stroke="Yellow" StrokeThickness="2"
                                      Fill="Transparent"
@@ -329,25 +323,33 @@
                                     <TranslateTransform X="-6" Y="-6" />
                                 </Ellipse.RenderTransform>
                             </Ellipse>
+                            
                         </Canvas>
                     </paz:ZoomBorder>
 
-                    <Border Grid.Column="1" BorderBrush="#2D2D2D" BorderThickness="1,0,1,0" />
+                    <!-- Spacer Border -->
+                    <Border Grid.Column="1" IsVisible="{Binding IsSplitViewEnabled}" 
+                            BorderBrush="#2D2D2D" BorderThickness="1,0,1,0" />
 
+                    <!-- Right Side Split -->
                     <paz:ZoomBorder Grid.Column="2" x:Name="ZoomBorderRight"
                                     Background="#121212" Stretch="None"
                                     BoundsMode="KeepContentVisible" ClipToBounds="True"
                                     EnableConstrains="True" EnablePan="True" PanButton="Left"
                                     ZoomSpeed="1.05" MinZoomX="0.5" MinZoomY="0.5"
-                                    MaxZoomX="50" MaxZoomY="50">
+                                    MaxZoomX="40" MaxZoomY="40">
+                        
                         <Canvas Width="{Binding ImageWidth}"
                                 Height="{Binding ImageHeight}">
+                            
                             <Image Source="{Binding CurrentBitmap}"
                                    PointerPressed="OnImagePointerPressed" />
+                            
                             <Image Source="{Binding Overlay.OverlayBitmap}"
                                    Opacity="{Binding Overlay.OverlayOpacity}"
                                    IsVisible="{Binding Overlay.ShowOverlay}"
                                    IsHitTestVisible="False" />
+                            
                             <Ellipse Width="12" Height="12"
                                      Stroke="Yellow" StrokeThickness="2"
                                      Fill="Transparent"
@@ -359,6 +361,7 @@
                                     <TranslateTransform X="-6" Y="-6" />
                                 </Ellipse.RenderTransform>
                             </Ellipse>
+                            
                         </Canvas>
                     </paz:ZoomBorder>
                 </Grid>
