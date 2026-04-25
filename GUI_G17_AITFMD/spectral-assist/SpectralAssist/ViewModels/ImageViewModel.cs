@@ -29,7 +29,7 @@ public enum LoadingState
 /// Each stage is handled by its own service:
 /// <list>
 /// <item><see cref="ImageLoadingService"/> loads and calibrates the HSI cube</item>
-/// <item><see cref="PreprocessingService"/> for manifest-driven preprocessing (static class)</item>
+/// <item><see cref="PreprocessingService"/> for manifest-driven preprocessing</item>
 /// <item><see cref="InferenceService"/> for ONNX model inference</item>
 /// </list>
 /// Overlay state is managed by <see cref="OverlayViewModel"/>.
@@ -189,7 +189,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
-            //var running = true;
             var progress = new Progress<string>(s => { InferenceOutput = s; });
 
             // Perform preprocessing if fresh session or different modelPackage
@@ -205,7 +204,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             // Perform inference on preprocessed cube
             var runResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, package, progress, ct);
-            //running = false;
             InferenceOutput = "";
 
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
@@ -220,10 +218,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Error: {ex.Message}";
         }
     }
-
-    private bool CanRunInference() => Cube != null && _hasCalibration;
-
-
+    
     // -- Display -- //
     private void UpdateBitmap()
     {
@@ -344,21 +339,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Cube = null;
         GC.SuppressFinalize(this);
     }
-
-
-    // ToDo: Split view?
-    // Export:
-    // 4 ulike bilder: 
-    // 1: RGB standard
-    // 2: RGB med overlay?
-    // 3: RGB med overlay med en viss threshold 80%?
-    // 4: RGB med overlay med en viss threshold 50%?
+    
     
     public int ImageWidth => Cube?.Samples ?? 0;
     public int ImageHeight => Cube?.Lines ?? 0;
     [ObservableProperty] private int? _selectedX;
     [ObservableProperty] private int? _selectedY;
     public bool HasSelection => SelectedX.HasValue && SelectedY.HasValue;
+    [ObservableProperty] private bool _isSplitViewEnabled;
 
     public void OnPixelClicked(int x, int y)
     {
@@ -366,6 +354,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         SelectedX = x;
         SelectedY = y;
         OnPropertyChanged(nameof(HasSelection));
+        
         // ToDo: SelectedSpectrum = Cube.GetSpectrum(x, y);
     }
 

@@ -205,7 +205,7 @@ public partial class LibraryViewModel : ViewModelBase
 
     /// <summary>
     /// Rebuilds <see cref="TreeRoots"/> and <see cref="CurrentImages"/> from the in-memory manifest,
-    /// preserving the currently-selected node across rescans/refreshes (matched by relpath).
+    /// preserving the currently-selected node across rescans/refreshes.
     /// </summary>
     private void PopulateFromManifest()
     {
@@ -249,7 +249,6 @@ public sealed partial class LibraryTreeItem : ObservableObject
     public ObservableCollection<LibraryTreeItem> Children { get; }
 
     [ObservableProperty] private bool _isExpanded;
-    //[ObservableProperty] private bool _isSelected;
 
     public LibraryTreeItem(FolderNode source)
     {
