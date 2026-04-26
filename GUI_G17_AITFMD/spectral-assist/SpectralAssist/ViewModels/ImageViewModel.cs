@@ -91,10 +91,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private DisplayOption _selectedDisplayMode = DisplayOption.Default;
     public static IReadOnlyList<DisplayOption> AvailableDisplayModes => DisplayOption.Presets;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
-    [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
-    private int _selectedBand;
+
 
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private double _progress;
@@ -109,16 +106,54 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "??";
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
 
-    // -- Property change handlers -- //
-    public bool IsSpectralMode => SelectedDisplayMode.DisplayMode == DisplayMode.SpectralBand;
-    partial void OnSelectedBandChanged(int value) => UpdateBitmap();
+ 
+    
+    
+    // DisplayMode Changes ==================================================================
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
+    [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
+    private int _selectedBand;
+    
+    partial void OnSelectedBandChanged(int value)
+    {
+        if (IsSpectralMode) UpdateBitmap();
+    }
+    
+    public bool IsRgbMode
+    {
+        get => SelectedDisplayMode.DisplayMode == DisplayMode.SyntheticRgb;
+        set
+        {
+            if (value)
+                SelectedDisplayMode = DisplayOption.Presets.First(p => p.DisplayMode == DisplayMode.SyntheticRgb);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSpectralMode));
+        }
+    }
 
+    public bool IsSpectralMode
+    {
+        get => SelectedDisplayMode.DisplayMode == DisplayMode.SpectralBand;
+        set
+        {
+            if (value)
+                SelectedDisplayMode = DisplayOption.Presets.First(p => p.DisplayMode == DisplayMode.SpectralBand);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsRgbMode));
+        }
+    }
+    
     partial void OnSelectedDisplayModeChanged(DisplayOption value)
     {
+        OnPropertyChanged(nameof(IsRgbMode));
         OnPropertyChanged(nameof(IsSpectralMode));
         UpdateBitmap();
     }
+    
 
+    
     // -- Image loading on Initialization (delegates to ImageLoadingService) -- //
     private async Task LoadAsync()
     {
@@ -134,8 +169,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             var result = await ImageLoadingService.LoadAsync(_hdrPath, progress, _cts.Token);
             Cube = result.Cube;
             _hasCalibration = result.HasCalibration;
-
-
+            
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
             UpdateBitmap();
@@ -218,38 +252,43 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Error: {ex.Message}";
         }
     }
+
+    // Display and Bitmaps ____________________________________________________
+    private Bitmap? _cachedSyntheticRgb;
     
-    // -- Display -- //
     private void UpdateBitmap()
     {
         if (Cube == null) return;
-
-        CurrentBitmap = SelectedDisplayMode.DisplayMode switch
+        var option = SelectedDisplayMode;
+        
+        CurrentBitmap = option.DisplayMode switch
         {
             DisplayMode.SpectralBand => CubeRenderer.BandToBitmap(Cube, SelectedBand),
-            DisplayMode.SyntheticRgb => GetCachedSyntheticRgb(Cube),
-            DisplayMode.NearestBandRgb => CubeRenderer.RgbToBitmap(Cube,
-                Cube.Header.FindClosestBand(630f),
-                Cube.Header.FindClosestBand(530f),
-                Cube.Header.FindClosestBand(460f)),
-            _ => throw new ArgumentOutOfRangeException(nameof(DisplayMode))
+            DisplayMode.SyntheticRgb => GetCachedSyntheticRgb(Cube, option.RgbParameters),
+            _ => throw new ArgumentOutOfRangeException(nameof(option.DisplayMode))
         };
     }
-
-    private Bitmap? _cachedSyntheticRgb;
-
+    
     /// <summary>
     /// Returns the cached synthetic RGB bitmap, recomputing only initially.
+    /// Returns a synthetic RGB bitmap for the given parameters, computing
+    /// and caching it on first access. Subsequent calls with the same
+    /// parameters return the cached bitmap without recomputation.
     /// </summary>
-    private Bitmap GetCachedSyntheticRgb(HsiCube cube)
+    private Bitmap GetCachedSyntheticRgb(HsiCube cube, SyntheticRgbParameters parameters)
     {
-        _cachedSyntheticRgb ??= CubeRenderer.SyntheticRgbToBitmap(cube, SyntheticRgbParameters.HistologyBalanced);
-        return _cachedSyntheticRgb;
+        if (_cachedSyntheticRgb is not null)
+            return _cachedSyntheticRgb;
+
+        var bitmap = CubeRenderer.SyntheticRgbToBitmap(cube, parameters);
+        _cachedSyntheticRgb = bitmap;
+        return bitmap;
     }
-
-
+    
+    
+    
     // Persistence Logic _______________________________
-
+    
     [ObservableProperty] private string? _activeRunId;
 
     /// <summary>
@@ -382,7 +421,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             new Avalonia.Vector(96, 96),
             Avalonia.Platform.PixelFormat.Bgra8888,
             Avalonia.Platform.AlphaFormat.Opaque);
-
+        
         LoadingState = LoadingState.Ready;
         StatusMessage = "Design preview";
     }

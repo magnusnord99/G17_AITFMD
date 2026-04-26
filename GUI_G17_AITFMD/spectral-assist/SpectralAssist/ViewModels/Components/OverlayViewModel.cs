@@ -8,7 +8,7 @@ using SpectralAssist.Services.Rendering;
 namespace SpectralAssist.ViewModels.Components;
 
 /// <summary>
-/// Manages the overlay, colormap, threshold and info panel states for the classification overlay.
+/// Manages the overlay, colormap and thresholding states for the classification overlay.
 /// </summary>
 public partial class OverlayViewModel : ObservableObject
 {
@@ -23,22 +23,11 @@ public partial class OverlayViewModel : ObservableObject
     [ObservableProperty] private bool _showOverlay = true;
     [ObservableProperty] private double _overlayThreshold;
     [ObservableProperty] private ClassificationReport? _classificationResult;
-    [ObservableProperty] private bool _showInfoPanel;
-    [ObservableProperty] private string _selectedColorMapName = "Green-Red";
-
-    /// <summary>Available colormap names for the dropdown (includes "Off" to hide overlay).</summary>
-    public IReadOnlyList<string> AvailableColorMaps { get; } =
-        new[] { "Off" }.Concat(ColorMaps.All.Keys).ToList();
-
-    // -- Property change handlers -- //
-    partial void OnSelectedColorMapNameChanged(string value)
-    {
-        ShowOverlay = value != "Off";
-        if (ShowOverlay) RebuildOverlay();
-    }
-
+    [ObservableProperty] private string _selectedColorMapName = ColorMaps.All.Keys.First();
+    
+    public IReadOnlyList<string> AvailableColorMaps { get; } = ColorMaps.All.Keys.ToList();
+    partial void OnSelectedColorMapNameChanged(string value) => RebuildOverlay();
     partial void OnOverlayThresholdChanged(double value) => RebuildOverlay();
-
     
     /// <summary>
     /// Applies a new classification result and performs one-time build of the Gaussian-weighted heatmap,
@@ -46,14 +35,11 @@ public partial class OverlayViewModel : ObservableObject
     /// </summary>
     public void ApplyResult(ClassificationReport report, int imageWidth, int imageHeight)
     {
-        // Build the heatmap once
         ClassificationResult = report;
         _heatmapWidth = imageWidth;
         _heatmapHeight = imageHeight;
         _cachedHeatmap = HeatmapRenderer.BuildHeatmap(report, _heatmapWidth, _heatmapHeight);
         
-        if (SelectedColorMapName == "Off")
-            SelectedColorMapName = "Green-Red";
         ShowOverlay = true;
         RebuildOverlay();
     }
