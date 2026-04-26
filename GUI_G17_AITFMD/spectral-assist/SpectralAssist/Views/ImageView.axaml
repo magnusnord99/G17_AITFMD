@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
              xmlns:paz="using:Avalonia.Controls.PanAndZoom"
+             xmlns:scottPlot="clr-namespace:ScottPlot.Avalonia;assembly=ScottPlot.Avalonia"
              xmlns:models="clr-namespace:SpectralAssist.Models"
              xmlns:extensions="clr-namespace:SpectralAssist.Extensions"
              mc:Ignorable="d" d:DesignWidth="1860" d:DesignHeight="1000"
@@ -57,7 +58,7 @@
                         <StackPanel Spacing="6"
                                     IsVisible="{Binding Overlay.ClassificationResult,
                                         Converter={x:Static ObjectConverters.IsNotNull}}">
-
+                            
                             <Grid ColumnDefinitions="Auto,*"
                                   RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                   Margin="0,2,0,0"
@@ -313,12 +314,15 @@
                                     </MultiBinding>
                                 </Image.IsVisible>
                             </Image>
+                            <scottPlot:AvaPlot x:Name="SpectrumPlot"
+                                               Width="600"
+                                               Height="400"/>
 
                             <Ellipse Width="12" Height="12"
                                      Stroke="Yellow" StrokeThickness="2"
                                      Fill="Transparent"
                                      IsHitTestVisible="False"
-                                     IsVisible="{Binding HasSelection}"
+                                     IsVisible="{Binding HasSelectedPixel}"
                                      Canvas.Left="{Binding SelectedX}"
                                      Canvas.Top="{Binding SelectedY}">
                                 <Ellipse.RenderTransform>
@@ -356,7 +360,7 @@
                                      Stroke="Yellow" StrokeThickness="2"
                                      Fill="Transparent"
                                      IsHitTestVisible="False"
-                                     IsVisible="{Binding HasSelection}"
+                                     IsVisible="{Binding HasSelectedPixel}"
                                      Canvas.Left="{Binding SelectedX}"
                                      Canvas.Top="{Binding SelectedY}">
                                 <Ellipse.RenderTransform>
@@ -529,6 +533,8 @@
                                            Foreground="#CCCCCC" FontSize="12"
                                            VerticalAlignment="Center" Width="36" />
                             </StackPanel>
+                            
+
                         </StackPanel>
                     </Grid>
                 </Border>

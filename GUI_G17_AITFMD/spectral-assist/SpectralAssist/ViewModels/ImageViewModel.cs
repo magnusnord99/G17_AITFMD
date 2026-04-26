@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ScottPlot;
+using ScottPlot.Avalonia;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
 using SpectralAssist.Services.Library;
@@ -382,22 +384,33 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     
     public int ImageWidth => Cube?.Samples ?? 0;
     public int ImageHeight => Cube?.Lines ?? 0;
+    [ObservableProperty] private bool _isSplitViewEnabled;
+    
+    public bool HasSelectedSpectrum => SelectedSpectrum != null;
+    public bool HasSelectedPixel => SelectedX.HasValue && SelectedY.HasValue;
+    
     [ObservableProperty] private int? _selectedX;
     [ObservableProperty] private int? _selectedY;
-    public bool HasSelection => SelectedX.HasValue && SelectedY.HasValue;
-    [ObservableProperty] private bool _isSplitViewEnabled;
-
+    [ObservableProperty] private float[]? _selectedSpectrum;
+    [ObservableProperty] private float[]? _selectedWavelengths;
+    
+    //public event EventHandler SpectrumUpdated;
+    
+    
     public void OnPixelClicked(int x, int y)
     {
-        if (Cube == null || x < 0 || y < 0 || x >= Cube.Samples || y >= Cube.Lines) return;
+        if (Cube == null || x < 0 || y < 0 || x >= Cube.Samples || y >= Cube.Lines) 
+            return;
+        
         SelectedX = x;
         SelectedY = y;
-        OnPropertyChanged(nameof(HasSelection));
-        
-        // ToDo: SelectedSpectrum = Cube.GetSpectrum(x, y);
+        var SelectedSpectrum = Cube.GetSpectrumAt(x, y);
+        var SelectedWaveLengths = Cube.Header.WavelengthValues;
+        OnPropertyChanged(nameof(HasSelectedPixel));
+        OnPropertyChanged(nameof(HasSelectedSpectrum));
+        //SpectrumUpdated?.Invoke(this, EventArgs.Empty);
     }
-
-
+    
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ImageViewModel()
     {

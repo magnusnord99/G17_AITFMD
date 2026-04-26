@@ -42,6 +42,7 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
         <PackageReference Include="PanAndZoom" Version="11.3.9.1"/>
         <PackageReference Include="QuestPDF" Version="2026.2.4" />
+        <PackageReference Include="ScottPlot.Avalonia" Version="5.1.58" />
         <!-- <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/> -->
     </ItemGroup>
 

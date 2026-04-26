@@ -1,9 +1,11 @@
-﻿using System;
+﻿using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.PanAndZoom;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using SpectralAssist.ViewModels;
+using Image = Avalonia.Controls.Image;
 
 namespace SpectralAssist.Views;
 
@@ -11,6 +13,7 @@ public partial class ImageView : UserControl
 {
     private ImageViewModel Vm => (ImageViewModel)DataContext!;
     private bool _syncing;
+    
     
     public ImageView()
     {
@@ -32,24 +35,49 @@ public partial class ImageView : UserControl
     
     private void OnImagePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        try
+        var props = e.GetCurrentPoint((Image)sender!).Properties;
+        if (!props.IsLeftButtonPressed) return;
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift)) return;
+
+        var img = (Image)sender!;
+        var pos = e.GetPosition(img);
+        var x = (int)pos.X;
+        var y = (int)pos.Y;
+
+        if (DataContext is not ImageViewModel vm) return;
+
+        vm.OnPixelClicked(x, y);
+        UpdateSpectrumPlot(vm, x, y);
+        e.Handled = true;
+    }
+
+    private void UpdateSpectrumPlot(ImageViewModel vm, int x, int y)
+    {
+        if (vm.Cube == null) return;
+
+        var spectrum = vm.Cube.GetSpectrumAt(x, y);
+        var wavelengths = vm.Cube.Header.WavelengthValues;
+
+        SpectrumPlot.Plot.Clear();
+        SpectrumPlot.Plot.Add.ScatterLine(wavelengths, spectrum);
+        SpectrumPlot.Plot.XLabel($"Wavelength ({vm.WavelengthUnit})");
+        SpectrumPlot.Plot.YLabel("Reflectance");
+        SpectrumPlot.Plot.Title($"Pixel ({x}, {y})");
+        SpectrumPlot.Plot.Axes.SetLimitsY(0, 1.1); 
+        SpectrumPlot.Plot.Axes.SetLimitsX(wavelengths.Min(), wavelengths.Max()); 
+        SpectrumPlot.Plot.SetStyle(new ScottPlot.PlotStyles.Dark());
+        SpectrumPlot.Plot.Add.Palette = new ScottPlot.Palettes.Aurora();
+        SpectrumPlot.Refresh();
+    }
+    
+    private void OnClearSpectrumClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is ImageViewModel vm)
         {
-            var props = e.GetCurrentPoint(null).Properties;
-            if (!props.IsLeftButtonPressed) return;
-            if (e.KeyModifiers != KeyModifiers.Shift) return;
-            
-            var img = (Image)sender!;
-            var pos = e.GetPosition(img);
-            var x = (int)pos.X;
-            var y = (int)pos.Y;
-            Console.WriteLine($"x = {x}, y = {y}");
-            if (DataContext is ImageViewModel vm) 
-                vm.OnPixelClicked(x, y);
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine(exception);
-            Console.WriteLine(exception.Message);
+            vm.SelectedX = null;
+            vm.SelectedY = null;
+            SpectrumPlot.Plot.Clear();
+            SpectrumPlot.Refresh();
         }
     }
 }
