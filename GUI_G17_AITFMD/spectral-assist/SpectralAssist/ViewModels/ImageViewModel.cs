@@ -390,6 +390,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cachedPreprocessing = null;
         _lastPackage = null;
         CurrentBitmap = null;
+        _cachedSyntheticRgb = null;
         Cube = null;
         GC.SuppressFinalize(this);
     }
@@ -441,8 +442,13 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private ModelPackage? _lastUsedPackage;
     private string _lastSummaryText = "";
 
-    private bool CanExportPdf() =>
-        IsReady && Overlay.ClassificationResult != null && Overlay.ClassificationResult.DatePerformed != default;
+
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
+    private bool _activeRun = true;
+    //private RunSummary? _activeRun;
+
+
+    private bool CanExportPdf() => ActiveRun;
 
     [RelayCommand(CanExecute = nameof(CanExportPdf))]
     private async Task ExportPdfAsync()
