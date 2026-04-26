@@ -235,7 +235,7 @@ public readonly record struct SyntheticRgbParameters(
 {
     /// <summary>
     /// Balanced RGB composite for histology HSI datasets.
-    /// Uses broader Gaussian bands to reduce noise and produce
+    /// Uses broad Gaussian bands to reduce noise and produce
     /// smooth, stain-consistent visualization.
     /// </summary>
     public static SyntheticRgbParameters HistologyBalanced => new(
@@ -245,8 +245,20 @@ public readonly record struct SyntheticRgbParameters(
     );
     
     /// <summary>
+    /// Synthetic RGB parameters from the HistologyHSI-GB dataset paper
+    /// (Ortega et al., Scientific Data 11:681, 2024, doi:10.1038/s41597-024-03510-x).
+    /// The paper uses σ values 0.08, 0.06, 0.04 applied to the spectral range of the data (400–1000 = 600nm)
+    /// This produces visual output consistent with the paper's Fig. 5c.
+    /// </summary>
+    public static SyntheticRgbParameters HistologyPaperExact => new(
+        MuR: 590f, SigmaR: 48f,    // 0.08 x 600
+        MuG: 560f, SigmaG: 36f,    // 0.06 x 600
+        MuB: 470f, SigmaB: 24f     // 0.04 x 600
+    );
+    
+    /// <summary>
     /// High-contrast RGB composite for surgical HSI datasets.
-    /// Uses narrower Gaussian bands and shifted wavelengths to enhance
+    /// Uses narrow Gaussian bands and shifted wavelengths to enhance
     /// spectral separability and improve visibility of perfused tissue.
     /// </summary>
     public static SyntheticRgbParameters DiagnosticHighContrast => new(
