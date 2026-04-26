@@ -1,19 +1,26 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ScottPlot;
 using ScottPlot.Avalonia;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Export;
 using SpectralAssist.Services.Library;
 using SpectralAssist.Services.Rendering;
 using SpectralAssist.ViewModels.Components;
+using SpectralAssist.Views;
 
 namespace SpectralAssist.ViewModels;
 
@@ -39,17 +46,19 @@ public enum LoadingState
 public partial class ImageViewModel : ViewModelBase, IDisposable
 {
     // Single-file mode constructor: FilePicker and Drag&Drop without persistence
-    private ImageViewModel(
-        string hdrPath, InferenceService inferenceService)
+    public ImageViewModel(
+        string hdrPath, InferenceService inferenceService, PdfReportService pdfReportService)
     {
         _hdrPath = hdrPath;
         _inferenceService = inferenceService;
+        _pdfReportService = pdfReportService;
         _ = LoadAsync();
     }
 
     // Library mode constructor: library context aware with persistence
     public ImageViewModel(string hdrPath, InferenceService inferenceService,
-        string imageId, LibraryManager libraryManager) : this(hdrPath, inferenceService)
+        string imageId, LibraryManager libraryManager, PdfReportService pdfReportService) : this(hdrPath,
+        inferenceService, pdfReportService)
     {
         _imageId = imageId;
         _libraryManager = libraryManager;
@@ -63,6 +72,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private readonly ImageNode? _imageNode;
     private readonly string? _imageId;
     private readonly LibraryManager? _libraryManager;
+    private readonly PdfReportService _pdfReportService;
     public ObservableCollection<RunSummary> Reports { get; } = [];
     private bool InLibraryMode => _libraryManager != null && _imageId != null;
 
@@ -94,7 +104,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public static IReadOnlyList<DisplayOption> AvailableDisplayModes => DisplayOption.Presets;
 
 
-
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private double _progress;
     [ObservableProperty] private Bitmap? _currentBitmap;
@@ -108,21 +117,19 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public string WavelengthUnit => Cube?.Header.WavelengthUnit ?? "??";
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
 
- 
-    
-    
+
     // DisplayMode Changes ==================================================================
-    
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     private int _selectedBand;
-    
+
     partial void OnSelectedBandChanged(int value)
     {
         if (IsSpectralMode) UpdateBitmap();
     }
-    
+
     public bool IsRgbMode
     {
         get => SelectedDisplayMode.DisplayMode == DisplayMode.SyntheticRgb;
@@ -146,16 +153,15 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(IsRgbMode));
         }
     }
-    
+
     partial void OnSelectedDisplayModeChanged(DisplayOption value)
     {
         OnPropertyChanged(nameof(IsRgbMode));
         OnPropertyChanged(nameof(IsSpectralMode));
         UpdateBitmap();
     }
-    
 
-    
+
     // -- Image loading on Initialization (delegates to ImageLoadingService) -- //
     private async Task LoadAsync()
     {
@@ -171,7 +177,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             var result = await ImageLoadingService.LoadAsync(_hdrPath, progress, _cts.Token);
             Cube = result.Cube;
             _hasCalibration = result.HasCalibration;
-            
+
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
             UpdateBitmap();
@@ -244,6 +250,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
             await TryAutoSaveRunAsync(runResult, ct);
+            
+            // Refactor here
+            _lastUsedPackage = package;
+            _lastSummaryText = ClassificationReportMetrics.BuildReportSummaryText(runResult);
+
+            Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
+            ExportPdfCommand.NotifyCanExecuteChanged();
+            await TryAutoSaveRunAsync(runResult, ct);
         }
         catch (OperationCanceledException)
         {
@@ -257,12 +271,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     // Display and Bitmaps ____________________________________________________
     private Bitmap? _cachedSyntheticRgb;
-    
+
     private void UpdateBitmap()
     {
         if (Cube == null) return;
         var option = SelectedDisplayMode;
-        
+
         CurrentBitmap = option.DisplayMode switch
         {
             DisplayMode.SpectralBand => CubeRenderer.BandToBitmap(Cube, SelectedBand),
@@ -270,7 +284,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             _ => throw new ArgumentOutOfRangeException(nameof(option.DisplayMode))
         };
     }
-    
+
     /// <summary>
     /// Returns the cached synthetic RGB bitmap, recomputing only initially.
     /// Returns a synthetic RGB bitmap for the given parameters, computing
@@ -286,11 +300,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cachedSyntheticRgb = bitmap;
         return bitmap;
     }
-    
-    
-    
+
+
     // Persistence Logic _______________________________
-    
+
     [ObservableProperty] private string? _activeRunId;
 
     /// <summary>
@@ -380,22 +393,24 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Cube = null;
         GC.SuppressFinalize(this);
     }
-    
-    
+
+
     public int ImageWidth => Cube?.Samples ?? 0;
     public int ImageHeight => Cube?.Lines ?? 0;
     [ObservableProperty] private bool _isSplitViewEnabled;
-    
-    
+
+
+    // Spectral Signature _______________________________________________
+
     [ObservableProperty] private int? _pixel1X;
     [ObservableProperty] private int? _pixel1Y;
     [ObservableProperty] private int? _pixel2X;
     [ObservableProperty] private int? _pixel2Y;
     public bool HasAnySelection => Pixel1X is not null || Pixel2X is not null;
-    
+
     public void OnPixelClicked(int x, int y, bool isPrimary)
     {
-        if (Cube == null || x < 0 || y < 0 || x >= Cube.Samples || y >= Cube.Lines) 
+        if (Cube == null || x < 0 || y < 0 || x >= Cube.Samples || y >= Cube.Lines)
             return;
 
         if (isPrimary)
@@ -406,8 +421,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         else
         {
             Pixel2X = x;
-            Pixel2Y = y;  
+            Pixel2Y = y;
         }
+
         OnPropertyChanged(nameof(HasAnySelection));
     }
 
@@ -419,12 +435,144 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Pixel2Y = null;
         OnPropertyChanged(nameof(HasAnySelection));
     }
-    
+
+
+    // PDF Export _________________________________________
+    private ModelPackage? _lastUsedPackage;
+    private string _lastSummaryText = "";
+
+    private bool CanExportPdf() =>
+        IsReady && Overlay.ClassificationResult != null && Overlay.ClassificationResult.DatePerformed != default;
+
+    [RelayCommand(CanExecute = nameof(CanExportPdf))]
+    private async Task ExportPdfAsync()
+    {
+        var ownerWindow = GetTopLevelAsWindow();
+        if (ownerWindow == null) return;
+
+        var optionsDialog = new ExportOptionsDialog();
+        await optionsDialog.ShowDialog(ownerWindow);
+        var options = optionsDialog.Result;
+        if (options == null) return;
+
+        var suggested = $"SpectralAssist_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+        var file = await ownerWindow.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export PDF report",
+            DefaultExtension = "pdf",
+            SuggestedFileName = suggested,
+            FileTypeChoices = [new FilePickerFileType("PDF") { Patterns = ["*.pdf"] }]
+        });
+        if (file == null) return;
+
+        try
+        {
+            StatusMessage = "Genererer PDF…";
+            var pdfService = _pdfReportService;
+            var pdfBytes = await Task.Run(() =>
+            {
+                var doc = BuildPdfReportDocument(options);
+                using var ms = new MemoryStream();
+                pdfService.Write(ms, doc);
+                return ms.ToArray();
+            });
+
+            await using var outStream = await file.OpenWriteAsync();
+            await outStream.WriteAsync(pdfBytes);
+            StatusMessage = "PDF-eksport fullført";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"PDF-eksport mislyktes: {ex.Message}";
+        }
+    }
+
+    private static Window? GetTopLevelAsWindow()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
+            {
+                MainWindow: { } window
+            })
+            return window;
+        return null;
+    }
+
+    private PdfReportDocument BuildPdfReportDocument(ExportOptions options)
+    {
+        if (Cube == null || Overlay.ClassificationResult == null)
+            throw new InvalidOperationException("Cannot build PDF: missing cube or result.");
+
+        var result = Overlay.ClassificationResult;
+        if (result.DatePerformed == default)
+            throw new InvalidOperationException("Cannot build PDF: inference metadata is missing.");
+
+        var w = Cube.Samples;
+        var h = Cube.Lines;
+        var heatmap = HeatmapRenderer.BuildHeatmap(result, w, h);
+        var colorMap = ColorMaps.All.GetValueOrDefault(options.ColorMapName, ColorMaps.GreenRed);
+        var manifestDisplayName = _lastUsedPackage?.Manifest.DisplayName ?? "";
+        var accuracy = _lastUsedPackage?.Manifest.Training.Metrics.Accuracy;
+        var accDisplay = accuracy is { } a ? $"{a:P1}" : "—";
+
+        var rgb = CubeRenderer.SyntheticRgbToBitmap(Cube, SyntheticRgbParameters.HistologyBalanced);
+        Bitmap? c0 = null, c1 = null, c2 = null;
+        try
+        {
+            using var ol0 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, 0f);
+            using var ol1 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, options.Overlay1Threshold);
+            using var ol2 = HeatmapRenderer.RenderHeatmap(heatmap, w, h, colorMap, options.Overlay2Threshold);
+
+            c0 = RgbOverlayComposer.Compose(rgb, ol0, options.Opacity);
+            c1 = RgbOverlayComposer.Compose(rgb, ol1, options.Opacity);
+            c2 = RgbOverlayComposer.Compose(rgb, ol2, options.Opacity);
+
+            return new PdfReportDocument
+            {
+                InferenceCompletedAt = new DateTimeOffset(result.DatePerformed, TimeSpan.Zero),
+                ExportedAt = DateTimeOffset.Now,
+                ManifestDisplayName = manifestDisplayName,
+                ModelNameFromResult = result.ModelName,
+                AccuracyDisplay = accDisplay,
+                ReportSummaryText = _lastSummaryText,
+                SyntheticRgbPng = EncodeForPdf(rgb),
+                Overlay0Png = EncodeForPdf(c0),
+                Overlay50Png = EncodeForPdf(c1),
+                Overlay80Png = EncodeForPdf(c2),
+                Overlay1Threshold = options.Overlay1Threshold,
+                Overlay2Threshold = options.Overlay2Threshold,
+                OverlayOpacity = options.Opacity,
+            };
+        }
+        finally
+        {
+            rgb.Dispose();
+            c0?.Dispose();
+            c1?.Dispose();
+            c2?.Dispose();
+        }
+    }
+
+    private static byte[] EncodeForPdf(Bitmap original)
+    {
+        var scaled = BitmapExportHelper.MaybeDownscale(original);
+        try
+        {
+            return BitmapExportHelper.ToPngBytes(scaled);
+        }
+        finally
+        {
+            if (!ReferenceEquals(scaled, original))
+                scaled.Dispose();
+        }
+    }
+
+
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ImageViewModel()
     {
         _hdrPath = "design.hdr";
         _inferenceService = null!;
+        _pdfReportService = null!;
 
         var dummyHeader = new HsiHeader
         {
@@ -443,7 +591,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             new Avalonia.Vector(96, 96),
             Avalonia.Platform.PixelFormat.Bgra8888,
             Avalonia.Platform.AlphaFormat.Opaque);
-        
+
         LoadingState = LoadingState.Ready;
         StatusMessage = "Design preview";
     }

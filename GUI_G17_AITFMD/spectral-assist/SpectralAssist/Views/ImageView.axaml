@@ -169,6 +169,7 @@
                                     CornerRadius="4" />
 
                             <Button Content="⇩ Export to PDF"
+                                    Command="{Binding ExportPdfCommand}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center"
                                     Padding="8,6"
