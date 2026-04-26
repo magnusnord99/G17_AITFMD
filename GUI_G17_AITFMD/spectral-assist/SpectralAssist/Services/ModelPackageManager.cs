@@ -94,7 +94,22 @@ public class ModelPackageManager : IDisposable
         var targetDir = Path.Combine(ModelPackagesDir, folderName);
 
         if (Directory.Exists(targetDir))
-            return ServiceResult<ModelManifest>.Fail($"A model package named '{folderName}' already exists.");
+        {
+            var existing = TryLoadManifest(targetDir);
+            if (existing.IsSuccess)
+                return ServiceResult<ModelManifest>.Fail($"A model package named '{folderName}' already exists.");
+
+            // Clean up invalid model package (missing manifest)
+            try
+            {
+                Directory.Delete(targetDir, recursive: true);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<ModelManifest>.Fail($"Could not remove broken package directory: {ex.Message}");
+            }
+        }
+
 
         try
         {
@@ -103,6 +118,17 @@ public class ModelPackageManager : IDisposable
         }
         catch (Exception ex)
         {
+            // Clean up partial copy so the user can retry
+            try
+            {
+                if (Directory.Exists(targetDir))
+                    Directory.Delete(targetDir, recursive: true);
+            }
+            catch
+            {
+                // Skip: silently fail
+            }
+
             return ServiceResult<ModelManifest>.Fail($"Failed to copy model package: {ex.Message}");
         }
 
@@ -232,7 +258,7 @@ public class ModelPackageManager : IDisposable
         {
             var json = File.ReadAllText(manifestPath);
             var manifest = JsonSerializer.Deserialize<ModelManifest>(json);
-            if (manifest == null) 
+            if (manifest == null)
                 return ServiceResult<ModelManifest>.Fail("Failed to deserialize manifest");
 
             manifest.Id = Path.GetFileName(packageDir);
@@ -244,20 +270,29 @@ public class ModelPackageManager : IDisposable
             return ServiceResult<ModelManifest>.Fail($"Manifest error: {ex.Message}");
         }
     }
-    
+
     private static void CopyDirectory(string sourceDir, string targetDir)
     {
         Directory.CreateDirectory(targetDir);
 
         foreach (var file in Directory.GetFiles(sourceDir))
         {
-            var destFile = Path.Combine(targetDir, Path.GetFileName(file));
+            var fileName = Path.GetFileName(file);
+            // Skip macOS AppleDouble metadata files (._*) and other OS artifacts
+            if (fileName.StartsWith("._") || fileName == ".DS_Store")
+                continue;
+
+            var destFile = Path.Combine(targetDir, fileName);
             File.Copy(file, destFile, overwrite: false);
         }
 
         foreach (var subDir in Directory.GetDirectories(sourceDir))
         {
-            var destSubDir = Path.Combine(targetDir, Path.GetFileName(subDir));
+            var fileName = Path.GetFileName(subDir);
+            if (fileName.StartsWith('.'))
+                continue;
+
+            var destSubDir = Path.Combine(targetDir, fileName);
             CopyDirectory(subDir, destSubDir);
         }
     }
