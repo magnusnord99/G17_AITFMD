@@ -1,18 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
+        <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <!-- Set OSPlatform type boolean -->
+        <IsMacOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">true</IsMacOS>
+        <IsWinOrLinux Condition="$([MSBuild]::IsOSPlatform('Windows')) Or $([MSBuild]::IsOSPlatform('Linux'))">true</IsWinOrLinux>
     </PropertyGroup>
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
 
-    <!-- Base models: copied to output on build, not overwritten if already newer -->
+    <!-- Base ModelsPackages: copied to output on build -->
     <ItemGroup>
         <None Include="ModelPackages\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -32,19 +36,19 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
         <PackageReference Include="PanAndZoom" Version="11.3.9.1"/>
-        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/>
+        <!-- <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/> -->
     </ItemGroup>
 
-    <!-- macOS: CPU + CoreML -->
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/>
+    <!-- If macOS: CPU and CoreML OnnxRuntime -->
+    <ItemGroup Condition="'$(IsMacOS)' == 'true'">
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     </ItemGroup>
 
-    <!-- Windows/Linux: CPU + CUDA -->
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) Or $([MSBuild]::IsOSPlatform('Linux'))">
-        <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1"/>
+    <!-- If Windows/Linux: CUDA and CPU OnnxRuntime -->
+    <ItemGroup Condition="'$(IsWinOrLinux)' == 'true'">
+        <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1" />
     </ItemGroup>
-
+    
     <ItemGroup>
         <Compile Update="Views\ImageViewBackup.axaml.cs">
             <DependentUpon>ImageViewBackup.axaml</DependentUpon>
