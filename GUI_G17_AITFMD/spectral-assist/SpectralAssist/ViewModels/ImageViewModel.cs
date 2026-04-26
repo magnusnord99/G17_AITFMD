@@ -386,29 +386,38 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public int ImageHeight => Cube?.Lines ?? 0;
     [ObservableProperty] private bool _isSplitViewEnabled;
     
-    public bool HasSelectedSpectrum => SelectedSpectrum != null;
-    public bool HasSelectedPixel => SelectedX.HasValue && SelectedY.HasValue;
     
-    [ObservableProperty] private int? _selectedX;
-    [ObservableProperty] private int? _selectedY;
-    [ObservableProperty] private float[]? _selectedSpectrum;
-    [ObservableProperty] private float[]? _selectedWavelengths;
+    [ObservableProperty] private int? _pixel1X;
+    [ObservableProperty] private int? _pixel1Y;
+    [ObservableProperty] private int? _pixel2X;
+    [ObservableProperty] private int? _pixel2Y;
+    public bool HasAnySelection => Pixel1X is not null || Pixel2X is not null;
     
-    //public event EventHandler SpectrumUpdated;
-    
-    
-    public void OnPixelClicked(int x, int y)
+    public void OnPixelClicked(int x, int y, bool isPrimary)
     {
         if (Cube == null || x < 0 || y < 0 || x >= Cube.Samples || y >= Cube.Lines) 
             return;
-        
-        SelectedX = x;
-        SelectedY = y;
-        var SelectedSpectrum = Cube.GetSpectrumAt(x, y);
-        var SelectedWaveLengths = Cube.Header.WavelengthValues;
-        OnPropertyChanged(nameof(HasSelectedPixel));
-        OnPropertyChanged(nameof(HasSelectedSpectrum));
-        //SpectrumUpdated?.Invoke(this, EventArgs.Empty);
+
+        if (isPrimary)
+        {
+            Pixel1X = x;
+            Pixel1Y = y;
+        }
+        else
+        {
+            Pixel2X = x;
+            Pixel2Y = y;  
+        }
+        OnPropertyChanged(nameof(HasAnySelection));
+    }
+
+    public void ClearPixelSelections()
+    {
+        Pixel1X = null;
+        Pixel1Y = null;
+        Pixel2X = null;
+        Pixel2Y = null;
+        OnPropertyChanged(nameof(HasAnySelection));
     }
     
     /// <summary>Design preview constructor filled with dummy data.</summary>

@@ -58,7 +58,7 @@
                         <StackPanel Spacing="6"
                                     IsVisible="{Binding Overlay.ClassificationResult,
                                         Converter={x:Static ObjectConverters.IsNotNull}}">
-                            
+
                             <Grid ColumnDefinitions="Auto,*"
                                   RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                   Margin="0,2,0,0"
@@ -314,19 +314,32 @@
                                     </MultiBinding>
                                 </Image.IsVisible>
                             </Image>
-                            <scottPlot:AvaPlot x:Name="SpectrumPlot"
-                                               Width="600"
-                                               Height="400"/>
 
-                            <Ellipse Width="12" Height="12"
-                                     Stroke="Yellow" StrokeThickness="2"
+                            <!-- Pixel 1: Yellow (Shift) -->
+                            <Ellipse Width="14" Height="14"
+                                     Stroke="Yellow"
+                                     StrokeThickness="2"
                                      Fill="Transparent"
                                      IsHitTestVisible="False"
-                                     IsVisible="{Binding HasSelectedPixel}"
-                                     Canvas.Left="{Binding SelectedX}"
-                                     Canvas.Top="{Binding SelectedY}">
+                                     IsVisible="{Binding Pixel1X, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                     Canvas.Left="{Binding Pixel1X}"
+                                     Canvas.Top="{Binding Pixel1Y}">
                                 <Ellipse.RenderTransform>
-                                    <TranslateTransform X="-6" Y="-6" />
+                                    <TranslateTransform X="-7" Y="-7" />
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+
+                            <!-- Pixel 2: Red (Ctrl) -->
+                            <Ellipse Width="14" Height="14"
+                                     Stroke="Red"
+                                     StrokeThickness="2"
+                                     Fill="Transparent"
+                                     IsHitTestVisible="False"
+                                     IsVisible="{Binding Pixel2X, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                     Canvas.Left="{Binding Pixel2X}"
+                                     Canvas.Top="{Binding Pixel2Y}">
+                                <Ellipse.RenderTransform>
+                                    <TranslateTransform X="-7" Y="-7" />
                                 </Ellipse.RenderTransform>
                             </Ellipse>
 
@@ -356,15 +369,31 @@
                                    IsVisible="{Binding Overlay.ShowOverlay}"
                                    IsHitTestVisible="False" />
 
-                            <Ellipse Width="12" Height="12"
-                                     Stroke="Yellow" StrokeThickness="2"
+                            <!-- Pixel 1: Yellow (Shift) -->
+                            <Ellipse Width="14" Height="14"
+                                     Stroke="Yellow"
+                                     StrokeThickness="2"
                                      Fill="Transparent"
                                      IsHitTestVisible="False"
-                                     IsVisible="{Binding HasSelectedPixel}"
-                                     Canvas.Left="{Binding SelectedX}"
-                                     Canvas.Top="{Binding SelectedY}">
+                                     IsVisible="{Binding Pixel1X, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                     Canvas.Left="{Binding Pixel1X}"
+                                     Canvas.Top="{Binding Pixel1Y}">
                                 <Ellipse.RenderTransform>
-                                    <TranslateTransform X="-6" Y="-6" />
+                                    <TranslateTransform X="-7" Y="-7" />
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+
+                            <!-- Pixel 2: Red (Ctrl) -->
+                            <Ellipse Width="14" Height="14"
+                                     Stroke="Red"
+                                     StrokeThickness="2"
+                                     Fill="Transparent"
+                                     IsHitTestVisible="False"
+                                     IsVisible="{Binding Pixel2X, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                     Canvas.Left="{Binding Pixel2X}"
+                                     Canvas.Top="{Binding Pixel2Y}">
+                                <Ellipse.RenderTransform>
+                                    <TranslateTransform X="-7" Y="-7" />
                                 </Ellipse.RenderTransform>
                             </Ellipse>
 
@@ -407,6 +436,46 @@
                     </StackPanel>
                 </Border>
 
+                <Border Grid.Row="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,16,16,0"
+                        Background="#DD1A1A1A"
+                        BorderBrush="#2D2D2D"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="8"
+                        IsVisible="{Binding HasAnySelection}">
+
+                    <!-- Plot Container -->
+                    <Grid>
+                        <scottPlot:AvaPlot x:Name="SpectrumPlot" 
+                                           Width="300" 
+                                           Height="180" 
+                                           Margin="0,16,0,0"/>
+                        
+                        <Grid VerticalAlignment="Top"
+                              ColumnDefinitions="*,Auto"
+                              Margin="8,0,4,0">
+                            <TextBlock Grid.Column="0"
+                                       Text="Spectral Signature: Reflectance vs λ (nm)"
+                                       Foreground="#CCCCCC"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Margin="0,4,0,0"
+                                       HorizontalAlignment="Center"
+                                       IsHitTestVisible="False" />
+                            <Button Grid.Column="1"
+                                    Content="✕"
+                                    Padding="4,4"
+                                    FontSize="12"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="OnClearSpectrumClicked" />
+                        </Grid>
+                    </Grid>
+                </Border>
+
                 <!-- Spectral Slider Panel -->
                 <Border Grid.Row="0"
                         VerticalAlignment="Bottom"
@@ -414,7 +483,7 @@
                         Margin="16,0,248,16"
                         Background="#CC1E1E1E"
                         CornerRadius="4"
-                        Padding="12,9"
+                        Padding="12,10"
                         IsVisible="{Binding IsSpectralMode}">
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
@@ -432,7 +501,7 @@
                                 Minimum="0" Maximum="{Binding MaxBandIndex}"
                                 Value="{Binding SelectedBand}"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
-                                Height="20"
+                                Height="22"
                                 VerticalAlignment="Center" />
 
                         <TextBlock Grid.Column="2" Foreground="#888888" FontSize="11" VerticalAlignment="Center">
@@ -477,6 +546,17 @@
                                     <TextBlock Text="Split View" VerticalAlignment="Center" />
                                 </StackPanel>
                             </ToggleButton>
+                            
+                            <ToggleButton IsChecked="{Binding Overlay.ShowOverlay}"
+                                          IsEnabled="{Binding Overlay.ClassificationResult,
+                                  Converter={x:Static ObjectConverters.IsNotNull}}"
+                                          Padding="12,6" FontSize="12">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="👁" FontSize="16" VerticalAlignment="Center" />
+                                    <TextBlock Text="Show Overlay" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </ToggleButton>
+                            
                         </StackPanel>
 
                         <!-- MIDDLE: Empty/Spacer -->
@@ -484,19 +564,7 @@
 
                         <!-- RIGHT: Overlay Options -->
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
-
-                            <!-- Show/Hide Toggle -->
-                            <ToggleButton IsChecked="{Binding Overlay.ShowOverlay}"
-                                          IsEnabled="{Binding Overlay.ClassificationResult,
-                                  Converter={x:Static ObjectConverters.IsNotNull}}"
-                                          Padding="12,6" FontSize="11">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="👁" FontSize="16" VerticalAlignment="Center" />
-                                    <TextBlock Text="Show Overlay" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </ToggleButton>
-
-
+                            
                             <!-- Colormap -->
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock Text="Colormap"
@@ -533,7 +601,7 @@
                                            Foreground="#CCCCCC" FontSize="12"
                                            VerticalAlignment="Center" Width="36" />
                             </StackPanel>
-                            
+
 
                         </StackPanel>
                     </Grid>
