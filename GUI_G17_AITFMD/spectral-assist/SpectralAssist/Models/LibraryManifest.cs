@@ -30,7 +30,7 @@ public class ImageNode
 public class RunSummary
 {
     public string RunId { get; init; } = string.Empty;
-    public string ModelName { get; init; } = string.Empty;
+    public string ModelDisplayName { get; init; } = string.Empty;
     public DateTime DatePerformed { get; init; }
     public string PositiveClassName { get; init; } = string.Empty;
     public double PositiveClassPercentAbove50 { get; init; }

@@ -354,7 +354,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         Overlay.ApplyResult(report, Cube.Samples, Cube.Lines);
         ActiveRunId = summary.RunId;
-        InferenceOutput = $"Loaded report from {summary.DatePerformed:yyyy-MM-dd} ({summary.ModelName})";
+        InferenceOutput = $"Loaded report from {summary.DatePerformed:yyyy-MM-dd} ({summary.ModelDisplayName})";
     }
 
     /// <summary>
@@ -537,7 +537,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 InferenceCompletedAt = new DateTimeOffset(result.DatePerformed, TimeSpan.Zero),
                 ExportedAt = DateTimeOffset.Now,
                 ManifestDisplayName = manifestDisplayName,
-                ModelNameFromResult = result.ModelName,
+                ModelNameFromResult = result.ModelDisplayName,
                 AccuracyDisplay = accDisplay,
                 ReportSummaryText = _lastSummaryText,
                 SyntheticRgbPng = EncodeForPdf(rgb),

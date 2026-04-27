@@ -50,9 +50,9 @@ public static class ClassificationReportMetrics
     public static string BuildReportSummaryText(ClassificationReport result)
     {
         var text = new StringBuilder();
-        text.AppendLine($"Model: {result.ModelName}");
-        if (!string.IsNullOrEmpty(result.ManifestDisplayName))
-            text.AppendLine($"Package: {result.ManifestDisplayName}");
+        text.AppendLine($"Model: {result.ModelMetadata.Name}");
+        if (!string.IsNullOrEmpty(result.ModelDisplayName))
+            text.AppendLine($"Package: {result.ModelDisplayName}");
 
         text.AppendLine($"Evaluated: {result.EvaluatedPatches} patches ({result.SkippedPatches} skipped as background)");
 

@@ -65,17 +65,27 @@ public class Onnx3DCnnClassifier : IDisposable
             PatchH = grid.PatchH,
             StrideH = grid.StrideH,
             StrideW = grid.StrideW,
-            Classes = _package.Manifest.OutputSpec.Classes,
-            ModelName = _package.Manifest.Metadata.Name,
             TotalPatches = grid.TotalPatches,
             EvaluatedPatches = predictions.Count,
             SkippedPatches = grid.TotalPatches - predictions.Count,
             ExecutionProvider = _executionProvider.ToString(),
+            
+            Classes = _package.Manifest.OutputSpec.Classes,
+            ModelMetadata = _package.Manifest.Metadata,
+            ModelTraining = _package.Manifest.Training,
+            PreprocessingSteps = _package.Manifest.Pipeline.Preprocessing.Steps, 
+            SpectralReducer = _package.Manifest.Pipeline.SpectralReducer,
+            ModelSummary = new ModelSummary 
+            { 
+                Architecture = _package.Manifest.Pipeline.Model.Architecture, 
+                Task = _package.Manifest.Pipeline.Model.Task, 
+                TotalParameters = _package.Manifest.Pipeline.Model.TotalParameters, 
+            }
         });
     }
     
     /// <summary>
-    /// Precomputes all sliding-window geometry, including tile counts, strides, and patch dimensions .
+    /// Precomputes all sliding-window geometry, including tile counts, strides, and patch dimensions.
     /// </summary>
     private readonly struct PatchGrid
     {
