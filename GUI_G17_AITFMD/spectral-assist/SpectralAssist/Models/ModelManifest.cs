@@ -1,30 +1,24 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
 using SpectralAssist.Services;
-using SpectralAssist.Services.Preprocessing;
 
 namespace SpectralAssist.Models;
 
 /// <summary>
 /// Root DTO for the model package manifest, <c>manifest.json</c>.
 /// Mirrors the JSON contract between the Python export pipeline and the C# application.
-/// The added <see cref="Id"/> and <see cref="DirectoryPath"/> properties are added
-/// by <see cref="ModelPackageManager"/> for runtime use.
+/// The added <see cref="DirectoryPath"/> property is set by the
+/// <see cref="ModelPackageManager"/> for runtime use.
 /// </summary>
 public class ModelManifest
 {
-    /// <summary>Unique identifier within ModelPackages/.</summary>
-    [JsonIgnore] public string Id { get; set; } = string.Empty;
-
     /// <summary>Absolute path to the model package directory.</summary>
     [JsonIgnore] public string DirectoryPath { get; set; } = string.Empty;
     
     // --- Display Helpers --- //
-    
     [JsonIgnore] public string DisplayName =>
-        string.IsNullOrWhiteSpace(Metadata.Name) ? Id : $"{Metadata.Name} v{Metadata.Version}";
+        string.IsNullOrWhiteSpace(Metadata.Name) ? Metadata.Id : $"{Metadata.Name} v{Metadata.Version}";
 
     [JsonIgnore] public string ClassesDisplay =>
         OutputSpec.Classes.Count > 0 ? string.Join(", ", OutputSpec.Classes) : "";
@@ -43,7 +37,6 @@ public class ModelManifest
     
     
     // --- JSON Properties --- //
-    
     [JsonPropertyName("schema_version")]
     public string SchemaVersion { get; set; } = string.Empty;
 
@@ -69,9 +62,12 @@ public class ModelManifest
     public ValidationInfo Validation { get; set; } = new();
 }
 
-/// <summary>Display metadata: name, version, creation date, author, and description.</summary>
+/// <summary>Display metadata: identifier (hashed), name, version, creation date, author, and description.</summary>
 public class ManifestMetadata
 {
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+    
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 

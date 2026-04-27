@@ -33,10 +33,6 @@ public class ClassificationReport
     public List<PatchPrediction> Predictions { get; init; } = [];
     
     
-    /// <summary>Set after a successful run for reporting (PDF/UI).</summary>
-    public DateTimeOffset InferenceCompletedAt { get; init; }
-
-    /// <summary>From model package manifest at inference time.</summary>
     public string ManifestDisplayName { get; init; } = "";
 
     /// <summary>Training validation accuracy from manifest, if present.</summary>
