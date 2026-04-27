@@ -91,31 +91,37 @@
                 <StackPanel Spacing="2">
                     <TextBlock Text="METADATA" FontSize="11" FontWeight="SemiBold"
                                Foreground="#666666" Margin="0,0,0,6" />
-                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
+                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Unique ID"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}"
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Id}"
+                                   Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Name"
+                                   Foreground="#888888" FontSize="13" Margin="0,3" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Name}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Version"
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Version"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Version}"
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Version}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Author"
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Author"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Author}"
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.Author}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Created"
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Created"
                                    Foreground="#888888" FontSize="13" Margin="0,3" />
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.Created}"
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.Created}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3" />
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Description"
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Description"
                                    Foreground="#888888" FontSize="13" Margin="0,3"
                                    VerticalAlignment="Top" />
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.Description}"
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Metadata.Description}"
                                    Foreground="#CCCCCC" FontSize="13" Margin="0,3"
                                    TextWrapping="Wrap" />
                     </Grid>
