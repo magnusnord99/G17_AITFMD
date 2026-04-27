@@ -201,6 +201,43 @@ public class LibraryManager
 
 
     /// <summary>
+    /// Updates the notes for a saved run. Persists the change to both the run JSON
+    /// file and the lightweight RunSummary entry in library.json.
+    /// </summary>
+    /// <param name="imageId">The ID of the image the run belongs to.</param>
+    /// <param name="runId">The ID of the run to update.</param>
+    /// <param name="notes">The new notes text.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task UpdateRunNotesAsync(string imageId, string runId, string notes, CancellationToken ct = default)
+    {
+        if (Root == null || Manifest == null) return;
+
+        var path = LibraryPaths.RunPath(Root, imageId, runId);
+        if (!File.Exists(path)) return;
+
+        ClassificationReport? report;
+        await using (var stream = File.OpenRead(path))
+            report = await JsonSerializer.DeserializeAsync<ClassificationReport>(stream, LibraryJson.Options, ct);
+
+        if (report == null) return;
+        report.Notes = notes;
+        await WriteJsonSafelyAsync(path, report, ct);
+
+        await _manifestLock.WaitAsync(ct);
+        try
+        {
+            var summary = FindImage(imageId)?.Runs.FirstOrDefault(r => r.RunId == runId);
+            if (summary != null)
+                summary.Notes = notes;
+            await WriteManifestAsync(Root, Manifest, ct);
+        }
+        finally
+        {
+            _manifestLock.Release();
+        }
+    }
+
+    /// <summary>
     /// Deletes a stored inference run for the specified image. Removes the run file,
     /// updates the manifest, and deletes the per‑image run folder under
     /// <c>.spectral-assist/runs/</c> if it becomes empty. The image’s data folder

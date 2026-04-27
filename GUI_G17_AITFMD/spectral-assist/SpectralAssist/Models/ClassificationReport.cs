@@ -40,6 +40,8 @@ public class ClassificationReport
     public ModelSummary ModelSummary { get; init; } = new();
     public List<string> PreprocessingSteps { get; init; } = [];
     public SpectralReducerInfo SpectralReducer { get; init; } = new();
+
+    public string Notes { get; set; } = string.Empty;
 }
 
 public class ModelSummary

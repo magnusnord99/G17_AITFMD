@@ -106,6 +106,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _progress;
     [ObservableProperty] private Bitmap? _currentBitmap;
     [ObservableProperty] private string _inferenceOutput = "";
+    [ObservableProperty] private bool _showNotes;
+    [ObservableProperty] private string _runNotes = "";
 
     // -- Computed properties -- //
     public bool IsLoading => LoadingState == LoadingState.Loading;
@@ -250,7 +252,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
             var summary = await TryAutoSaveRunAsync(runResult, ct);
             if (summary != null)
+            {
                 ActiveRun = summary;
+                RunNotes = string.Empty;
+                SaveNotesCommand.NotifyCanExecuteChanged();
+            }
             
             InferenceOutput = "";
         }
@@ -346,6 +352,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         Overlay.ApplyResult(report, Cube.Samples, Cube.Lines);
         ActiveRun = summary;
+        RunNotes = report.Notes;
+        SaveNotesCommand.NotifyCanExecuteChanged();
         InferenceOutput = $"Loaded report from {summary.CompletedAt:yyyy-MM-dd HH:mm} ({summary.ModelDisplayName})";
     }
 
@@ -372,6 +380,25 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
     }
 
+
+    [RelayCommand]
+    private void ToggleNotes() => ShowNotes = !ShowNotes;
+
+    private bool CanSaveNotes() => InLibraryMode && ActiveRun != null;
+
+    [RelayCommand(CanExecute = nameof(CanSaveNotes))]
+    private async Task SaveNotes(CancellationToken ct)
+    {
+        if (ActiveRun == null) return;
+        try
+        {
+            await _libraryManager.UpdateRunNotesAsync(ImageNode.ImageId, ActiveRun.RunId, RunNotes, ct);
+        }
+        catch (Exception ex)
+        {
+            InferenceOutput = $"Failed to save notes: {ex.Message}";
+        }
+    }
 
     public void Dispose()
     {

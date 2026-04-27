@@ -82,6 +82,7 @@ public static class PdfReportExporter
                 Overlay1Threshold = options.Overlay1Threshold,
                 Overlay2Threshold = options.Overlay2Threshold,
                 OverlayOpacity = options.OverlayOpacity,
+                RunNotes = string.IsNullOrWhiteSpace(report.Notes) ? null : report.Notes,
             };
         }
         finally
@@ -122,6 +123,8 @@ public static class PdfReportExporter
                     col.Spacing(18);
                     col.Item().Element(c => MetadataSection(c, doc));
                     col.Item().Element(c => SummarySection(c, doc));
+                    if (!string.IsNullOrWhiteSpace(doc.RunNotes))
+                        col.Item().Element(c => NotesSection(c, doc));
                     col.Item().Element(c => ImagesSection(c, doc));
                 });
                 page.Footer().Element(Footer);
@@ -218,7 +221,23 @@ public static class PdfReportExporter
         });
     }
 
-    // Images =========================================================================
+    // ── Notes ────────────────────────────────────────────────────────────────
+
+    private static void NotesSection(IContainer container, PdfReportDocument doc)
+    {
+        container.Column(col =>
+        {
+            col.Item().Text("Notes").SemiBold().FontSize(11);
+            col.Item().PaddingTop(6)
+                .Border(1).BorderColor(ColorBorder)
+                .Background(ColorSurface)
+                .PaddingHorizontal(14).PaddingVertical(10)
+                .Text(doc.RunNotes!.TrimEnd())
+                .FontSize(10).FontColor("#2D3748");
+        });
+    }
+
+    // ── Images ───────────────────────────────────────────────────────────────
 
     private static void ImagesSection(IContainer container, PdfReportDocument doc)
     {

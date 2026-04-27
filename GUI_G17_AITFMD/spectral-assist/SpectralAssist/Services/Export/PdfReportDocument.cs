@@ -23,4 +23,5 @@ public sealed class PdfReportDocument
     public required float Overlay1Threshold { get; init; }
     public required float Overlay2Threshold { get; init; }
 
+    public string? RunNotes { get; init; }
 }
