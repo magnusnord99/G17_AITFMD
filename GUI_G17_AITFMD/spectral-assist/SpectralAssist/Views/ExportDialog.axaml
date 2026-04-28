@@ -10,34 +10,24 @@
         WindowStartupLocation="CenterOwner"
         Background="#1E1E1E">
     
-    <Design.DataContext>
-        <vm:ExportDialogViewModel />
-    </Design.DataContext>
-
-
     <Border Padding="20">
         <StackPanel Spacing="16">
             
-            <!-- Intro / Explanation -->
+            <!-- Info -->
             <StackPanel Spacing="6">
-                <TextBlock Text="Report Image Overview"
-                           Foreground="#CCCCCC"
-                           FontSize="13"
-                           FontWeight="SemiBold" />
-
                 <TextBlock Text="The exported PDF will include four images:"
                            Foreground="#888888"
                            FontSize="11" />
 
                 <StackPanel Margin="0,4,0,0" Spacing="2">
                     <TextBlock Text="• Original RGB image"
-                               Foreground="#666666" FontSize="10" />
+                               Foreground="#666666" FontSize="11" />
                     <TextBlock Text="• Full overlay (0% threshold)"
-                               Foreground="#666666" FontSize="10" />
+                               Foreground="#666666" FontSize="11" />
                     <TextBlock Text="• Overlay using threshold 1"
-                               Foreground="#666666" FontSize="10" />
+                               Foreground="#666666" FontSize="11" />
                     <TextBlock Text="• Overlay using threshold 2"
-                               Foreground="#666666" FontSize="10" />
+                               Foreground="#666666" FontSize="11" />
                 </StackPanel>
             </StackPanel>
             
@@ -69,7 +59,7 @@
             <!-- Threshold 1 -->
             <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Classification threshold for overlay 2"
+                    <TextBlock Text="Overlay threshold 1"
                                Foreground="#888888" FontSize="11" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="1"
                                Text="{Binding Overlay1Threshold, StringFormat='{}{0:P0}'}"
@@ -82,7 +72,7 @@
             <!-- Threshold 2 -->
             <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Classification threshold for fourth image"
+                    <TextBlock Text="Overlay threshold 2"
                                Foreground="#888888" FontSize="11" FontWeight="SemiBold" />
                     <TextBlock Grid.Column="1"
                                Text="{Binding Overlay2Threshold, StringFormat='{}{0:P0}'}"
@@ -110,7 +100,6 @@
                         Padding="12,6"
                         CornerRadius="4" />
             </StackPanel>
-
         </StackPanel>
     </Border>
 </Window>
