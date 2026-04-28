@@ -234,7 +234,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         {
             var progress = new Progress<string>(s => { InferenceOutput = s; });
 
-            // Perform preprocessing if fresh session or different modelPackage
+            // Preprocess (cache invalidation by package change)
             if (_cachedPreprocessing == null || _lastPackage != package)
             {
                 InferenceOutput = "Performing preprocessing...";
@@ -244,16 +244,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
             }
 
-            // Perform inference on preprocessed cube
+            // Perform Inference
             var runResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, package, progress, ct);
-            InferenceOutput = "";
-
+            
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
-
             var summary = await TryAutoSaveRunAsync(runResult, ct);
             if (summary != null)
                 ActiveRun = summary;
+            
+            InferenceOutput = "";
         }
         catch (OperationCanceledException)
         {

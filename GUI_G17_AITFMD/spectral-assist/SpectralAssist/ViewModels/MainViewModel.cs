@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
-using SpectralAssist.Services.Library;
 
 namespace SpectralAssist.ViewModels;
 
@@ -14,10 +13,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly LibraryViewModel _libraryView;
     private readonly ModelsViewModel _modelsView;
     private readonly Func<ImageNode, ImageViewModel> _imageVmFactory;
-    private ImageViewModel? _imageView;
-
+    
     public MainViewModel(
-        LibraryManager libraryManager,
         ModelPackageManager modelManager,
         SessionService session,
         LibraryViewModel libraryView,
@@ -32,44 +29,74 @@ public partial class MainViewModel : ViewModelBase
 
         _libraryView.ImageSelected += OpenImageFromLibrary;
     }
-    
+
     // --- Observable States --- //
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImageView))]
+    [NotifyPropertyChangedFor(nameof(HasOpenImage))]
+    [NotifyPropertyChangedFor(nameof(OpenImageTitle))]
+    [NotifyPropertyChangedFor(nameof(OpenImageSubtitle))]
+    private ImageViewModel? _openImage;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOnImageView))]
+    [NotifyPropertyChangedFor(nameof(IsOnHome))]
+    [NotifyPropertyChangedFor(nameof(IsOnLibrary))]
+    [NotifyPropertyChangedFor(nameof(IsOnModels))]
     private ViewModelBase _currentView = new HomeViewModel();
-    
+
+    public bool HasOpenImage => OpenImage != null;
+    public string OpenImageTitle => OpenImage?.ImageNode.SceneFileName ?? "";
+    public string OpenImageSubtitle => OpenImage?.ImageNode.CurrentRelPath ?? "";
+
+    public bool IsOnImageView => CurrentView is ImageViewModel;
+    public bool IsOnHome => CurrentView is HomeViewModel;
+    public bool IsOnLibrary => CurrentView is LibraryViewModel;
+    public bool IsOnModels => CurrentView is ModelsViewModel;
+
     public SessionService Session { get; }
     public ObservableCollection<ModelManifest> AvailableModels => _modelManager.AvailableModels;
-    public bool HasImageView => _imageView != null;
-    public bool IsOnImageView => CurrentView is ImageViewModel;
-    
+
     // --- Navigation --- //
     [RelayCommand]
-    private void NavigateToHome() => CurrentView = (ViewModelBase?)_imageView ?? new HomeViewModel();
+    private void NavigateToHome() => CurrentView = new HomeViewModel();
+    
+    [RelayCommand]
+    private void NavigateToLibrary() => CurrentView = _libraryView;
 
     [RelayCommand]
     private void NavigateToModels() => CurrentView = _modelsView;
-
-    [RelayCommand]
-    private void NavigateToLibrary() =>CurrentView = _libraryView;
     
     [RelayCommand]
-    public void OpenImage(string filePath)
+    private void NavigateToOpenImage()
     {
-        _imageView?.Dispose();
+        if (OpenImage != null) CurrentView = OpenImage;
+    }
+
+    [RelayCommand]
+    public void OpenImageFromPath(string filePath)
+    {
+        OpenImage?.Dispose();
         var transientNode = ImageNode.CreateTransient(filePath);
-        _imageView = _imageVmFactory(transientNode);
+        OpenImage = _imageVmFactory(transientNode);
         Session.ActiveImageId = transientNode.ImageId;
-        CurrentView = _imageView;
+        CurrentView = OpenImage;
+    }
+    
+    [RelayCommand]
+    private void CloseOpenImage()
+    {
+        OpenImage?.Dispose();
+        OpenImage = null;
+        Session.ActiveImageId = null;
+        if (CurrentView is ImageViewModel) CurrentView = new HomeViewModel();
     }
 
     private void OpenImageFromLibrary(ImageNode imageNode)
     {
-        _imageView?.Dispose();
-        _imageView = _imageVmFactory(imageNode);
+        OpenImage?.Dispose();
+        OpenImage = _imageVmFactory(imageNode);
         Session.ActiveImageId = imageNode.ImageId;
-        CurrentView = _imageView;
+        CurrentView = OpenImage;
     }
 
 

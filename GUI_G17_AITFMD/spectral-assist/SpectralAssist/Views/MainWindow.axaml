@@ -10,8 +10,6 @@
         Title="SpectralAssist">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-        to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainViewModel />
     </Design.DataContext>
 
@@ -32,7 +30,7 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal"
                                 HorizontalAlignment="Left"
                                 Spacing="4">
-                        
+
                         <!-- App Logo -->
                         <TextBlock Text="SpectralAssist"
                                    FontSize="13"
@@ -43,9 +41,10 @@
 
                         <Border Width="1" Background="#2D2D2D" Margin="0,0,0,4" />
 
-                        <!-- Navigational -->
+                        <!-- Image Navigation -->
                         <Button Content="Home"
                                 Command="{Binding NavigateToHomeCommand}"
+                                IsEnabled="{Binding !IsOnHome}"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
                                 Padding="8,6"
@@ -53,6 +52,7 @@
 
                         <Button Content="Library"
                                 Command="{Binding NavigateToLibraryCommand}"
+                                IsEnabled="{Binding !IsOnLibrary}"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
                                 Padding="8,6"
@@ -60,6 +60,7 @@
 
                         <Button Content="Models"
                                 Command="{Binding NavigateToModelsCommand}"
+                                IsEnabled="{Binding !IsOnModels}"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
                                 Padding="8,6"
@@ -75,9 +76,33 @@
                                 CornerRadius="4" />
                     </StackPanel>
 
-                    <!-- Middle Spacer-->
-                    <TextBlock Grid.Column="1" />
-                    
+                    <!-- Middle Section: Open Image Tab-->
+                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto"
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Center"
+                          IsVisible="{Binding HasOpenImage}"
+                          Background="Transparent">
+
+                        <Button Grid.Column="0" Content="{Binding OpenImageSubtitle}"
+                                Command="{Binding NavigateToOpenImageCommand}"
+                                IsEnabled="{Binding !IsOnImageView}"
+                                Background="Transparent"
+                                Foreground="#AAAAAA"
+                                Padding="8, 6, 28,6"
+                                CornerRadius="4" />
+
+                        <Button Grid.Column="0"
+                                Content="✕"
+                                Background="Transparent"
+                                Foreground="White"
+                                Padding="2"
+                                Margin="0,0,6,0"
+                                Command="{Binding CloseOpenImageCommand}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                CornerRadius="2" />
+                    </Grid>
+
                     <!-- Right Section -->
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
