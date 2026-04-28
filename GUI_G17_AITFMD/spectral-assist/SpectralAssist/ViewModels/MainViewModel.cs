@@ -10,7 +10,6 @@ namespace SpectralAssist.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly LibraryManager _libraryManager;
     private readonly ModelPackageManager _modelManager;
     private readonly LibraryViewModel _libraryView;
     private readonly ModelsViewModel _modelsView;
@@ -25,7 +24,6 @@ public partial class MainViewModel : ViewModelBase
         ModelsViewModel modelsView,
         Func<ImageNode, ImageViewModel> imageVmFactory)
     {
-        _libraryManager = libraryManager;
         _modelManager = modelManager;
         Session = session;
         _libraryView = libraryView;
@@ -91,7 +89,6 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public MainViewModel()
     {
-        _libraryManager = null!;
         _modelManager = new ModelPackageManager();
         Session = new SessionService();
         _libraryView = null!;

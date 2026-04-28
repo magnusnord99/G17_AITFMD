@@ -13,7 +13,7 @@ public class ClassificationReport
     // Run identity
     public string RunId { get; init; } = string.Empty;
     public string ImageId { get; init; } = string.Empty;
-    public DateTime DatePerformed { get; init; }
+    public DateTime CompletedAt { get; init; }
 
     // Image and Patch geometry
     public int ImageWidth { get; init; }

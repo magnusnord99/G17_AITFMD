@@ -239,7 +239,7 @@
 
                                                 <!-- Date -->
                                                 <TextBlock
-                                                    Text="{Binding DatePerformed, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                    Text="{Binding CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
                                                     FontSize="10"
                                                     Foreground="#888" />
 

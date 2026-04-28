@@ -2,13 +2,13 @@ using System;
 
 namespace SpectralAssist.Services.Export;
 
-/// <summary>Input payload for <see cref="PdfReportService"/>.</summary>
+/// <summary>Input payload for <see cref="PdfReportExporter"/>.</summary>
 public sealed class PdfReportDocument
 {
     public required DateTimeOffset InferenceCompletedAt { get; init; }
     public required DateTimeOffset ExportedAt { get; init; }
-    public required string ManifestDisplayName { get; init; }
-    public required string ModelNameFromResult { get; init; }
+    public required string ModelDisplayName { get; init; }
+    public required string ModelName { get; init; }
     public required string AccuracyDisplay { get; init; }
     public required string ReportSummaryText { get; init; }
 

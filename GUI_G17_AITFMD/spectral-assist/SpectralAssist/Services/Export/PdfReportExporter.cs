@@ -1,23 +1,110 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Avalonia.Media.Imaging;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
+using SpectralAssist.Models;
+using SpectralAssist.Services.Rendering;
 
 namespace SpectralAssist.Services.Export;
 
-public sealed class PdfReportService
+public static class PdfReportExporter
 {
-    private const string ColorPrimary  = "#1E3A5F";
-    private const string ColorAccent   = "#3B82F6";
-    private const string ColorSurface  = "#F7FAFC";
-    private const string ColorBorder   = "#CBD5E0";
+    private const string ColorPrimary = "#1E3A5F";
+    private const string ColorAccent = "#3B82F6";
+    private const string ColorSurface = "#F7FAFC";
+    private const string ColorBorder = "#CBD5E0";
     private const string ColorTextMuted = "#4A5568";
 
-    public PdfReportService()
+    static PdfReportExporter()
     {
         QuestPDF.Settings.License = LicenseType.Community;
     }
+    
+    /// <summary>
+    /// Generates a complete PDF report for the given inference result and
+    /// writes it directly to the provided <paramref name="output"/> stream.
+    /// </summary>
+    /// <param name="report">The classification report containing model output and metadata</param>
+    /// <param name="syntheticRgb">A synthetic RGB bitmap generated from the cube.</param>
+    /// <param name="heatmap">A sequence of intensity values (0-1) used to generate the heatmap.</param>
+    /// <param name="options">Selected export settings controlling content.</param>
+    /// <param name="output">The destination stream to write the generated PDF to.</param>
+    public static void Export(
+        ClassificationReport report,
+        Bitmap syntheticRgb,
+        float[] heatmap,
+        ExportOptions options,
+        Stream output)
+    {
+        var document = BuildDocument(report, syntheticRgb, heatmap, options);
+        Write(output, document);
+    }
 
-    public void Write(Stream output, PdfReportDocument doc)
+    private static PdfReportDocument BuildDocument(ClassificationReport report, Bitmap syntheticRgb, float[] heatmap,
+        ExportOptions options)
+    {
+        var imageWidth = report.ImageWidth;
+        var imageHeight = report.ImageHeight;
+        var colorMap = ColorMaps.All.GetValueOrDefault(options.ColorMapName, ColorMaps.All.Values.First());
+        var accuracy = report.ModelTraining.Metrics.Accuracy;
+        var accDisplay = accuracy?.ToString("P1") ?? "—";
+        
+        Bitmap? c0 = null, c1 = null, c2 = null;
+        try
+        {
+            using var ol0 = HeatmapRenderer.RenderHeatmap(heatmap, imageWidth, imageHeight, colorMap, 0f);
+            using var ol1 =
+                HeatmapRenderer.RenderHeatmap(heatmap, imageWidth, imageHeight, colorMap, options.Overlay1Threshold);
+            using var ol2 =
+                HeatmapRenderer.RenderHeatmap(heatmap, imageWidth, imageHeight, colorMap, options.Overlay2Threshold);
+
+            c0 = RgbOverlayComposer.Compose(syntheticRgb, ol0, options.Opacity);
+            c1 = RgbOverlayComposer.Compose(syntheticRgb, ol1, options.Opacity);
+            c2 = RgbOverlayComposer.Compose(syntheticRgb, ol2, options.Opacity);
+
+            return new PdfReportDocument
+            {
+                InferenceCompletedAt = new DateTimeOffset(report.CompletedAt, TimeSpan.Zero),
+                ExportedAt = DateTimeOffset.Now,
+                ModelDisplayName = report.ModelDisplayName,
+                ModelName = report.ModelMetadata.Name,
+                AccuracyDisplay = accDisplay,
+                ReportSummaryText = ClassificationReportMetrics.BuildReportSummaryText(report),
+                SyntheticRgbPng = EncodeForPdf(syntheticRgb),
+                Overlay0Png = EncodeForPdf(c0),
+                Overlay50Png = EncodeForPdf(c1),
+                Overlay80Png = EncodeForPdf(c2),
+                Overlay1Threshold = options.Overlay1Threshold,
+                Overlay2Threshold = options.Overlay2Threshold,
+                OverlayOpacity = options.Opacity,
+            };
+        }
+        finally
+        {
+            c0?.Dispose();
+            c1?.Dispose();
+            c2?.Dispose();
+        }
+    }
+    
+    private static byte[] EncodeForPdf(Bitmap original)
+    {
+        var scaled = BitmapExportHelper.MaybeDownscale(original);
+        try
+        {
+            return BitmapExportHelper.ToPngBytes(scaled);
+        }
+        finally
+        {
+            if (!ReferenceEquals(scaled, original))
+                scaled.Dispose();
+        }
+    }
+    
+    private static void Write(Stream output, PdfReportDocument doc)
     {
         Document.Create(container =>
         {
@@ -86,13 +173,13 @@ public sealed class PdfReportService
                     cols.RelativeColumn();
                 });
 
-                MetaRow(table, "Package",              doc.ManifestDisplayName, shaded: false);
-                MetaRow(table, "Model",                doc.ModelNameFromResult,  shaded: true);
-                MetaRow(table, "Validation accuracy",  doc.AccuracyDisplay,      shaded: false);
+                MetaRow(table, "Package", doc.ModelDisplayName, shaded: false);
+                MetaRow(table, "Model", doc.ModelName, shaded: true);
+                MetaRow(table, "Validation accuracy", doc.AccuracyDisplay, shaded: false);
                 MetaRow(table, "Inference completed",
                     doc.InferenceCompletedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"), shaded: true);
                 MetaRow(table, "Report exported",
-                    doc.ExportedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"),           shaded: false);
+                    doc.ExportedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"), shaded: false);
             });
         });
     }
@@ -146,11 +233,16 @@ public sealed class PdfReportService
 
                 table.Cell().Row(1).Column(1).Element(c => Figure(c, "Synthetic RGB", doc.SyntheticRgbPng));
                 table.Cell().Row(1).Column(2); // gap
-                table.Cell().Row(1).Column(3).Element(c => Figure(c, $"Overlay — threshold 0 %, opacity {doc.OverlayOpacity:P0}", doc.Overlay0Png));
+                table.Cell().Row(1).Column(3).Element(c =>
+                    Figure(c, $"Overlay — threshold 0 %, opacity {doc.OverlayOpacity:P0}", doc.Overlay0Png));
 
-                table.Cell().Row(2).Column(1).PaddingTop(10).Element(c => Figure(c, $"Overlay — threshold {doc.Overlay1Threshold:P0}, opacity {doc.OverlayOpacity:P0}", doc.Overlay50Png));
+                table.Cell().Row(2).Column(1).PaddingTop(10).Element(c => Figure(c,
+                    $"Overlay — threshold {doc.Overlay1Threshold:P0}, opacity {doc.OverlayOpacity:P0}",
+                    doc.Overlay50Png));
                 table.Cell().Row(2).Column(2); // gap
-                table.Cell().Row(2).Column(3).PaddingTop(10).Element(c => Figure(c, $"Overlay — threshold {doc.Overlay2Threshold:P0}, opacity {doc.OverlayOpacity:P0}", doc.Overlay80Png));
+                table.Cell().Row(2).Column(3).PaddingTop(10).Element(c => Figure(c,
+                    $"Overlay — threshold {doc.Overlay2Threshold:P0}, opacity {doc.OverlayOpacity:P0}",
+                    doc.Overlay80Png));
             });
         });
     }

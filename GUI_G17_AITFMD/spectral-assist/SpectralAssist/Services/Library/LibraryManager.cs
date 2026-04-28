@@ -119,7 +119,7 @@ public class LibraryManager
         {
             RunId = runId,
             ImageId = imageId,
-            DatePerformed = report.DatePerformed == default ? DateTime.UtcNow : report.DatePerformed,
+            CompletedAt = report.CompletedAt == default ? DateTime.UtcNow : report.CompletedAt,
 
             ImageWidth = report.ImageWidth,
             ImageHeight = report.ImageHeight,
@@ -152,7 +152,7 @@ public class LibraryManager
         {
             RunId = runId,
             ModelDisplayName = toSave.ModelDisplayName,
-            DatePerformed = toSave.DatePerformed,
+            CompletedAt = toSave.CompletedAt,
             PositiveClassName = positiveName,
             PositiveClassPercentAbove50 = pct50,
             PositiveClassPercentAbove80 = pct80,
@@ -166,7 +166,7 @@ public class LibraryManager
             {
                 image.Runs.RemoveAll(r => r.RunId == runId);
                 image.Runs.Add(summary);
-                image.Runs.Sort((a, b) => b.DatePerformed.CompareTo(a.DatePerformed));
+                image.Runs.Sort((a, b) => b.CompletedAt.CompareTo(a.CompletedAt));
                 ImageUpdated?.Invoke(image);
             }
 

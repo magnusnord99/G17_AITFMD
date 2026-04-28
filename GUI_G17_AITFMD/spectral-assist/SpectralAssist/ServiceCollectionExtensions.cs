@@ -22,7 +22,6 @@ public static class ServiceCollectionExtensions
 
         collection.AddSingleton<ModelPackageManager>();
         collection.AddSingleton<LibraryManager>();
-        collection.AddSingleton<PdfReportService>();
 
         // ViewModels
         collection.AddSingleton<MainViewModel>();
@@ -32,9 +31,8 @@ public static class ServiceCollectionExtensions
         // ImageViewModel Factory
         collection.AddSingleton<Func<ImageNode, ImageViewModel>>(sp => (imageNode) =>
             new ImageViewModel(
-                imageNode,
-                sp.GetRequiredService<InferenceService>(),
-                sp.GetRequiredService<LibraryManager>(),
-                sp.GetRequiredService<PdfReportService>()));
+                imageNode, 
+                sp.GetRequiredService<InferenceService>(), 
+                sp.GetRequiredService<LibraryManager>()));
     }
 }

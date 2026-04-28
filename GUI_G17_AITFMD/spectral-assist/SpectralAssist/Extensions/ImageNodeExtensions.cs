@@ -11,7 +11,7 @@ public static class ImageNodeExtensions
             image.Runs.Count == 0 ? null : image.Runs.MaxBy(r => r.PositiveClassPercentAbove50);
 
         public RunSummary? LatestRun() =>
-            image.Runs.Count == 0 ? null : image.Runs.MaxBy(r => r.DatePerformed);
+            image.Runs.Count == 0 ? null : image.Runs.MaxBy(r => r.CompletedAt);
 
         public bool IsAnalyzed() => image.Runs.Count > 0;
     }

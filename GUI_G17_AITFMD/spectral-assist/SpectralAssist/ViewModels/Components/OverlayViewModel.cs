@@ -12,7 +12,7 @@ namespace SpectralAssist.ViewModels.Components;
 /// </summary>
 public partial class OverlayViewModel : ObservableObject
 {
-    private float[]? _cachedHeatmap;
+    public float[]? CachedHeatmap;
     private int _heatmapWidth;
     private int _heatmapHeight;
 
@@ -38,7 +38,7 @@ public partial class OverlayViewModel : ObservableObject
         ClassificationResult = report;
         _heatmapWidth = imageWidth;
         _heatmapHeight = imageHeight;
-        _cachedHeatmap = HeatmapRenderer.BuildHeatmap(report, _heatmapWidth, _heatmapHeight);
+        CachedHeatmap = HeatmapRenderer.BuildHeatmap(report, _heatmapWidth, _heatmapHeight);
         
         ShowOverlay = true;
         RebuildOverlay();
@@ -50,11 +50,11 @@ public partial class OverlayViewModel : ObservableObject
     /// </summary>
     private void RebuildOverlay()
     {
-        if (_cachedHeatmap == null || ClassificationResult == null) return;
+        if (CachedHeatmap == null || ClassificationResult == null) return;
 
         var colorMap = ColorMaps.All.GetValueOrDefault(SelectedColorMapName, ColorMaps.GreenRed);
         OverlayBitmap = HeatmapRenderer.RenderHeatmap(
-            _cachedHeatmap,
+            CachedHeatmap,
             _heatmapWidth,
             _heatmapHeight,
             colorMap,
@@ -69,7 +69,7 @@ public partial class OverlayViewModel : ObservableObject
     /// </summary>
     public void Clear()
     {
-        _cachedHeatmap = null;
+        CachedHeatmap = null;
         ClassificationResult = null;
         OverlayBitmap = null;
         ColorBarBitmap = null;

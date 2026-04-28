@@ -57,7 +57,7 @@ public class Onnx3DCnnClassifier : IDisposable
         
         return Task.FromResult(new ClassificationReport
         {
-            DatePerformed = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow,
             Predictions = predictions,
             ImageWidth = cube.Samples,
             ImageHeight = cube.Lines,
