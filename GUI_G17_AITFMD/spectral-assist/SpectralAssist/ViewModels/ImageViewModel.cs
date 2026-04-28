@@ -393,6 +393,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         try
         {
             await _libraryManager.UpdateRunNotesAsync(ImageNode.ImageId, ActiveRun.RunId, RunNotes, ct);
+            if (Overlay.ClassificationResult != null)
+                Overlay.ClassificationResult.Notes = RunNotes;
         }
         catch (Exception ex)
         {
