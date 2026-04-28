@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using SpectralAssist.Extensions;
 using SpectralAssist.Models;
 
 namespace SpectralAssist.Services.Library;
@@ -87,7 +88,7 @@ public class LibraryManager
     /// </summary>
     /// <param name="imageId">The ID of the <c>ImageNode</c> to find.</param>
     /// <returns>Returns found <c>ImageNode</c> if found; otherwise <c>null</c></returns>
-    public ImageNode? FindImage(string imageId)
+    private ImageNode? FindImage(string imageId)
     {
         if (Manifest == null) return null;
         return LibraryScanner.FlattenImages(Manifest.Folders)

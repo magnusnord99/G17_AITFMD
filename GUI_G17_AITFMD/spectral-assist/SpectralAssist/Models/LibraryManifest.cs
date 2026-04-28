@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Text.Json.Serialization;
 
 namespace SpectralAssist.Models;
 
@@ -24,7 +27,25 @@ public class ImageNode
     public string SceneFileName { get; set; } = string.Empty;
     public bool HasCalibration { get; set; }
     public string Notes { get; set; } = string.Empty;
-    public List<RunSummary> Runs { get; set; } = [];
+    public ObservableCollection<RunSummary> Runs { get; set; } = [];
+    
+    [JsonIgnore] public string AbsolutePath { get; set; } = string.Empty;
+    public bool IsInLibrary => !string.IsNullOrEmpty(ImageId);
+
+    /// <summary>
+    /// Creates a temporary (transient) ImageNode for single-file mode.
+    /// Used for single image node (meaning no library or persistence).
+    /// </summary>
+    /// <param name="absPath">the absolute path to the image's header file (.hdr)</param>
+    /// <returns>A transient <c>ImageNode</c> with empty ImageId</returns>
+    public static ImageNode CreateTransient(string absPath) => new()
+    {
+        ImageId = string.Empty,
+        CurrentRelPath = string.Empty,
+        SceneFileName = Path.GetFileName(absPath),
+        HasCalibration = false,
+        AbsolutePath = absPath,
+    };
 }
 
 public class RunSummary

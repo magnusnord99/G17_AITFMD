@@ -183,6 +183,7 @@ public class LibraryScanner
                 CurrentRelPath = imgRelPath,
                 SceneFileName = Path.GetFileName(hdrPath),
                 HasCalibration = hasCalibration,
+                AbsolutePath = hdrPath,
                 Notes = prior?.Notes ?? string.Empty,
                 Runs = prior?.Runs ?? []
             });

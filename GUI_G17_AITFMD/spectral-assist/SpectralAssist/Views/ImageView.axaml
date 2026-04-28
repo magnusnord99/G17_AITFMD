@@ -196,9 +196,9 @@
                                        Foreground="#666"
                                        TextWrapping="Wrap"
                                        Margin="12,4,12,0"
-                                       IsVisible="{Binding !Reports.Count}" />
+                                       IsVisible="{Binding ImageNode.Runs}" />
 
-                            <ItemsControl ItemsSource="{Binding Reports}">
+                            <ItemsControl ItemsSource="{Binding ImageNode.Runs}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="models:RunSummary">
                                         <Border Margin="8,3"
