@@ -26,7 +26,8 @@ public partial class MainViewModel : ViewModelBase
         _libraryView = libraryView;
         _modelsView = modelsView;
         _imageVmFactory = imageVmFactory;
-
+        
+        _currentView = libraryView;
         _libraryView.ImageSelected += OpenImageFromLibrary;
     }
 
@@ -39,17 +40,15 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOnImageView))]
-    [NotifyPropertyChangedFor(nameof(IsOnHome))]
     [NotifyPropertyChangedFor(nameof(IsOnLibrary))]
     [NotifyPropertyChangedFor(nameof(IsOnModels))]
-    private ViewModelBase _currentView = new HomeViewModel();
+    private ViewModelBase _currentView;
 
     public bool HasOpenImage => OpenImage != null;
     public string OpenImageTitle => OpenImage?.ImageNode.SceneFileName ?? "";
     public string OpenImageSubtitle => OpenImage?.ImageNode.CurrentRelPath ?? "";
 
     public bool IsOnImageView => CurrentView is ImageViewModel;
-    public bool IsOnHome => CurrentView is HomeViewModel;
     public bool IsOnLibrary => CurrentView is LibraryViewModel;
     public bool IsOnModels => CurrentView is ModelsViewModel;
 
@@ -57,9 +56,6 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ModelManifest> AvailableModels => _modelManager.AvailableModels;
 
     // --- Navigation --- //
-    [RelayCommand]
-    private void NavigateToHome() => CurrentView = new HomeViewModel();
-    
     [RelayCommand]
     private void NavigateToLibrary() => CurrentView = _libraryView;
 
@@ -88,7 +84,6 @@ public partial class MainViewModel : ViewModelBase
         OpenImage?.Dispose();
         OpenImage = null;
         Session.ActiveImageId = null;
-        if (CurrentView is ImageViewModel) CurrentView = new HomeViewModel();
     }
 
     private void OpenImageFromLibrary(ImageNode imageNode)
@@ -120,6 +115,7 @@ public partial class MainViewModel : ViewModelBase
         Session = new SessionService();
         _libraryView = null!;
         _modelsView = null!;
+        _currentView = null!;
         _imageVmFactory = (_) => null!;
     }
 }

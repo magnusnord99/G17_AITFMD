@@ -42,14 +42,13 @@
                         <Border Width="1" Background="#2D2D2D" Margin="0,0,0,4" />
 
                         <!-- Image Navigation -->
-                        <Button Content="Home"
-                                Command="{Binding NavigateToHomeCommand}"
-                                IsEnabled="{Binding !IsOnHome}"
+                        <Button Content="Open HSI"
+                                Click="OpenHSIButton_Clicked"
                                 Background="Transparent"
                                 Foreground="#AAAAAA"
                                 Padding="8,6"
                                 CornerRadius="4" />
-
+                        
                         <Button Content="Library"
                                 Command="{Binding NavigateToLibraryCommand}"
                                 IsEnabled="{Binding !IsOnLibrary}"
@@ -67,13 +66,7 @@
                                 CornerRadius="4" />
 
                         <Border Width="1" Background="#2D2D2D" Margin="0,8,0,4" />
-
-                        <Button Content="Open HSI"
-                                Click="OpenHSIButton_Clicked"
-                                Background="Transparent"
-                                Foreground="#AAAAAA"
-                                Padding="8,6"
-                                CornerRadius="4" />
+                        
                     </StackPanel>
 
                     <!-- Middle Section: Open Image Tab-->
