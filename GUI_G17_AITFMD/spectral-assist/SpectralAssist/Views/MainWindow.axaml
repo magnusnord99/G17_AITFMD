@@ -69,14 +69,14 @@
                         
                     </StackPanel>
 
-                    <!-- Middle Section: Open Image Tab-->
+                    <!-- Middle Section: Open Image Tab -->
                     <Grid Grid.Column="1" ColumnDefinitions="*,Auto"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Center"
                           IsVisible="{Binding HasOpenImage}"
                           Background="Transparent">
 
-                        <Button Grid.Column="0" Content="{Binding OpenImageSubtitle}"
+                        <Button Grid.Column="0" Content="{Binding OpenImageDisplayName}"
                                 Command="{Binding NavigateToOpenImageCommand}"
                                 IsEnabled="{Binding !IsOnImageView}"
                                 Background="Transparent"

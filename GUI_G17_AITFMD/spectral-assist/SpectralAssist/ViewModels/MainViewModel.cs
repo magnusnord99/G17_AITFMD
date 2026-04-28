@@ -34,8 +34,7 @@ public partial class MainViewModel : ViewModelBase
     // --- Observable States --- //
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOpenImage))]
-    [NotifyPropertyChangedFor(nameof(OpenImageTitle))]
-    [NotifyPropertyChangedFor(nameof(OpenImageSubtitle))]
+    [NotifyPropertyChangedFor(nameof(OpenImageDisplayName))]
     private ImageViewModel? _openImage;
 
     [ObservableProperty]
@@ -45,8 +44,7 @@ public partial class MainViewModel : ViewModelBase
     private ViewModelBase _currentView;
 
     public bool HasOpenImage => OpenImage != null;
-    public string OpenImageTitle => OpenImage?.ImageNode.SceneFileName ?? "";
-    public string OpenImageSubtitle => OpenImage?.ImageNode.CurrentRelPath ?? "";
+    public string OpenImageDisplayName => OpenImage?.ImageNode.CurrentRelPath ?? "";
 
     public bool IsOnImageView => CurrentView is ImageViewModel;
     public bool IsOnLibrary => CurrentView is LibraryViewModel;
@@ -84,6 +82,7 @@ public partial class MainViewModel : ViewModelBase
         OpenImage?.Dispose();
         OpenImage = null;
         Session.ActiveImageId = null;
+        NavigateToLibrary();
     }
 
     private void OpenImageFromLibrary(ImageNode imageNode)
