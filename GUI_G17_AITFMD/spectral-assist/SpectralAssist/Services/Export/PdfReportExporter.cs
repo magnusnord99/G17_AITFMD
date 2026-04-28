@@ -43,6 +43,8 @@ public static class PdfReportExporter
         Write(output, document);
     }
 
+    // Build and Write =========================================================================
+    
     private static PdfReportDocument BuildDocument(ClassificationReport report, Bitmap syntheticRgb, float[] heatmap,
         ExportOptions options)
     {
@@ -61,9 +63,9 @@ public static class PdfReportExporter
             using var ol2 =
                 HeatmapRenderer.RenderHeatmap(heatmap, imageWidth, imageHeight, colorMap, options.Overlay2Threshold);
 
-            c0 = RgbOverlayComposer.Compose(syntheticRgb, ol0, options.Opacity);
-            c1 = RgbOverlayComposer.Compose(syntheticRgb, ol1, options.Opacity);
-            c2 = RgbOverlayComposer.Compose(syntheticRgb, ol2, options.Opacity);
+            c0 = RgbOverlayComposer.Compose(syntheticRgb, ol0, options.OverlayOpacity);
+            c1 = RgbOverlayComposer.Compose(syntheticRgb, ol1, options.OverlayOpacity);
+            c2 = RgbOverlayComposer.Compose(syntheticRgb, ol2, options.OverlayOpacity);
 
             return new PdfReportDocument
             {
@@ -79,7 +81,7 @@ public static class PdfReportExporter
                 Overlay80Png = EncodeForPdf(c2),
                 Overlay1Threshold = options.Overlay1Threshold,
                 Overlay2Threshold = options.Overlay2Threshold,
-                OverlayOpacity = options.Opacity,
+                OverlayOpacity = options.OverlayOpacity,
             };
         }
         finally
@@ -126,9 +128,9 @@ public static class PdfReportExporter
             });
         }).GeneratePdf(output);
     }
-
-    // ── Header ──────────────────────────────────────────────────────────────
-
+    
+    // Header =========================================================================
+    
     private static void Header(IContainer container, PdfReportDocument doc)
     {
         container.Column(col =>
@@ -158,8 +160,8 @@ public static class PdfReportExporter
         });
     }
 
-    // ── Metadata ─────────────────────────────────────────────────────────────
-
+    // Metadata =========================================================================
+    
     private static void MetadataSection(IContainer container, PdfReportDocument doc)
     {
         container.Column(col =>
@@ -199,8 +201,9 @@ public static class PdfReportExporter
             .Text(value).SemiBold();
     }
 
-    // ── Summary ──────────────────────────────────────────────────────────────
-
+    
+    // Summary =========================================================================
+    
     private static void SummarySection(IContainer container, PdfReportDocument doc)
     {
         container.Column(col =>
@@ -215,7 +218,7 @@ public static class PdfReportExporter
         });
     }
 
-    // ── Images ───────────────────────────────────────────────────────────────
+    // Images =========================================================================
 
     private static void ImagesSection(IContainer container, PdfReportDocument doc)
     {
@@ -257,7 +260,8 @@ public static class PdfReportExporter
         });
     }
 
-    // ── Footer ───────────────────────────────────────────────────────────────
+
+    // Footer =========================================================================
 
     private static void Footer(IContainer container)
     {

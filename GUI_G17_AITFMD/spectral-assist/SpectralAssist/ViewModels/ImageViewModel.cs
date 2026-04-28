@@ -5,13 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Primitives;
+using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SpectralAssist.Extensions;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
 using SpectralAssist.Services.Export;
@@ -442,15 +441,17 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanExportPdf))]
     private async Task ExportPdfAsync()
     {
-        if (Cube == null || Overlay.ClassificationResult == null || Overlay.CachedHeatmap == null) 
-            return;
-
-        var ownerWindow = GetTopLevelAsWindow();
+        if (Cube == null || Overlay.ClassificationResult == null || Overlay.CachedHeatmap == null) return;
+        
+        var ownerWindow = Application.Current?.MainWindow();
         if (ownerWindow == null) return;
 
-        var optionsDialog = new ExportOptionsDialog();
-        await optionsDialog.ShowDialog(ownerWindow);
-        var options = optionsDialog.Result;
+        var defaults = ExportOptions.FromOverlay(
+            Overlay.SelectedColorMapName, (float)Overlay.OverlayOpacity, (float)Overlay.OverlayThreshold);
+
+        var dialog = new ExportDialog();
+        dialog.DataContext = new ExportDialogViewModel(dialog, defaults);
+        var options = await dialog.ShowDialog<ExportOptions?>(ownerWindow);
         if (options == null) return;
 
         var file = await ownerWindow.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -461,13 +462,13 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             FileTypeChoices = [new FilePickerFileType("PDF") { Patterns = ["*.pdf"] }]
         });
         if (file == null) return;
-        
+
         try
         {
             var report = Overlay.ClassificationResult;
             var heatmap = Overlay.CachedHeatmap;
             var rgb = GetCachedSyntheticRgb(Cube, SyntheticRgbParameters.HistologyBalanced);
-            
+
             StatusMessage = "Generating PDF...";
             var pdfBytes = await Task.Run(() =>
             {
@@ -485,17 +486,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             StatusMessage = $"PDF export failed: {ex.Message}";
         }
     }
-
-    private static Window? GetTopLevelAsWindow()
-    {
-        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
-            {
-                MainWindow: { } window
-            })
-            return window;
-        return null;
-    }
-
 
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ImageViewModel()
