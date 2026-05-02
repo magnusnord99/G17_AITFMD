@@ -46,7 +46,7 @@ source .venv/bin/activate   # macOS/Linux
 
 Uten aktivt `.venv` mangler ofte `numpy`, `scikit-image` osv., og stier til `src/` feiler.
 
-**3D-CNN → ONNX → SpectralAssist:** se [`docs/CNN3D_ONNX_WORKFLOW.md`](docs/CNN3D_ONNX_WORKFLOW.md) og `scripts/export_cnn3d_onnx.py`.
+**3D-CNN → ONNX → SpectralAssist:** se [`docs/CNN3D_ONNX_WORKFLOW.md`](docs/CNN3D_ONNX_WORKFLOW.md) og `scripts/export/export_cnn3d_onnx.py`.
 
 ## Notes
 

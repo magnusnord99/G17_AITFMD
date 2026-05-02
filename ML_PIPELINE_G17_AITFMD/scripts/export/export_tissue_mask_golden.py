@@ -6,7 +6,7 @@ Run from ML pipeline root with venv activated:
 
   cd ML_PIPELINE_G17_AITFMD
   source .venv/bin/activate
-  python scripts/export_tissue_mask_golden.py
+  python scripts/export/export_tissue_mask_golden.py
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 

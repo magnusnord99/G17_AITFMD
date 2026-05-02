@@ -1,10 +1,10 @@
 seed: 42
 
-model_config: "configs/models/baseline_3dcnn_1pool.yaml"
+model_config: "configs/models/baseline_3dcnn.yaml"
 
 data:
-  cube_manifest_csv: "data/interim/pca_manifest.csv"
-  cube_root: "data/processed_V2/pca16"
+  cube_manifest_csv: "data/interim/avg_baseline_manifest.csv"
+  cube_root: "data/processed_V2/avg16"
   mask_root: "data/interim/masks/final_mask"
   patch_h: 64
   patch_w: 64
@@ -34,15 +34,12 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 13
+  early_stopping_patience: 7
   mixed_precision: true
   save_best_only: true
 
 paths:
-  checkpoints_dir: "outputs/checkpoints"
-  logs_dir: "outputs/logs"
-  reports_dir: "outputs/reports"
-  plots_dir: "outputs/plots"
+  outputs_dir: "outputs"
 
 splits:
   train_ratio: 0.70

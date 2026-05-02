@@ -1,6 +1,6 @@
 seed: 42
 
-model_config: "configs/models/baseline_3dcnn.yaml"
+model_config: "configs/models/baseline_3dcnn_1pool.yaml"
 
 data:
   cube_manifest_csv: "data/interim/pca_manifest.csv"
@@ -39,10 +39,7 @@ trainer:
   save_best_only: true
 
 paths:
-  checkpoints_dir: "outputs/checkpoints"
-  logs_dir: "outputs/logs"
-  reports_dir: "outputs/reports"
-  plots_dir: "outputs/plots"
+  outputs_dir: "outputs"
 
 splits:
   train_ratio: 0.70

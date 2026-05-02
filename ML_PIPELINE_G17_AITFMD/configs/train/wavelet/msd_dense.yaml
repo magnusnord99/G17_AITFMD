@@ -1,10 +1,11 @@
+# Wavelet16 + MSD Dense 3D-CNN — samme data/split som configs/train/wavelet/resnet.yaml
 seed: 42
 
-model_config: "configs/models/baseline_3dcnn.yaml"
+model_config: "configs/models/msd_dense_3dcnn.yaml"
 
 data:
-  cube_manifest_csv: "data/interim/avg_baseline_manifest.csv"
-  cube_root: "data/processed_V2/avg16"
+  cube_manifest_csv: "data/interim/wavelet_manifest.csv"
+  cube_root: "data/processed_V2/wavelet16"
   mask_root: "data/interim/masks/final_mask"
   patch_h: 64
   patch_w: 64
@@ -34,15 +35,12 @@ loss:
 
 trainer:
   max_epochs: 50
-  early_stopping_patience: 7
+  early_stopping_patience: 13
   mixed_precision: true
   save_best_only: true
 
 paths:
-  checkpoints_dir: "outputs/checkpoints"
-  logs_dir: "outputs/logs"
-  reports_dir: "outputs/reports"
-  plots_dir: "outputs/plots"
+  outputs_dir: "outputs"
 
 splits:
   train_ratio: 0.70
