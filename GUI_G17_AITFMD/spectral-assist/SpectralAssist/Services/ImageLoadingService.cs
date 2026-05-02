@@ -13,7 +13,7 @@ public readonly struct ImageLoadResult
 {
     /// <summary>The loaded cube (calibrated if references were found, raw otherwise).</summary>
     public HsiCube Cube { get; init; }
-    
+
     /// <summary>Whether dark/white calibration was applied.</summary>
     public bool HasCalibration { get; init; }
 }
@@ -38,17 +38,20 @@ public class ImageLoadingService
         CancellationToken ct = default)
     {
         // Step 1: Parse header
-        progress?.Report(("Reading image data...", 0));
+        progress?.Report(("Reading header...", 0.0));
         var header = HsiHeaderParser.Parse(hdrPath);
-        progress?.Report(($"{header.Samples}x{header.Lines}x{header.Bands} bands, {header.Interleave.ToUpper()}", 0));
+        progress?.Report(($"{header.Samples}x{header.Lines}x{header.Bands} bands, {header.Interleave.ToUpper()}",
+            0.02));
 
         // Step 2: Load binary data
         var loadProgress = new Progress<(float percent, int band)>(p =>
-            progress?.Report(($"Loading image data... {p.percent:P0}", p.percent)));
+            progress?.Report(($"Loading data... {p.percent:P0}", 0.02 + p.percent * 0.48)));
         var scene = await HsiCubeLoader.LoadAsync(header, loadProgress, ct);
 
         // Step 3: Calibrate if dark/white references exist in same folder
-        var calibrated = await HsiCalibration.TryCalibrateAsync(hdrPath, scene, progress, ct);
+        var calibrationProgress = new Progress<(float percent, int band)>(p =>
+            progress?.Report(($"Calibrating... {p.percent:P0}", 0.50 + p.percent * 1.0)));
+        var calibrated = await HsiCalibration.TryCalibrateAsync(hdrPath, scene, calibrationProgress, ct);
 
         if (calibrated == null)
             progress?.Report(("Calibration skipped (no dark/white in folder)...", 1));

@@ -47,13 +47,12 @@ public static class HsiCalibration
     /// </summary>
     public static async Task<HsiCube?> TryCalibrateAsync(
         string sceneHdrPath, HsiCube sceneCube,
-        IProgress<(string Status, double Progress)>? progress = null,
+        IProgress<(float Percent, int Band)>? progress = null,
         CancellationToken ct = default)
     {
         if (!TryFindReferenceHdrPaths(sceneHdrPath, out var darkPath, out var whitePath))
             return null;
-
-        progress?.Report(("Loading dark/white references...", 1));
+        
         var darkTask = HsiCubeLoader.LoadAsync(HsiHeaderParser.Parse(darkPath!), ct: ct);
         var whiteTask = HsiCubeLoader.LoadAsync(HsiHeaderParser.Parse(whitePath!), ct: ct);
         await Task.WhenAll(darkTask, whiteTask);
@@ -64,74 +63,10 @@ public static class HsiCalibration
         if (sceneCube.Bands != dark.Bands || sceneCube.Bands != white.Bands)
             throw new InvalidOperationException(
                 $"Band mismatch: scene {sceneCube.Bands}, dark {dark.Bands}, white {white.Bands}");
-
-        progress?.Report(("Calibration complete...", 1));
-        return ApplyReflectance(sceneCube, dark, white);
+        
+        return await Task.Run(() => ApplyReflectance(sceneCube, dark, white, progress), ct);
     }
-
-    /// <summary>
-    /// Applies reflectance calibration: (scene - dark) / (white - dark).
-    /// Supports both full-frame references (same dimensions as scene) and
-    /// single-line references (one row, broadcast across all lines.
-    /// </summary>
-    public static HsiCube ApplyReflectanceOld(HsiCube sceneCube, HsiCube darkCube, HsiCube whiteCube)
-    {
-        var header = sceneCube.Header;
-        var bands = header.Bands;
-        var samples = header.Samples;
-        var lines = header.Lines;
-        var pixels = lines * samples;
-        var lineRef = darkCube.Header.Lines != lines;
-
-        var result = new float[bands * pixels];
-
-        // Each band is calibrated independently
-        Parallel.For(0, bands, b =>
-        {
-            var sceneBand = sceneCube.GetBand(b);
-            var darkBand = darkCube.GetBand(b);
-            var whiteBand = whiteCube.GetBand(b);
-            var offset = b * pixels;
-
-            if (lineRef)
-            {
-                // Single-line reference: dark/white have one value per column (x).
-                // Precompute 1 / (white-dark) per column to avoid repeated division.
-                Span<float> invDenom = stackalloc float[samples];
-                Span<float> darkCol = stackalloc float[samples];
-                for (var x = 0; x < samples; x++)
-                {
-                    var d = whiteBand[x] - darkBand[x];
-                    invDenom[x] = d > 1f ? 1f / d : 0f;
-                    darkCol[x] = darkBand[x];
-                }
-
-                // Apply: reflectance = (scene - dark) * (1 / (white - dark))
-                for (var y = 0; y < lines; y++)
-                {
-                    var rowStart = y * samples;
-                    for (var x = 0; x < samples; x++)
-                        result[offset + rowStart + x] =
-                            (sceneBand[rowStart + x] - darkCol[x]) * invDenom[x];
-                }
-            }
-            else
-            {
-                // Full-frame reference: one dark/white value per pixel
-                // Apply: reflectance = (raw - dark) / (white - dark)
-                for (var i = 0; i < pixels; i++)
-                {
-                    var d = whiteBand[i] - darkBand[i];
-                    result[offset + i] = d > 1f
-                        ? (sceneBand[i] - darkBand[i]) / d
-                        : 0f;
-                }
-            }
-        });
-
-        return new HsiCube(header, result);
-    }
-
+    
     /// <summary>
     /// Applies reflectance calibration: (scene - dark) / (white - dark + eps).
     /// Matches Python <c>calibrate_cube</c> exactly (epsilon-based denominator).
@@ -139,7 +74,7 @@ public static class HsiCalibration
     /// single-line references (one row, broadcast across all lines).
     /// </summary>
     public static HsiCube ApplyReflectance(HsiCube sceneCube, HsiCube darkCube, HsiCube whiteCube,
-        float eps = 1e-8f)
+        IProgress<(float Percent, int Band)>? progress = null, float eps = 1e-8f)
     {
         var header = sceneCube.Header;
         var bands = header.Bands;
@@ -157,16 +92,20 @@ public static class HsiCalibration
             var darkBand = darkCube.GetBand(b);
             var whiteBand = whiteCube.GetBand(b);
             var offset = b * pixels;
+
+            var pixelsDone = 0;
+            
             if (lineRef)
             {
                 // Single-line reference: dark/white have one value per column (x).
-                // Precompute 1 / (white - dark + eps) per column to avoid repeated division.
                 Span<float> invDenom = stackalloc float[samples];
                 Span<float> darkCol = stackalloc float[samples];
                 for (var x = 0; x < samples; x++)
                 {
                     invDenom[x] = 1f / (whiteBand[x] - darkBand[x] + eps);
                     darkCol[x] = darkBand[x];
+                    pixelsDone++;
+                    progress?.Report((pixelsDone / pixels, 0));
                 }
 
                 for (var y = 0; y < lines; y++)
@@ -175,8 +114,12 @@ public static class HsiCalibration
                     for (var x = 0; x < samples; x++)
                         result[offset + rowStart + x] =
                             (sceneBand[rowStart + x] - darkCol[x]) * invDenom[x];
+                    pixelsDone++;
+                    progress?.Report((pixelsDone / pixels, 0));
+                    
                 }
             }
+            
             else
             {
                 // Full-frame reference: one dark/white value per pixel
@@ -184,6 +127,7 @@ public static class HsiCalibration
                 {
                     var denom = whiteBand[i] - darkBand[i] + eps;
                     result[offset + i] = (sceneBand[i] - darkBand[i]) / denom;
+                    progress?.Report((pixelsDone / pixels, 0));
                 }
             }
         });

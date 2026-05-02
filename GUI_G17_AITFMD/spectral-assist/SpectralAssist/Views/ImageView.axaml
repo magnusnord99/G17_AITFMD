@@ -45,236 +45,201 @@
         <Grid IsVisible="{Binding IsReady}"
               ColumnDefinitions="260,*">
 
-            <!-- LEFT: Runs panel -->
+            <!-- LEFT: Sidebar -->
+            
+            
             <Border Grid.Column="0"
-                    Background="#161616"
-                    BorderBrush="#2D2D2D"
-                    BorderThickness="0,0,1,0">
-                <DockPanel LastChildFill="True">
+        Background="#161616"
+        BorderBrush="#2D2D2D"
+        BorderThickness="0,0,1,0">
+    <DockPanel LastChildFill="True">
 
-                    <!-- Top Summary Block: Details -->
-                    <Border DockPanel.Dock="Top"
-                            Padding="12,10,12,6">
-                        <StackPanel Spacing="6"
-                                    IsVisible="{Binding Overlay.ClassificationResult,
-                                        Converter={x:Static ObjectConverters.IsNotNull}}">
+        <!-- TOP: Active run details (only shown when ActiveRun != null) -->
+        <Border DockPanel.Dock="Top"
+                Padding="14,12"
+                BorderBrush="#2D2D2D"
+                BorderThickness="0,0,0,1"
+                IsVisible="{Binding Overlay.ClassificationResult,
+                            Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Spacing="8" DataContext="{Binding Overlay.ClassificationResult}">
 
-                            <Grid ColumnDefinitions="Auto,*"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                                  Margin="0,2,0,0"
-                                  DataContext="{Binding Overlay.ClassificationResult}">
+                <!-- Header -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="ACTIVE RUN"
+                               FontSize="9"
+                               FontWeight="Bold"
+                               Foreground="#666"
+                               LetterSpacing="1" />
+                    <TextBlock Text="{Binding ModelMetadata.Name}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="#E0E0E0" />
+                    <TextBlock FontSize="10" Foreground="#888">
+                        <Run Text="v" /><Run Text="{Binding ModelMetadata.Version}" />
+                        <Run Text=" · " />
+                        <Run Text="{Binding CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+                        <Run Text=" · " />
+                        <Run Text="{Binding ExecutionProvider}" />
+                    </TextBlock>
+                </StackPanel>
 
-                                <TextBlock Text="Analysis Details"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"
-                                           Foreground="#CCCCCC" />
+                <!-- Accuracy badge -->
+                <TextBlock FontSize="11" Foreground="#CCCCCC"
+                           IsVisible="{Binding ModelTraining.Metrics.Accuracy,
+                                       Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Run Text="Validation accuracy: " Foreground="#888" />
+                    <Run Text="{Binding ModelTraining.Metrics.Accuracy, StringFormat='{}{0:P1}'}" />
+                </TextBlock>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0"
-                                           Text="Model:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,4" />
-                                <TextBlock Grid.Row="1" Grid.Column="1"
-                                           Text="{Binding ModelDisplayName}"
-                                           Foreground="#CCCCCC" FontSize="11"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,4" />
+                <Border Height="1" Background="#2D2D2D" Margin="0,2" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0"
-                                           Text="Classes:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,4" />
-                                <TextBlock Grid.Row="2" Grid.Column="1"
-                                           Text="{Binding Classes.Count, StringFormat='{}{0} classes'}"
-                                           Foreground="#CCCCCC" FontSize="11"
-                                           Margin="0,0,0,4" />
+                <!-- Patch geometry -->
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
 
-                                <TextBlock Grid.Row="3" Grid.Column="0"
-                                           Text="Evaluated:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,4" />
-                                <TextBlock Grid.Row="3" Grid.Column="1"
-                                           Text="{Binding EvaluatedPatches, StringFormat='{}{0} patches'}"
-                                           Foreground="#CCCCCC" FontSize="11"
-                                           Margin="0,0,0,4" />
+                    <TextBlock Text="Patches:" Foreground="#888" FontSize="11"
+                               Margin="0,0,12,3" />
+                    <TextBlock Grid.Column="1" FontSize="11" Foreground="#CCCCCC"
+                               Margin="0,0,0,3">
+                        <Run Text="{Binding EvaluatedPatches}" />
+                        <Run Text=" / " />
+                        <Run Text="{Binding TotalPatches}" />
+                    </TextBlock>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0"
-                                           Text="Skipped:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,4" />
-                                <TextBlock Grid.Row="4" Grid.Column="1"
-                                           Text="{Binding SkippedPatches, StringFormat='{}{0} patches'}"
-                                           Foreground="#CCCCCC" FontSize="11"
-                                           Margin="0,0,0,4" />
+                    <TextBlock Grid.Row="1" Text="Patch:" Foreground="#888" FontSize="11"
+                               Margin="0,0,12,3" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" FontSize="11" Foreground="#CCCCCC"
+                               Margin="0,0,0,3">
+                        <Run Text="{Binding PatchW}" />×<Run Text="{Binding PatchH}" /> px
+                    </TextBlock>
 
-                                <TextBlock Grid.Row="5" Grid.Column="0"
-                                           Text="Patch size:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,4" />
-                                <TextBlock Grid.Row="5" Grid.Column="1"
-                                           Foreground="#CCCCCC" FontSize="11">
-                                    <Run Text="{Binding PatchW}" />
-                                    <Run Text="×" />
-                                    <Run Text="{Binding PatchH}" />
-                                    <Run Text="px" />
-                                </TextBlock>
+                    <TextBlock Grid.Row="2" Text="Stride:" Foreground="#888" FontSize="11"
+                               Margin="0,0,12,0" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" FontSize="11" Foreground="#CCCCCC">
+                        <Run Text="{Binding StrideW}" />×<Run Text="{Binding StrideH}" /> px
+                    </TextBlock>
+                </Grid>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0"
-                                           Text="Stride size:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,4" />
-                                <TextBlock Grid.Row="6" Grid.Column="1"
-                                           Foreground="#CCCCCC" FontSize="11">
-                                    <Run Text="{Binding StrideW}" />
-                                    <Run Text="×" />
-                                    <Run Text="{Binding StrideH}" />
-                                    <Run Text="px" />
-                                </TextBlock>
+                <Border Height="1" Background="#2D2D2D" Margin="0,2" />
 
-                                <TextBlock Grid.Row="7" Grid.Column="0"
-                                           Text="Provider:"
-                                           Foreground="#888888" FontSize="11"
-                                           Margin="0,0,12,0" />
-                                <TextBlock Grid.Row="7" Grid.Column="1"
-                                           Text="{Binding ExecutionProvider}"
+                <!-- Per-class stats -->
+                <ItemsControl ItemsSource="{Binding Statistics}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:ClassStatistics">
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
+                                <TextBlock Text="{Binding ClassName}"
                                            Foreground="#CCCCCC" FontSize="11" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding PercentWinner, StringFormat='{}{0}%'}"
+                                           Foreground="#888" FontSize="11" />
                             </Grid>
-                        </StackPanel>
-                    </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
 
-                    <!-- Bottom Action Button Block: Run / Notes / Export -->
-                    <Border DockPanel.Dock="Bottom"
-                            Padding="12,10"
-                            BorderBrush="#2D2D2D"
-                            BorderThickness="0,1,0,0">
-                        <StackPanel Spacing="6">
+        <!-- BOTTOM: Action buttons -->
+        <Border DockPanel.Dock="Bottom"
+                Padding="12,10"
+                BorderBrush="#2D2D2D"
+                BorderThickness="0,1,0,0">
+            <StackPanel Spacing="6">
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding RunInferenceCommand.IsRunning}" />
+                <Button Command="{Binding RunInferenceCancelCommand}"
+                        IsVisible="{Binding RunInferenceCommand.IsRunning}"
+                        Content="Cancel" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" />
 
-                            <Button Command="{Binding RunInferenceCancelCommand}"
-                                    IsVisible="{Binding RunInferenceCommand.IsRunning}" Content="Cancel" />
-                            <ProgressBar IsIndeterminate="True" IsVisible="{Binding RunInferenceCommand.IsRunning}" />
+                <Button Content="▶ Run Inference"
+                        Command="{Binding RunInferenceCommand}"
+                        IsEnabled="{Binding !RunInferenceCommand.IsRunning}"
+                        IsVisible="{Binding !RunInferenceCommand.IsRunning}"
+                        Background="RoyalBlue"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="8,8" CornerRadius="4" FontWeight="SemiBold" />
 
-                            <Button Content="▶ Run Inference"
-                                    Command="{Binding RunInferenceCommand}"
-                                    IsEnabled="{Binding !RunInferenceCommand.IsRunning}"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Background="RoyalBlue"
-                                    Padding="8,8"
-                                    CornerRadius="4"
-                                    FontWeight="SemiBold" />
+                <Button Content="⇩ Export PDF"
+                        Command="{Binding ExportPdfCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="8,6" CornerRadius="4" />
+            </StackPanel>
+        </Border>
 
-                            <Button Content="📝 Toggle Notes"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Padding="8,6"
-                                    CornerRadius="4" />
+        <!-- MIDDLE: Runs list -->
+        <Border DockPanel.Dock="Top" Padding="14,12,14,6">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Runs" FontSize="12" FontWeight="SemiBold" Foreground="#CCCCCC" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ImageNode.Runs.Count}"
+                           Foreground="#666" FontSize="11" />
+            </Grid>
+        </Border>
 
-                            <Button Content="⇩ Export to PDF"
-                                    Command="{Binding ExportPdfCommand}"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Padding="8,6"
-                                    CornerRadius="4" />
-                        </StackPanel>
-                    </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="No runs yet. Click Run Inference."
+                           FontSize="11" Foreground="#666" TextWrapping="Wrap"
+                           Margin="14,4,14,0"
+                           IsVisible="{Binding !ImageNode.Runs.Count}" />
 
-                    <!-- Runs list header -->
-                    <Border DockPanel.Dock="Top"
-                            Padding="12,10,12,6">
-                        <TextBlock Text="Runs"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="#CCCCCC" />
-                    </Border>
+                <ItemsControl ItemsSource="{Binding ImageNode.Runs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:RunSummary">
+                            <Button Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="14,8"
+                                    HorizontalContentAlignment="Stretch"
+                                    Command="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).LoadRunCommand}"
+                                    CommandParameter="{Binding}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
 
-                    <!-- Runs list -->
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel>
-                            <!-- Empty state -->
-                            <TextBlock Text="No runs yet. Click Run Inference."
-                                       FontSize="11"
-                                       Foreground="#666"
-                                       TextWrapping="Wrap"
-                                       Margin="12,4,12,0"
-                                       IsVisible="{Binding ImageNode.Runs}" />
+                                    <!-- Active indicator dot -->
+                                    <Ellipse Width="6" Height="6"
+                                             Fill="RoyalBlue"
+                                             VerticalAlignment="Center"
+                                             Margin="0,0,8,0"/>
+                                             <!-- IsActive needs converter — see below -->
 
-                            <ItemsControl ItemsSource="{Binding ImageNode.Runs}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="models:RunSummary">
-                                        <Border Margin="8,3"
-                                                Padding="10,8"
-                                                Background="#1E1E1E"
-                                                BorderBrush="#2D2D2D"
-                                                BorderThickness="1"
-                                                CornerRadius="4">
-                                            <Border.Styles>
+                                    <!-- Model name + percentage -->
+                                    <TextBlock Grid.Column="1"
+                                               FontSize="12"
+                                               Foreground="#E0E0E0"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding ModelDisplayName}" />
+                                        <Run Text=" · " Foreground="#666" />
+                                        <Run Text="{Binding PositiveClassPercentAbove50, StringFormat='{}{0:0}%'}" />
+                                    </TextBlock>
 
-                                                <!-- Active run highlight -->
-                                                <Style Selector="Border">
-                                                    <Setter Property="BorderBrush" Value="#2D2D2D" />
-                                                </Style>
-                                            </Border.Styles>
-                                            <StackPanel Spacing="3">
+                                    <!-- Delete -->
+                                    <Button Grid.Column="2"
+                                            Content="🗑"
+                                            Background="Transparent"
+                                            Foreground="#666"
+                                            Padding="4,0" FontSize="11"
+                                            Command="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).DeleteRunCommand}"
+                                            CommandParameter="{Binding}" />
 
-                                                <!-- Header: model name + delete -->
-                                                <Grid ColumnDefinitions="*,Auto">
-
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding ModelDisplayName}"
-                                                               FontSize="12"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="#E0E0E0"
-                                                               TextTrimming="CharacterEllipsis" />
-
-                                                    <Button Grid.Column="1"
-                                                            Content="🗑"
-                                                            Background="Transparent"
-                                                            Foreground="#888"
-                                                            Padding="4,0"
-                                                            FontSize="12"
-                                                            Command="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).DeleteRunCommand}"
-                                                            CommandParameter="{Binding}"
-                                                            ToolTip.Tip="Delete this run" />
-                                                </Grid>
-
-                                                <!-- Date -->
-                                                <TextBlock
-                                                    Text="{Binding CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                                                    FontSize="10"
-                                                    Foreground="#888" />
-
-                                                <!-- Positive-class stat -->
-                                                <TextBlock FontSize="11"
-                                                           Foreground="#CCCCCC">
-                                                    <Run
-                                                        Text="{Binding PositiveClassPercentAbove50, StringFormat='{}{0:0}%'}" />
-                                                    <Run Text=" " />
-                                                    <Run Text="{Binding PositiveClassName}" />
-                                                    <Run Text=" (≥50%)" Foreground="#888" />
-                                                </TextBlock>
-
-                                                <!-- Load button -->
-                                                <Button Content="View"
-                                                        FontSize="11"
-                                                        HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Center"
-                                                        Padding="6,4"
-                                                        Margin="0,4,0,0"
-                                                        Background="#2D2D2D"
-                                                        Foreground="#CCCCCC"
-                                                        CornerRadius="3"
-                                                        Command="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).LoadRunCommand}"
-                                                        CommandParameter="{Binding}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                </DockPanel>
-            </Border>
-
+                                    <!-- Date -->
+                                    <TextBlock Grid.Row="1" Grid.Column="1"
+                                               Text="{Binding CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                               FontSize="10" Foreground="#888" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Border>
+            
+            
+            
+            
+            
             <!-- RIGHT: ImageContainer and Bottom Display Settings -->
             <Grid Grid.Column="1" RowDefinitions="*, 56">
 
@@ -450,11 +415,11 @@
 
                     <!-- Plot Container -->
                     <Grid>
-                        <scottPlot:AvaPlot x:Name="SpectrumPlot" 
-                                           Width="300" 
-                                           Height="180" 
-                                           Margin="0,16,0,0"/>
-                        
+                        <scottPlot:AvaPlot x:Name="SpectrumPlot"
+                                           Width="300"
+                                           Height="180"
+                                           Margin="0,16,0,0" />
+
                         <Grid VerticalAlignment="Top"
                               ColumnDefinitions="*,Auto"
                               Margin="8,0,4,0">
@@ -547,7 +512,7 @@
                                     <TextBlock Text="Split View" VerticalAlignment="Center" />
                                 </StackPanel>
                             </ToggleButton>
-                            
+
                             <ToggleButton IsChecked="{Binding Overlay.ShowOverlay}"
                                           IsEnabled="{Binding Overlay.ClassificationResult,
                                   Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -557,7 +522,7 @@
                                     <TextBlock Text="Show Overlay" VerticalAlignment="Center" />
                                 </StackPanel>
                             </ToggleButton>
-                            
+
                         </StackPanel>
 
                         <!-- MIDDLE: Empty/Spacer -->
@@ -565,7 +530,7 @@
 
                         <!-- RIGHT: Overlay Options -->
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
-                            
+
                             <!-- Colormap -->
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock Text="Colormap"
