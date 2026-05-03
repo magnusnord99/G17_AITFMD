@@ -57,4 +57,5 @@ public class RunSummary
     public string PositiveClassName { get; init; } = string.Empty;
     public double PositiveClassPercentAbove50 { get; init; }
     public double PositiveClassPercentAbove80 { get; init; }
+    public string Notes { get; set; } = string.Empty;
 }

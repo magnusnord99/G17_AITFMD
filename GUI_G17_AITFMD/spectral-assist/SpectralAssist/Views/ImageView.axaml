@@ -141,6 +141,39 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Notes Panel (collapsible) -->
+                    <Border DockPanel.Dock="Bottom"
+                            IsVisible="{Binding ShowNotes}"
+                            Padding="12,8"
+                            BorderBrush="#2D2D2D"
+                            BorderThickness="0,1,0,0"
+                            Background="#161616">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Run Notes"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="#CCCCCC" />
+                            <TextBox Text="{Binding RunNotes}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="80"
+                                     MaxHeight="160"
+                                     FontSize="11"
+                                     Background="#1E1E1E"
+                                     Foreground="#CCCCCC"
+                                     BorderBrush="#3D3D3D"
+                                     Watermark="Write a note for this run…"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                            <Button Content="Save Note"
+                                    Command="{Binding SaveNotesCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="8,5"
+                                    FontSize="11"
+                                    CornerRadius="4" />
+                        </StackPanel>
+                    </Border>
+
                     <!-- Bottom Action Button Block: Run / Notes / Export -->
                     <Border DockPanel.Dock="Bottom"
                             Padding="12,10"
@@ -163,6 +196,7 @@
                                     FontWeight="SemiBold" />
 
                             <Button Content="📝 Toggle Notes"
+                                    Command="{Binding ToggleNotesCommand}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center"
                                     Padding="8,6"

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using SpectralAssist.Models;
@@ -85,13 +86,18 @@ public static class ThumbnailService
         var baseName = Path.GetFileNameWithoutExtension(image.SceneFileName);
         foreach (var ext in PreviewExtensions)
         {
-            var candidate = Path.Combine(dir, baseName + ext);
-            if (File.Exists(candidate)) return candidate;
+            var matches = Directory.GetFiles(dir, baseName + "*")
+                .Where(f => !Path.GetFileName(f).StartsWith("._") &&
+                            string.Equals(Path.GetExtension(f), ext, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (matches.Length == 1) return matches[0];
         }
-        
+
         foreach (var ext in PreviewExtensions)
         {
-            var matches = Directory.GetFiles(dir, "*" + ext);
+            var matches = Directory.GetFiles(dir, "*" + ext)
+                .Where(f => !Path.GetFileName(f).StartsWith("._"))
+                .ToArray();
             if (matches.Length == 1)
                 return matches[0];
         }

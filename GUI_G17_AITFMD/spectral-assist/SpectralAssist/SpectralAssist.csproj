@@ -19,6 +19,7 @@
     <!-- Exclude macOS resource-fork ghost files created on FAT/exFAT volumes -->
     <ItemGroup>
         <Compile Remove="**/._*.cs"/>
+        <AvaloniaResource Remove="**/._*.axaml"/>
     </ItemGroup>
 
     <!-- Base ModelsPackages: copied to output on build -->
