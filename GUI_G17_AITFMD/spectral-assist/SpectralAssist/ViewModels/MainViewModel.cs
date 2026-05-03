@@ -1,107 +1,86 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System;
+using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Library;
 
 namespace SpectralAssist.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly ImageLoadingService _loadingService;
-    private readonly InferenceService _inferenceService;
+    private readonly LibraryManager _libraryManager;
+    private readonly ModelPackageManager _modelManager;
+    private readonly LibraryViewModel _libraryView;
+    private readonly ModelsViewModel _modelsView;
+    private readonly Func<string, string?, ImageViewModel> _imageVmFactory;
     private ImageViewModel? _imageView;
-    private readonly ModelPackageService _modelRegistry;
-    
-    public MainViewModel(
-        ImageLoadingService loadingService,
-        InferenceService inferenceService,
-        ModelPackageService modelRegistry)
-    {
-        _loadingService = loadingService;
-        _inferenceService = inferenceService;
-        _modelRegistry = modelRegistry;
-        _modelRegistry.Refresh();
-        
-        // ToDo: Change this from FirstOrDefault to settings based preferred model or last used with persistence?
-        ActiveModel = _modelRegistry.AvailableModels.FirstOrDefault();
-        _selectedStride = AvailableStrides[0];
-    }
 
-    // -- Observables -- //
+    public MainViewModel(
+        LibraryManager libraryManager,
+        ModelPackageManager modelManager,
+        SessionService session,
+        LibraryViewModel libraryView,
+        ModelsViewModel modelsView,
+        Func<string, string?, ImageViewModel> imageVmFactory)
+    {
+        _libraryManager = libraryManager;
+        _modelManager = modelManager;
+        Session = session;
+        _libraryView = libraryView;
+        _modelsView = modelsView;
+        _imageVmFactory = imageVmFactory;
+
+        _libraryView.ImageSelected += OpenImageFromLibrary;
+    }
+    
+    // --- Observable States --- //
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImageView))]
     [NotifyPropertyChangedFor(nameof(IsOnImageView))]
-    [NotifyCanExecuteChangedFor(nameof(RunInferenceCommand))]
     private ViewModelBase _currentView = new HomeViewModel();
     
-    [ObservableProperty] private ModelManifest? _activeModel;
-    
-    [ObservableProperty] private StrideOption _selectedStride = StrideOption.Default;
-    public static IReadOnlyList<StrideOption> AvailableStrides => StrideOption.Presets;
-    
+    public SessionService Session { get; }
+    public ObservableCollection<ModelManifest> AvailableModels => _modelManager.AvailableModels;
     public bool HasImageView => _imageView != null;
     public bool IsOnImageView => CurrentView is ImageViewModel;
     
-    // -- Navigation -- //
+    // --- Navigation --- //
     [RelayCommand]
-    private void NavigateToHome()
-    {
-        // If an image is loaded, go back to it instead of an empty home page
-        if (_imageView != null)
-            CurrentView = _imageView;
-        else
-            CurrentView = new HomeViewModel();
-    }
-    
+    private void NavigateToHome() => CurrentView = (ViewModelBase?)_imageView ?? new HomeViewModel();
+
     [RelayCommand]
-    private void NavigateToModels()
-    {
-        CurrentView = new ModelsViewModel(_modelRegistry, _inferenceService, ActiveModel, modelManifest => ActiveModel = modelManifest);
-    }
-    
-    
-    // -- Actions -- //
+    private void NavigateToModels() => CurrentView = _modelsView;
+
+    [RelayCommand]
+    private void NavigateToLibrary() =>CurrentView = _libraryView;
     
     [RelayCommand]
     public void OpenImage(string filePath)
     {
-        // Dispose the previous image (if any) then load new one
         _imageView?.Dispose();
-        _imageView = new ImageViewModel(filePath, _loadingService, _inferenceService);
+        _imageView = _imageVmFactory(filePath, null);
+        Session.ActiveImageId = null;
         CurrentView = _imageView;
     }
-    
-    [RelayCommand(CanExecute = nameof(HasImageView))]
-    private async Task RunInference()
+
+    private void OpenImageFromLibrary(ImageNode imageNode)
     {
-        if (_imageView == null) return;
+        if (_libraryManager.Root == null) return;
 
-        var selected = ActiveModel;
-        if (selected == null)
-        {
-            _imageView.InferenceOutput = "No model available. Import one via the Models page.";
-            return;
-        }
+        var absPath = Path.Combine(
+            _libraryManager.Root,
+            imageNode.CurrentRelPath.Replace('/', Path.DirectorySeparatorChar));
 
+        _imageView?.Dispose();
+        _imageView = _imageVmFactory(absPath, imageNode.ImageId);
+        Session.ActiveImageId = imageNode.ImageId;
         CurrentView = _imageView;
-        var modelPackage = _modelRegistry.LoadPackage(selected.DirectoryPath);
-        var spec = modelPackage.Manifest.InputSpec;
-        var patchSize = spec.SpatialPatchSize[0];
-        var stride = SelectedStride.Divisor switch
-        {
-            0  => spec.Stride.FirstOrDefault(patchSize),
-            -1 => 1,
-            var divisor => patchSize / divisor,
-        };
-        
-        await _imageView.RunInference(modelPackage, stride);
     }
-    
-    
-    
+
+
     // -- Drag and Drop Functionality -- //
     [ObservableProperty] private bool _isDragging;
     [ObservableProperty] private string _dragIcon = "⬇";
@@ -114,13 +93,15 @@ public partial class MainViewModel : ViewModelBase
         DragMessage = valid ? "Drop to open HSI file" : "Unsupported: please use a .hdr file";
     }
 
-    
-    
+
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public MainViewModel()
     {
-        _loadingService = null!;
-        _inferenceService = null!;
-        _modelRegistry = new ModelPackageService();
+        _libraryManager = null!;
+        _modelManager = new ModelPackageManager();
+        Session = new SessionService();
+        _libraryView = null!;
+        _modelsView = null!;
+        _imageVmFactory = (_, _) => null!;
     }
 }

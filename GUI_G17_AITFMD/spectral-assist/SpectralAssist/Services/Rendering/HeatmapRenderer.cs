@@ -24,13 +24,13 @@ public static class HeatmapRenderer
     /// thresholds or colormaps.
     /// </summary>
     public static float[] BuildHeatmap(
-        ClassificationResult result,
+        ClassificationReport report,
         int width,
         int height,
         int targetClassIndex = 1)
     {
-        var patchH = result.PatchH;
-        var patchW = result.PatchW;
+        var patchH = report.PatchH;
+        var patchW = report.PatchW;
         var pixelCount = width * height;
 
         var heatmap = new float[pixelCount];
@@ -43,7 +43,7 @@ public static class HeatmapRenderer
             Array.Clear(weightSum, 0, pixelCount);
 
             // Gaussian-weighted accumulation of patch scores
-            foreach (var pred in result.Predictions)
+            foreach (var pred in report.Predictions)
             {
                 var score = pred.Probabilities[targetClassIndex];
 
@@ -85,97 +85,91 @@ public static class HeatmapRenderer
     /// <summary>
     /// Renders a cached per-pixel heatmap to a bitmap using the given colormap and threshold.
     /// </summary>
-    public static WriteableBitmap RenderHeatmap(
+    public static Bitmap RenderHeatmap(
         float[] heatmap,
         int width,
         int height,
         Func<float, Color> colourMap,
         float threshold = 0f)
     {
-        var bitmap = CreateOverlayBitmap(width, height);
-        using var buffer = bitmap.Lock();
-        unsafe
+        var stride = width * 4;
+        var pixels = new byte[height * stride];
+
+        for (var py = 0; py < height; py++)
         {
-            var ptr = (byte*)buffer.Address;
-            var stride = buffer.RowBytes;
+            var rowOffset = py * width;
+            var bitmapRowOffset = py * stride;
 
-            for (var py = 0; py < height; py++)
+            for (var px = 0; px < width; px++)
             {
-                var rowOffset = py * width;
-                var bitmapRowOffset = py * stride;
+                var avgProb = heatmap[rowOffset + px];
+                if (avgProb < threshold || avgProb < 1e-6f) continue;
 
-                for (var px = 0; px < width; px++)
-                {
-                    var avgProb = heatmap[rowOffset + px];
-                    if (avgProb < threshold || avgProb < 1e-6f) continue;
+                var colour = colourMap(avgProb);
+                var offset = bitmapRowOffset + px * 4;
 
-                    var colour = colourMap(avgProb);
-                    var offset = bitmapRowOffset + px * 4;
-
-                    ptr[offset + 0] = colour.B; // B
-                    ptr[offset + 1] = colour.G; // G
-                    ptr[offset + 2] = colour.R; // R
-                    ptr[offset + 3] = 255;       // A
-                }
+                pixels[offset + 0] = colour.B; // B
+                pixels[offset + 1] = colour.G; // G
+                pixels[offset + 2] = colour.R; // R
+                pixels[offset + 3] = 255;      // A
             }
         }
 
-        return bitmap;
+        return CreateUnpremulBitmap(pixels, width, height, stride);
     }
-    
+
     /// <summary>
     /// Renders a horizontal gradient bar showing the active colormap from threshold to 1.0.
     /// Used as a legend for the classification overlay.
     /// </summary>
-    public static WriteableBitmap ColorBarLegend(
+    public static Bitmap ColorBarLegend(
         Func<float, Color> colourMap,
         int width = 256,
         int height = 20,
         float threshold = 0f)
     {
-        var bitmap = new WriteableBitmap(
-            new PixelSize(width, height),
-            new Vector(96, 96),
-            PixelFormat.Bgra8888,
-            AlphaFormat.Unpremul);
+        var stride = width * 4;
+        var pixels = new byte[height * stride];
 
-        using var buffer = bitmap.Lock();
-        unsafe
+        for (var x = 0; x < width; x++)
         {
-            var ptr = (byte*)buffer.Address;
-            var stride = buffer.RowBytes;
+            // Map pixel position to probability range [threshold, 1.0]
+            var prob = threshold + (float)x / (width - 1) * (1f - threshold);
+            var colour = colourMap(prob);
 
-            for (var x = 0; x < width; x++)
+            for (var y = 0; y < height; y++)
             {
-                // Map pixel position to probability range [threshold, 1.0]
-                var prob = threshold + (float)x / (width - 1) * (1f - threshold);
-                var colour = colourMap(prob);
-
-                for (var y = 0; y < height; y++)
-                {
-                    var offset = y * stride + x * 4;
-                    ptr[offset + 0] = colour.B; // B
-                    ptr[offset + 1] = colour.G; // G
-                    ptr[offset + 2] = colour.R; // R
-                    ptr[offset + 3] = 255; // A
-                }
+                var offset = y * stride + x * 4;
+                pixels[offset + 0] = colour.B; // B
+                pixels[offset + 1] = colour.G; // G
+                pixels[offset + 2] = colour.R; // R
+                pixels[offset + 3] = 255;      // A
             }
         }
 
-        return bitmap;
+        return CreateUnpremulBitmap(pixels, width, height, stride);
     }
-    
+
     /// <summary>
-    /// Creates a bitmap for overlay rendering with unpremultiplied alpha,
-    /// so uncovered pixels remain fully transparent.
+    /// Builds a Skia-native immutable <see cref="Bitmap"/> with unpremultiplied alpha
+    /// from a pre-filled BGRA byte buffer. The ctor copies pixel data into Skia on
+    /// construction, so <paramref name="pixels"/> may be collected afterwards.
     /// </summary>
-    private static WriteableBitmap CreateOverlayBitmap(int width, int height)
+    private static Bitmap CreateUnpremulBitmap(byte[] pixels, int width, int height, int stride)
     {
-        return new WriteableBitmap(
-            new PixelSize(width, height),
-            new Vector(96, 96),
-            PixelFormat.Bgra8888,
-            AlphaFormat.Unpremul);
+        unsafe
+        {
+            fixed (byte* ptr = pixels)
+            {
+                return new Bitmap(
+                    PixelFormat.Bgra8888,
+                    AlphaFormat.Unpremul,
+                    (IntPtr)ptr,
+                    new PixelSize(width, height),
+                    new Vector(96, 96),
+                    stride);
+            }
+        }
     }
     
     /// <summary>

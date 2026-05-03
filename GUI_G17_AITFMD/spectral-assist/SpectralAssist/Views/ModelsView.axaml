@@ -24,7 +24,7 @@
 
             <!-- Dropdown (browsing only) -->
             <ComboBox ItemsSource="{Binding AvailableModels}"
-                      SelectedItem="{Binding SelectedModel}"
+                      SelectedItem="{Binding Session.ActiveModel}"
                       HorizontalAlignment="Stretch"
                       MaxDropDownHeight="300"
                       Margin="0,4,0,0"
@@ -409,9 +409,9 @@
                 <!-- Browsing: Delete -->
                 <Button Content="Delete"
                         Command="{Binding DeleteModelCommand}"
-                        CommandParameter="{Binding SelectedModel}"
+                        CommandParameter="{Binding Session.ActiveModel}"
                         IsVisible="{Binding IsBrowsing}"
-                        IsEnabled="{Binding SelectedModel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        IsEnabled="{Binding Session.ActiveModel, Converter={x:Static ObjectConverters.IsNotNull}}"
                         Background="#2A1A1A"
                         Foreground="#CC6666"
                         Padding="12,8"

@@ -15,7 +15,7 @@ namespace SpectralAssist.Services.Inference;
 /// Uses IOBinding to keep tensors on GPU between patch inferences, eliminating per-patch
 /// CPU ↔ GPU copies. Falls back to CPU-side Run() when no GPU execution provider is active.
 /// </summary>
-public class Onnx3DCnnClassifier : IClassifier, IDisposable
+public class Onnx3DCnnClassifier : IDisposable
 {
     private ModelPackage? _package;
     private ExecutionProvider _executionProvider;
@@ -31,7 +31,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
         _outputName = _package.Session.OutputNames[0];
     }
 
-    public Task<ClassificationResult> ClassifyImageAsync(
+    public Task<ClassificationReport> ClassifyImageAsync(
         HsiCube cube, 
         bool[]? tissueMask = null,
         int? strideOverride = null, 
@@ -55,7 +55,7 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             ? ClassifyAllPatchesWithIOBinding(cube, grid, tissueMask, progress, ct)
             : ClassifyAllPatchesCpu(cube, grid, tissueMask, progress, ct);
         
-        return Task.FromResult(new ClassificationResult
+        return Task.FromResult(new ClassificationReport
         {
             Predictions = predictions,
             ImageWidth = cube.Samples,
@@ -66,9 +66,9 @@ public class Onnx3DCnnClassifier : IClassifier, IDisposable
             StrideW = grid.StrideW,
             Classes = _package.Manifest.OutputSpec.Classes,
             ModelName = _package.Manifest.Metadata.Name,
-            TotalPossible = grid.TotalPatches,
-            Evaluated = predictions.Count,
-            Skipped = grid.TotalPatches - predictions.Count,
+            TotalPatches = grid.TotalPatches,
+            EvaluatedPatches = predictions.Count,
+            SkippedPatches = grid.TotalPatches - predictions.Count,
             ExecutionProvider = _executionProvider.ToString(),
         });
     }
