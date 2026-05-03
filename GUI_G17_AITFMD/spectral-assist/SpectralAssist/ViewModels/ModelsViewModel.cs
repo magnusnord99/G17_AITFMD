@@ -127,14 +127,14 @@ public partial class ModelsViewModel : ViewModelBase
     [RelayCommand]
     private void DeleteModel(ModelManifest modelInfo)
     {
-        var result = _modelManager.DeletePackage(modelInfo.Id);
+        var result = _modelManager.DeletePackage(modelInfo.Metadata.Id);
         if (!result.IsSuccess)
         {
             ErrorMessage = result.Error;
             return;
         }
         
-        if (Session.ActiveModel?.Id == modelInfo.Id)
+        if (Session.ActiveModel?.Metadata.Id == modelInfo.Metadata.Id)
             Session.ActiveModel = AvailableModels.FirstOrDefault();
     }
     
@@ -160,10 +160,10 @@ public partial class ModelsViewModel : ViewModelBase
 
         var sample = new ModelManifest
         {
-            Id = "baseline_3dcnn_20260324",
             DirectoryPath = "",
             Metadata = new ManifestMetadata
             {
+                Id = "baseline_3dcnn_20260324",
                 Name = "Baseline 3D-CNN",
                 Version = "1.0.0",
                 Description = "3D convolutional classifier for hyperspectral tissue analysis.",

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using SpectralAssist.Extensions;
 using SpectralAssist.Models;
 
 namespace SpectralAssist.Services.Library;
@@ -17,14 +18,14 @@ namespace SpectralAssist.Services.Library;
 public class LibraryManager
 {
     private readonly SemaphoreSlim _manifestLock = new(1, 1);
-    
+
     public string? Root { get; private set; }
-    public LibraryManifest ? Manifest { get; private set; }
+    public LibraryManifest? Manifest { get; private set; }
     public bool IsOpen => Root != null && Manifest != null;
-    
+
     public event Action<ImageNode>? ImageUpdated;
     public void NotifyImageUpdated(ImageNode node) => ImageUpdated?.Invoke(node);
-    
+
     /// <summary>
     /// Opens a library folder, loads or generates its manifest, and initializes the manager's state.
     /// If a manifest already exists, its image IDs and notes are preserved during the scan.
@@ -71,7 +72,7 @@ public class LibraryManager
             _manifestLock.Release();
         }
     }
-    
+
     /// <summary>
     /// Closes the currently open library and clears all associated states.
     /// </summary>
@@ -80,21 +81,21 @@ public class LibraryManager
         Root = null;
         Manifest = null;
     }
-    
+
     /// <summary>
     /// Looks up an image by its ID in the currently loaded manifest.
     /// Returns <c>null</c> if the image is not found or no library is open.
     /// </summary>
     /// <param name="imageId">The ID of the <c>ImageNode</c> to find.</param>
     /// <returns>Returns found <c>ImageNode</c> if found; otherwise <c>null</c></returns>
-    public ImageNode? FindImage(string imageId)
+    private ImageNode? FindImage(string imageId)
     {
         if (Manifest == null) return null;
         return LibraryScanner.FlattenImages(Manifest.Folders)
             .FirstOrDefault(i => i.ImageId == imageId);
     }
-    
-    
+
+
     /// <summary>
     /// Saves a classification run for the specified image, generating a new run ID
     /// if needed, writing the run report to disk, and updating the manifest with a
@@ -105,36 +106,43 @@ public class LibraryManager
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A summary of the saved run.</returns>
     /// <exception cref="InvalidOperationException">Thrown if no library is open.</exception>
-    public async Task<RunSummary> SaveRunAsync(string imageId, ClassificationReport report, CancellationToken ct = default)
+    public async Task<RunSummary> SaveRunAsync(string imageId, ClassificationReport report,
+        CancellationToken ct = default)
     {
         if (Root == null || Manifest == null)
             throw new InvalidOperationException("No library open.");
-        
+
         LibraryPaths.EnsureSidecarExists(Root);
-        var runId = string.IsNullOrEmpty(report.RunId) ? NewRunId(report.ModelName) : report.RunId;
+        var runId = string.IsNullOrEmpty(report.RunId) ? NewRunId(report.ModelDisplayName) : report.RunId;
 
         var toSave = new ClassificationReport
         {
-            RunId          = runId,
-            ImageId        = imageId,
-            ModelId        = report.ModelId,
-            ModelName      = report.ModelName,
-            DatePerformed  = report.DatePerformed == default ? DateTime.UtcNow : report.DatePerformed,
-            ImageWidth     = report.ImageWidth,
-            ImageHeight    = report.ImageHeight,
-            PatchH         = report.PatchH,
-            PatchW         = report.PatchW,
-            StrideH        = report.StrideH,
-            StrideW        = report.StrideW,
+            RunId = runId,
+            ImageId = imageId,
+            CompletedAt = report.CompletedAt == default ? DateTime.UtcNow : report.CompletedAt,
+
+            ImageWidth = report.ImageWidth,
+            ImageHeight = report.ImageHeight,
+            PatchH = report.PatchH,
+            PatchW = report.PatchW,
+            StrideH = report.StrideH,
+            StrideW = report.StrideW,
             TotalPatches = report.TotalPatches,
             EvaluatedPatches = report.EvaluatedPatches,
             SkippedPatches = report.SkippedPatches,
             ExecutionProvider = report.ExecutionProvider,
-            Classes        = report.Classes,
-            Statistics     = report.Statistics.Count > 0 ? report.Statistics : StatisticsCalculator.Compute(report),
-            Predictions    = report.Predictions,
+
+            Classes = report.Classes,
+            Statistics = report.Statistics.Count > 0 ? report.Statistics : StatisticsCalculator.Compute(report),
+            Predictions = report.Predictions,
+
+            ModelMetadata = report.ModelMetadata,
+            ModelTraining = report.ModelTraining,
+            ModelSummary = report.ModelSummary,
+            PreprocessingSteps = report.PreprocessingSteps,
+            SpectralReducer = report.SpectralReducer,
         };
-        
+
         Directory.CreateDirectory(LibraryPaths.RunFolder(Root, imageId));
         var runPath = LibraryPaths.RunPath(Root, imageId, runId);
         await WriteJsonSafelyAsync(runPath, toSave, ct);
@@ -142,14 +150,14 @@ public class LibraryManager
         var (positiveName, pct50, pct80) = StatisticsCalculator.PickPositiveClass(toSave.Statistics);
         var summary = new RunSummary
         {
-            RunId                       = runId,
-            ModelName                   = toSave.ModelName,
-            DatePerformed               = toSave.DatePerformed,
-            PositiveClassName           = positiveName,
+            RunId = runId,
+            ModelDisplayName = toSave.ModelDisplayName,
+            CompletedAt = toSave.CompletedAt,
+            PositiveClassName = positiveName,
             PositiveClassPercentAbove50 = pct50,
             PositiveClassPercentAbove80 = pct80,
         };
-        
+
         await _manifestLock.WaitAsync(ct);
         try
         {
@@ -158,9 +166,10 @@ public class LibraryManager
             {
                 image.Runs.RemoveAll(r => r.RunId == runId);
                 image.Runs.Add(summary);
-                image.Runs.Sort((a, b) => b.DatePerformed.CompareTo(a.DatePerformed));
+                image.Runs.Sort((a, b) => b.CompletedAt.CompareTo(a.CompletedAt));
                 ImageUpdated?.Invoke(image);
             }
+
             await WriteManifestAsync(Root, Manifest, ct);
         }
         finally
@@ -170,8 +179,8 @@ public class LibraryManager
 
         return summary;
     }
-    
-    
+
+
     /// <summary>
     /// Loads a previously saved classification run for the given image and run ID.
     /// Returns <c>null</c> if the run does not exist or no library is open.
@@ -189,8 +198,8 @@ public class LibraryManager
         await using var stream = File.OpenRead(path);
         return await JsonSerializer.DeserializeAsync<ClassificationReport>(stream, LibraryJson.Options, ct);
     }
-    
-    
+
+
     /// <summary>
     /// Deletes a stored inference run for the specified image. Removes the run file,
     /// updates the manifest, and deletes the per‑image run folder under
@@ -203,7 +212,7 @@ public class LibraryManager
     public async Task DeleteRunAsync(string imageId, string runId, CancellationToken ct = default)
     {
         if (Root == null || Manifest == null) return;
-        
+
         var path = LibraryPaths.RunPath(Root, imageId, runId);
         if (File.Exists(path)) File.Delete(path);
 
@@ -219,12 +228,12 @@ public class LibraryManager
         {
             _manifestLock.Release();
         }
-        
+
         var runFolder = LibraryPaths.RunFolder(Root, imageId);
         if (Directory.Exists(runFolder) && !Directory.EnumerateFileSystemEntries(runFolder).Any())
             Directory.Delete(runFolder);
     }
-    
+
     /// <summary>
     /// Attempts to read and deserialize the manifest from the given library root.
     /// Returns <c>null</c> if the manifest file does not exist or cannot be parsed.
@@ -247,7 +256,7 @@ public class LibraryManager
             return null;
         }
     }
-    
+
     /// <summary>
     /// Writes the manifest to the library’s sidecar folder using a safe write‑and‑replace strategy.
     /// Updates the manifest’s <see cref="LibraryManifest.LastScanned"/> timestamp before saving.
@@ -255,23 +264,24 @@ public class LibraryManager
     /// <param name="libraryRoot">Path to the library folder.</param>
     /// <param name="manifest">The manifest to write.</param>
     /// <param name="ct">Cancellation token.</param>
-    private static async Task WriteManifestAsync(string libraryRoot, LibraryManifest manifest, CancellationToken ct = default)
+    private static async Task WriteManifestAsync(string libraryRoot, LibraryManifest manifest,
+        CancellationToken ct = default)
     {
         LibraryPaths.EnsureSidecarExists(libraryRoot);
         manifest.LastScanned = DateTime.UtcNow;
-        
+
         var path = LibraryPaths.ManifestPath(libraryRoot);
         var tempPath = path + ".tmp";
-        
+
         await using (var filestream = File.Create(tempPath))
-            await JsonSerializer.SerializeAsync(filestream, manifest, LibraryJson.Options, ct); 
-        
+            await JsonSerializer.SerializeAsync(filestream, manifest, LibraryJson.Options, ct);
+
         if (File.Exists(path))
             File.Replace(tempPath, path, path + ".bak");
         else
             File.Move(tempPath, path);
     }
-    
+
     /// <summary>
     /// Writes a JSON file safely by serializing to a temporary file and then
     /// replacing or moving it into place. Ensures the target directory exists.
@@ -290,10 +300,10 @@ public class LibraryManager
 
         if (File.Exists(path))
             File.Replace(tempPath, path, null);
-        
+
         else File.Move(tempPath, path);
     }
-    
+
     /// <summary>
     /// Generates a unique run ID consisting of a UTC timestamp, a sanitized model
     /// name, and a short GUID suffix. Suitable for use as a filename.

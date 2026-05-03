@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
@@ -11,11 +10,10 @@ namespace SpectralAssist.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly LibraryManager _libraryManager;
     private readonly ModelPackageManager _modelManager;
     private readonly LibraryViewModel _libraryView;
     private readonly ModelsViewModel _modelsView;
-    private readonly Func<string, string?, ImageViewModel> _imageVmFactory;
+    private readonly Func<ImageNode, ImageViewModel> _imageVmFactory;
     private ImageViewModel? _imageView;
 
     public MainViewModel(
@@ -24,9 +22,8 @@ public partial class MainViewModel : ViewModelBase
         SessionService session,
         LibraryViewModel libraryView,
         ModelsViewModel modelsView,
-        Func<string, string?, ImageViewModel> imageVmFactory)
+        Func<ImageNode, ImageViewModel> imageVmFactory)
     {
-        _libraryManager = libraryManager;
         _modelManager = modelManager;
         Session = session;
         _libraryView = libraryView;
@@ -61,21 +58,16 @@ public partial class MainViewModel : ViewModelBase
     public void OpenImage(string filePath)
     {
         _imageView?.Dispose();
-        _imageView = _imageVmFactory(filePath, null);
-        Session.ActiveImageId = null;
+        var transientNode = ImageNode.CreateTransient(filePath);
+        _imageView = _imageVmFactory(transientNode);
+        Session.ActiveImageId = transientNode.ImageId;
         CurrentView = _imageView;
     }
 
     private void OpenImageFromLibrary(ImageNode imageNode)
     {
-        if (_libraryManager.Root == null) return;
-
-        var absPath = Path.Combine(
-            _libraryManager.Root,
-            imageNode.CurrentRelPath.Replace('/', Path.DirectorySeparatorChar));
-
         _imageView?.Dispose();
-        _imageView = _imageVmFactory(absPath, imageNode.ImageId);
+        _imageView = _imageVmFactory(imageNode);
         Session.ActiveImageId = imageNode.ImageId;
         CurrentView = _imageView;
     }
@@ -97,11 +89,10 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public MainViewModel()
     {
-        _libraryManager = null!;
         _modelManager = new ModelPackageManager();
         Session = new SessionService();
         _libraryView = null!;
         _modelsView = null!;
-        _imageVmFactory = (_, _) => null!;
+        _imageVmFactory = (_) => null!;
     }
 }

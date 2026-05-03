@@ -69,7 +69,7 @@ public partial class ImageTileViewModel : ObservableObject
         get
         {
             var latestRun = Source.LatestRun();
-            var date = latestRun?.DatePerformed.ToLocalTime().ToString("MMM d");
+            var date = latestRun?.CompletedAt.ToLocalTime().ToString("MMM d");
             return ReportCount == 1
                 ? $"1 report · {date}"
                 : $"{ReportCount} reports · Last {date}";

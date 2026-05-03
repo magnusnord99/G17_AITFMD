@@ -74,7 +74,7 @@
                                            Foreground="#888888" FontSize="11"
                                            Margin="0,0,12,4" />
                                 <TextBlock Grid.Row="1" Grid.Column="1"
-                                           Text="{Binding ModelName}"
+                                           Text="{Binding ModelDisplayName}"
                                            Foreground="#CCCCCC" FontSize="11"
                                            TextWrapping="Wrap"
                                            Margin="0,0,0,4" />
@@ -196,9 +196,9 @@
                                        Foreground="#666"
                                        TextWrapping="Wrap"
                                        Margin="12,4,12,0"
-                                       IsVisible="{Binding !Reports.Count}" />
+                                       IsVisible="{Binding ImageNode.Runs}" />
 
-                            <ItemsControl ItemsSource="{Binding Reports}">
+                            <ItemsControl ItemsSource="{Binding ImageNode.Runs}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="models:RunSummary">
                                         <Border Margin="8,3"
@@ -220,7 +220,7 @@
                                                 <Grid ColumnDefinitions="*,Auto">
 
                                                     <TextBlock Grid.Column="0"
-                                                               Text="{Binding ModelName}"
+                                                               Text="{Binding ModelDisplayName}"
                                                                FontSize="12"
                                                                FontWeight="SemiBold"
                                                                Foreground="#E0E0E0"
@@ -239,7 +239,7 @@
 
                                                 <!-- Date -->
                                                 <TextBlock
-                                                    Text="{Binding DatePerformed, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                    Text="{Binding CompletedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
                                                     FontSize="10"
                                                     Foreground="#888" />
 

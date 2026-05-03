@@ -89,7 +89,7 @@ public static class HeatmapRenderer
         float[] heatmap,
         int width,
         int height,
-        Func<float, Color> colourMap,
+        Func<float, Color> colorMap,
         float threshold = 0f)
     {
         var stride = width * 4;
@@ -105,7 +105,7 @@ public static class HeatmapRenderer
                 var avgProb = heatmap[rowOffset + px];
                 if (avgProb < threshold || avgProb < 1e-6f) continue;
 
-                var colour = colourMap(avgProb);
+                var colour = colorMap(avgProb);
                 var offset = bitmapRowOffset + px * 4;
 
                 pixels[offset + 0] = colour.B; // B
@@ -123,7 +123,7 @@ public static class HeatmapRenderer
     /// Used as a legend for the classification overlay.
     /// </summary>
     public static Bitmap ColorBarLegend(
-        Func<float, Color> colourMap,
+        Func<float, Color> colorMap,
         int width = 256,
         int height = 20,
         float threshold = 0f)
@@ -135,7 +135,7 @@ public static class HeatmapRenderer
         {
             // Map pixel position to probability range [threshold, 1.0]
             var prob = threshold + (float)x / (width - 1) * (1f - threshold);
-            var colour = colourMap(prob);
+            var colour = colorMap(prob);
 
             for (var y = 0; y < height; y++)
             {

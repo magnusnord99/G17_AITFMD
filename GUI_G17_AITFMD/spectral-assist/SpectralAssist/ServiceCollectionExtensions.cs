@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using SpectralAssist.Models;
 using SpectralAssist.Services;
 using SpectralAssist.Services.Export;
 using SpectralAssist.Services.Inference;
@@ -21,7 +22,6 @@ public static class ServiceCollectionExtensions
 
         collection.AddSingleton<ModelPackageManager>();
         collection.AddSingleton<LibraryManager>();
-        collection.AddSingleton<PdfReportService>();
 
         // ViewModels
         collection.AddSingleton<MainViewModel>();
@@ -29,9 +29,10 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<ModelsViewModel>();
 
         // ImageViewModel Factory
-        collection.AddSingleton<Func<string, string?, ImageViewModel>>(sp => (path, imageId) =>
-            new ImageViewModel(path, sp.GetRequiredService<InferenceService>(), imageId,
-                sp.GetRequiredService<LibraryManager>(), sp.GetRequiredService<PdfReportService>()
-            ));
+        collection.AddSingleton<Func<ImageNode, ImageViewModel>>(sp => (imageNode) =>
+            new ImageViewModel(
+                imageNode, 
+                sp.GetRequiredService<InferenceService>(), 
+                sp.GetRequiredService<LibraryManager>()));
     }
 }
