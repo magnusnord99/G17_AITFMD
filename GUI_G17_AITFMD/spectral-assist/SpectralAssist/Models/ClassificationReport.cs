@@ -31,6 +31,16 @@ public class ClassificationReport
     public List<string> Classes { get; init; } = [];
     public List<ClassStatistics> Statistics { get; set; } = [];
     public List<PatchPrediction> Predictions { get; init; } = [];
+    
+    
+    /// <summary>Set after a successful run for reporting (PDF/UI).</summary>
+    public DateTimeOffset InferenceCompletedAt { get; init; }
+
+    /// <summary>From model package manifest at inference time.</summary>
+    public string ManifestDisplayName { get; init; } = "";
+
+    /// <summary>Training validation accuracy from manifest, if present.</summary>
+    public double? TrainingValidationAccuracy { get; init; }
 }
 
 public class PatchPrediction
