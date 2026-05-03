@@ -28,9 +28,9 @@ public class ImageNode
     public bool HasCalibration { get; set; }
     public string Notes { get; set; } = string.Empty;
     public ObservableCollection<RunSummary> Runs { get; set; } = [];
-    
+
     [JsonIgnore] public string AbsolutePath { get; set; } = string.Empty;
-    public bool IsInLibrary => !string.IsNullOrEmpty(ImageId);
+    [JsonIgnore] public bool IsInLibrary => !string.IsNullOrEmpty(ImageId);
 
     /// <summary>
     /// Creates a temporary (transient) ImageNode for single-file mode.
@@ -41,7 +41,8 @@ public class ImageNode
     public static ImageNode CreateTransient(string absPath) => new()
     {
         ImageId = string.Empty,
-        CurrentRelPath = string.Empty,
+        CurrentRelPath = Path.Combine(Path.GetFileName(Path.GetDirectoryName(absPath)) ?? string.Empty,
+            Path.GetFileName(absPath)),
         SceneFileName = Path.GetFileName(absPath),
         HasCalibration = false,
         AbsolutePath = absPath,

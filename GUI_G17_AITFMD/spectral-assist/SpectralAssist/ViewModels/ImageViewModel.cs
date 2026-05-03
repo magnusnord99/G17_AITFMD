@@ -71,14 +71,13 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private readonly LibraryManager _libraryManager;
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource _loadTcs = new();
-
-    private PropertyChangedEventHandler? _overlayHandler;
+    private readonly PropertyChangedEventHandler? _overlayHandler;
+    
+    [ObservableProperty]
     private bool _isCalibrated;
     private bool InLibraryMode => ImageNode.IsInLibrary;
-    private bool HasCalibration => ImageNode.HasCalibration;
     private bool CanExportPdf() => Cube != null && Overlay.ClassificationResult != null;
-
-
+    
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
     private RunSummary? _activeRun;
 
@@ -175,7 +174,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
             var result = await ImageLoadingService.LoadAsync(ImageNode.AbsolutePath, progress, _cts.Token);
             Cube = result.Cube;
-            _isCalibrated = result.HasCalibration;
+            IsCalibrated = result.HasCalibration;
 
             LoadingState = LoadingState.Ready;
             StatusMessage = "Loading Complete";
@@ -216,7 +215,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (!_isCalibrated)
+        if (!IsCalibrated)
         {
             InferenceOutput =
                 "Missing calibration: place darkReference.hdr and whiteReference.hdr in the scene folder and reopen.";
@@ -234,7 +233,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         {
             var progress = new Progress<string>(s => { InferenceOutput = s; });
 
-            // Perform preprocessing if fresh session or different modelPackage
+            // Preprocess (cache invalidation by package change)
             if (_cachedPreprocessing == null || _lastPackage != package)
             {
                 InferenceOutput = "Performing preprocessing...";
@@ -244,16 +243,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
             }
 
-            // Perform inference on preprocessed cube
+            // Perform Inference
             var runResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, package, progress, ct);
-            InferenceOutput = "";
-
+            
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
-
             var summary = await TryAutoSaveRunAsync(runResult, ct);
             if (summary != null)
                 ActiveRun = summary;
+            
+            InferenceOutput = "";
         }
         catch (OperationCanceledException)
         {
@@ -507,8 +506,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         // Placeholder Bitmap
         CurrentBitmap = new WriteableBitmap(
-            new Avalonia.PixelSize(320, 240),
-            new Avalonia.Vector(96, 96),
+            new PixelSize(320, 240),
+            new Vector(96, 96),
             Avalonia.Platform.PixelFormat.Bgra8888,
             Avalonia.Platform.AlphaFormat.Opaque);
 

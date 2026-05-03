@@ -60,7 +60,7 @@ public partial class MainWindow : Window
                 filePath = actualPath;
         }
 
-        Vm.OpenImage(filePath);
+        Vm.OpenImageFromPath(filePath);
     }
 
 
@@ -91,7 +91,7 @@ public partial class MainWindow : Window
             }
 
             Debug.WriteLine($"File received via file picker: {path}");
-            Vm.OpenImage(path);
+            Vm.OpenImageFromPath(path);
         }
         catch (Exception e)
         {

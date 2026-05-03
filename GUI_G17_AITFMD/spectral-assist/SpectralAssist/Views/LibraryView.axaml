@@ -15,7 +15,7 @@
             <TextBlock Text="No library folder open" FontSize="18" Opacity="0.7" HorizontalAlignment="Center" />
             <TextBlock Text="Pick a root folder containing patient sub-folders to get started."
                        Opacity="0.5" HorizontalAlignment="Center" />
-            <Button Content="Open Folder…" Click="OpenFolderButton_Click"
+            <Button Content="Open Folder" Click="OpenFolderButton_Click"
                     HorizontalAlignment="Center" Padding="16,8" />
         </StackPanel>
 
