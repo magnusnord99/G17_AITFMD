@@ -144,6 +144,9 @@ public class PreprocessingConfig
 
     [JsonPropertyName("band_reduce_strategy")]
     public string? BandReduceStrategy { get; set; }
+
+    [JsonPropertyName("patch_min_tissue_ratio")]
+    public double PatchMinTissueRatio { get; init; } = 0.0;
 }
 
 /// <summary>Spectral band reduction stage. May run in C# (band_average)

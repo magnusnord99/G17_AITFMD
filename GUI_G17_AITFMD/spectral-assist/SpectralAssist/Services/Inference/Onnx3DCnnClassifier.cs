@@ -125,6 +125,7 @@ public class Onnx3DCnnClassifier : IDisposable
         var done = 0;
 
         // Rent a reusable buffer for patch extraction (avoids per-patch allocation)
+        var minTissueRatio = _package!.Manifest.Pipeline.Preprocessing.Params.PatchMinTissueRatio;
         var patchBuffer = ArrayPool<float>.Shared.Rent(grid.PatchSize);
         try
         {
@@ -136,13 +137,13 @@ public class Onnx3DCnnClassifier : IDisposable
                     ct.ThrowIfCancellationRequested();
                     var x = Math.Min(tx * grid.StrideW, cube.Samples - grid.PatchW);
 
-                    // Skip patches that don't overlap any tissue
-                    if (!PatchOverlapsTissue(tissueMask, cube.Samples, x, y, grid.PatchW, grid.PatchH))
+                    // Skip patches below the tissue ratio threshold (matches Python min_tissue_ratio)
+                    if (!PatchMeetsTissueRatio(tissueMask, cube.Samples, x, y, grid.PatchW, grid.PatchH, minTissueRatio))
                     {
                         progress?.Report((++done, grid.TotalPatches));
                         continue;
                     }
-                    
+
                     // Extract patch into reusable buffer (no allocation)
                     ExtractPatchInto(cube, x, y, grid.PatchW, grid.PatchH, patchBuffer);
 
@@ -194,6 +195,7 @@ public class Onnx3DCnnClassifier : IDisposable
         var session = _package!.Session;
         var predictions = new List<PatchPrediction>();
         var done = 0;
+        var minTissueRatio = _package!.Manifest.Pipeline.Preprocessing.Params.PatchMinTissueRatio;
 
         var patchBuffer = ArrayPool<float>.Shared.Rent(grid.PatchSize);
         try
@@ -206,8 +208,8 @@ public class Onnx3DCnnClassifier : IDisposable
                     ct.ThrowIfCancellationRequested();
                     var x = Math.Min(tx * grid.StrideW, cube.Samples - grid.PatchW);
 
-                    // Skip patches that don't overlap any tissue
-                    if (!PatchOverlapsTissue(tissueMask, cube.Samples, x, y, grid.PatchW, grid.PatchH))
+                    // Skip patches below the tissue ratio threshold (matches Python min_tissue_ratio)
+                    if (!PatchMeetsTissueRatio(tissueMask, cube.Samples, x, y, grid.PatchW, grid.PatchH, minTissueRatio))
                     {
                         progress?.Report((++done, grid.TotalPatches));
                         continue;
@@ -271,18 +273,20 @@ public class Onnx3DCnnClassifier : IDisposable
     }
 
     /// <summary>
-    /// Returns true if any pixel in the patch region is marked as tissue (true) in the mask.
-    /// If mask is null, always returns true (classify everything).
+    /// Returns true if the fraction of tissue pixels in the patch meets or exceeds minTissueRatio.
+    /// Matches Python's min_tissue_ratio filtering in CubePatchDataset and iter_patches().
+    /// If mask is null or minTissueRatio is 0, always returns true.
     /// </summary>
-    private static bool PatchOverlapsTissue(
-        bool[]? mask, int imageWidth, int startX, int startY, int patchW, int patchH)
+    private static bool PatchMeetsTissueRatio(
+        bool[]? mask, int imageWidth, int startX, int startY, int patchW, int patchH, double minTissueRatio)
     {
-        if (mask == null) return true;
+        if (mask == null || minTissueRatio <= 0.0) return true;
+        var tissueCount = 0;
         for (var row = startY; row < startY + patchH; row++)
         for (var col = startX; col < startX + patchW; col++)
             if (mask[row * imageWidth + col])
-                return true;
-        return false;
+                tissueCount++;
+        return (double)tissueCount / (patchW * patchH) >= minTissueRatio;
     }
 
     private static float[] Softmax(float[] logits)
