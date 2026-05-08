@@ -144,7 +144,7 @@ public class Onnx3DCnnClassifier : IDisposable
                     }
                     
                     // Extract patch into reusable buffer (no allocation)
-                    ExtractPatchInto(cube, x, y, grid.PatchW, grid.PatchH, patchBuffer);
+                    cube.ExtractPatchInto(x, y, grid.PatchW, grid.PatchH, patchBuffer);
 
                     // Create OrtValue from managed Memory<float> with length equal to patch size
                     using var inputOrtValue = OrtValue.CreateTensorValueFromMemory(
@@ -213,7 +213,7 @@ public class Onnx3DCnnClassifier : IDisposable
                         continue;
                     }
 
-                    ExtractPatchInto(cube, x, y, grid.PatchW, grid.PatchH, patchBuffer);
+                    cube.ExtractPatchInto(x, y, grid.PatchW, grid.PatchH, patchBuffer);
 
                     // DenseTensor wraps the memory segment (exact length, not pooled capacity)
                     var tensor = new DenseTensor<float>(
@@ -251,25 +251,6 @@ public class Onnx3DCnnClassifier : IDisposable
     
     // -- Helpers -- //
     
-    /// <summary>
-    /// Extracts a BSQ patch from the cube into a pre-allocated buffer.
-    /// Same layout as <see cref="HsiCube.ExtractPatch"/> but avoids allocation.
-    /// </summary>
-    private static void ExtractPatchInto(
-        HsiCube cube, int startX, int startY, int patchW, int patchH, float[] dest)
-    {
-        for (var b = 0; b < cube.Bands; b++)
-        {
-            var band = cube.GetBand(b);
-            var destOffset = b * patchH * patchW;
-            for (var row = 0; row < patchH; row++)
-            {
-                band.Slice((startY + row) * cube.Samples + startX, patchW)
-                    .CopyTo(dest.AsSpan(destOffset + row * patchW, patchW));
-            }
-        }
-    }
-
     /// <summary>
     /// Returns true if any pixel in the patch region is marked as tissue (true) in the mask.
     /// If mask is null, always returns true (classify everything).
