@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -401,6 +402,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         if (!_headerPrinted)
         {
             Console.WriteLine("Image,PreprocessMs,InferenceMs,TotalMs,CpuMs,BeforeMiB,AfterMiB,ReductionPct");
+            Debug.WriteLine("Image,PreprocessMs,InferenceMs,TotalMs,CpuMs,BeforeMiB,AfterMiB,ReductionPct");
             _headerPrinted = true;
         }
 
@@ -421,7 +423,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         var reduction = beforeMiB > 0 ? (1.0 - afterMiB / beforeMiB) * 100.0 : 0.0;
 
         var image = Path.GetFileName(Path.GetDirectoryName(source.Header.DataFilePath)) ?? "(unknown)";
-        Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+        Console.WriteLine(string.Format(CultureInfo.InvariantCulture,
+            "{0},{1:F0},{2:F0},{3:F0},{4:F0},{5:F2},{6:F2},{7:F2}",
+            image, preMs, infMs, totalMs, cpuMs, beforeMiB, afterMiB, reduction));
+        
+        Debug.WriteLine(string.Format(CultureInfo.InvariantCulture,
             "{0},{1:F0},{2:F0},{3:F0},{4:F0},{5:F2},{6:F2},{7:F2}",
             image, preMs, infMs, totalMs, cpuMs, beforeMiB, afterMiB, reduction));
     }
