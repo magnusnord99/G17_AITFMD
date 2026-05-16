@@ -166,22 +166,24 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             {
                 if (running) InferenceOutput = s;
             });
-            var process = Process.GetCurrentProcess();
-            var pipelineWallClock = Stopwatch.StartNew();
-            var pipelineCpuStart = process.TotalProcessorTime;
+
+            // === Resource logging: timing setup ===============================
+            var wallTimer = Stopwatch.StartNew();
+            var cpuStart = Process.GetCurrentProcess().TotalProcessorTime;
             var preprocessingMs = 0.0;
-            var inferenceMs = 0.0;
+            // ==================================================================
             
             // Perform preprocessing if fresh session or different modelPackage
             if (_cachedPreprocessing == null || _lastPackage != modelPackage)
             {
+                var preprocessingTimer = Stopwatch.StartNew();
                 InferenceOutput = "Performing preprocessing...";
                 var preprocessing = modelPackage.Manifest.Pipeline.Preprocessing;
-                var preprocessingTimer = Stopwatch.StartNew();
                 _cachedPreprocessing = await Task.Run(
                     () => PreprocessingService.RunFromCalibrated(Cube!, preprocessing), _cts.Token);
-                preprocessingTimer.Stop();
+                
                 preprocessingMs = preprocessingTimer.Elapsed.TotalMilliseconds;
+
                 _lastPackage = modelPackage;
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
             }
@@ -192,11 +194,26 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             
             // Perform inference on preprocessed cube
             var inferenceTimer = Stopwatch.StartNew();
+            
             var classificationResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, modelPackage, stride, progress, _cts.Token);
-            inferenceTimer.Stop();
-            inferenceMs = inferenceTimer.Elapsed.TotalMilliseconds;
-            pipelineWallClock.Stop();
+            
+            wallTimer.Stop();
+            
+            // === Resource logging: write one CSV row to console ===========
+            if (LogMetrics)
+                LogMetricsCsv(
+                    preprocessingMs,
+                    inferenceTimer.Elapsed.TotalMilliseconds, 
+                    wallTimer.Elapsed.TotalMilliseconds,
+                    (Process.GetCurrentProcess().TotalProcessorTime - cpuStart).TotalMilliseconds, 
+                    Cube!,
+                    _cachedPreprocessing.Value.Cube);
+            // ================================================================
+            
+            /*
+             *
+
             var pipelineCpuUsedMs = (process.TotalProcessorTime - pipelineCpuStart).TotalMilliseconds;
             var pipelineElapsedMs = pipelineWallClock.Elapsed.TotalMilliseconds;
             var avgCpuUtilizationPct = pipelineElapsedMs > 0
@@ -235,8 +252,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 elementCompressionRate,
                 elementCompressionPercent);
             running = false;
+               */
 
-            InferenceOutput = FormatResultSummary(classificationResult, metrics);
+            InferenceOutput = "";
             Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
         }
         catch (OperationCanceledException)
@@ -248,7 +266,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             InferenceOutput = $"Error: {ex.Message}";
         }
     }
-    
+
     // -- Debug Summary (remove for production) -- //
     private static string FormatResultSummary(ClassificationResult result, PipelineMetrics metrics)
     {
@@ -261,22 +279,25 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         text.AppendLine($"Inference time: {metrics.InferenceMs:F2} ms");
         text.AppendLine($"Total pipeline time: {metrics.TotalElapsedMs:F2} ms");
         text.AppendLine($"CPU time used: {metrics.CpuUsedMs:F2} ms");
-        text.AppendLine($"Avg CPU utilization: {metrics.AvgCpuUtilizationPct:F2}% ({Environment.ProcessorCount} logical cores)");
+        text.AppendLine(
+            $"Avg CPU utilization: {metrics.AvgCpuUtilizationPct:F2}% ({Environment.ProcessorCount} logical cores)");
         text.AppendLine($"Cube size before preprocessing: {metrics.SourceBytes / (1024.0 * 1024.0):F3} MiB");
-        text.AppendLine($"Cube size after preprocessing (data-type equivalent): {metrics.PreprocessedBytes / (1024.0 * 1024.0):F3} MiB");
-        text.AppendLine($"Cube size after preprocessing (in-memory float32): {metrics.PreprocessedInMemoryBytes / (1024.0 * 1024.0):F3} MiB");
+        text.AppendLine(
+            $"Cube size after preprocessing (data-type equivalent): {metrics.PreprocessedBytes / (1024.0 * 1024.0):F3} MiB");
+        text.AppendLine(
+            $"Cube size after preprocessing (in-memory float32): {metrics.PreprocessedInMemoryBytes / (1024.0 * 1024.0):F3} MiB");
         text.AppendLine($"Byte ratio (after/before): {metrics.CompressionRate:F4}");
         text.AppendLine($"Byte reduction: {metrics.CompressionPercent:F2}%");
         text.AppendLine($"Element ratio (after/before): {metrics.ElementCompressionRate:F4}");
         text.AppendLine($"Element reduction: {metrics.ElementCompressionPercent:F2}%");
         text.AppendLine();
- 
+
         foreach (var pred in result.Predictions)
         {
             var className = result.Classes[pred.PredictedClass];
             text.AppendLine($"  ({pred.X},{pred.Y}): {className} ({pred.Confidence:P1})");
         }
- 
+
         return text.ToString();
     }
 
@@ -308,11 +329,11 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     private static int GetBytesPerElement(int enviDataType) => enviDataType switch
     {
-        1 => 1,  // byte
-        2 => 2,  // int16
-        3 => 4,  // int32
-        4 => 4,  // float32
-        5 => 8,  // float64
+        1 => 1, // byte
+        2 => 2, // int16
+        3 => 4, // int32
+        4 => 4, // float32
+        5 => 8, // float64
         12 => 2, // uint16
         _ => sizeof(float)
     };
@@ -360,8 +381,52 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         Cube = null;
         GC.SuppressFinalize(this);
     }
-    
-    
+
+
+    // === ResourceLogging =======================================
+    private const bool LogMetrics = true;
+    private static bool _headerPrinted;
+
+    /// <summary>
+    /// Writes one CSV row to the console per inference run, CPU timings and
+    /// cube-size compression can be aggregated for the performance evaluation.
+    ///
+    /// Header row is printed once per application start
+    /// (Image, PreprocessMs, InferenceMs, TotalMs, CpuMs, BeforeMiB, AfterMiB, ReductionPct).
+    /// </summary>
+    private static void LogMetricsCsv(
+        double preMs, double infMs, double totalMs, double cpuMs,
+        HsiCube source, HsiCube preprocessed)
+    {
+        if (!_headerPrinted)
+        {
+            Console.WriteLine("Image,PreprocessMs,InferenceMs,TotalMs,CpuMs,BeforeMiB,AfterMiB,ReductionPct");
+            _headerPrinted = true;
+        }
+
+        var bytesPerElement = source.Header.DataType switch
+        {
+            1 => 1, // byte
+            2 => 2, // int16
+            3 => 4, // int32
+            4 => 4, // float32
+            5 => 8, // float64
+            12 => 2, // uint16
+            _ => 4, // unknown -> float32
+        };
+
+        var beforeMiB = (long)source.Samples * source.Lines * source.Bands * bytesPerElement / (1024.0 * 1024.0);
+        var afterMiB = (long)preprocessed.Samples * preprocessed.Lines * preprocessed.Bands * bytesPerElement /
+                       (1024.0 * 1024.0);
+        var reduction = beforeMiB > 0 ? (1.0 - afterMiB / beforeMiB) * 100.0 : 0.0;
+
+        var image = Path.GetFileName(Path.GetDirectoryName(source.Header.DataFilePath)) ?? "(unknown)";
+        Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "{0},{1:F0},{2:F0},{3:F0},{4:F0},{5:F2},{6:F2},{7:F2}",
+            image, preMs, infMs, totalMs, cpuMs, beforeMiB, afterMiB, reduction));
+    }
+
+
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ImageViewModel()
     {
