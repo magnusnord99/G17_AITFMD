@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Text;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -122,7 +120,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
 
 
-    // DisplayMode Changes ==================================================================
+    //__ DisplayMode Changes ____________________________________________
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
@@ -164,6 +162,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsSpectralMode));
         UpdateBitmap();
     }
+    //______________________________________________________________________________
 
 
     // -- Image loading on Initialization (delegates to ImageLoadingService) -- //
@@ -238,13 +237,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         try
         {
 
-            // === Resource logging: timing setup ===============================
+            // __ Resource logging: setup up timers _________________________
             var wallTimer = Stopwatch.StartNew();
             var cpuStart = Process.GetCurrentProcess().TotalProcessorTime;
             var preprocessingMs = 0.0;
-            // ==================================================================
+            //_______________________________________________________________
+            
             var progress = new Progress<string>(s => { InferenceOutput = s; });
-
+            
             // Preprocess (cache invalidation by package change)
             if (_cachedPreprocessing == null || _lastPackage != package)
             {
@@ -260,9 +260,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             }
 
             // Perform Inference
+            var inferenceTimer = Stopwatch.StartNew();
             var runResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, package, progress, ct);
             
+            var inferenceMs = inferenceTimer.Elapsed.TotalMilliseconds;
+            wallTimer.Stop();
+            
+            InferenceOutput = "";
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
             var summary = await TryAutoSaveRunAsync(runResult, ct);
             if (summary != null)
@@ -272,28 +277,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 SaveNotesCommand.NotifyCanExecuteChanged();
             }
             
-            // Perform inference on preprocessed cube
-            var inferenceTimer = Stopwatch.StartNew();
-            
-            var classificationResult = await _inferenceService.RunAsync(
-                _cachedPreprocessing.Value, modelPackage, stride, progress, _cts.Token);
-            
-            wallTimer.Stop();
-            
-            // === Resource logging: write one CSV row to console ===========
+            // __ Resource logging: write one CSV row to console if flagged ___________
             if (LogMetrics)
                 LogMetricsCsv(
                     preprocessingMs,
-                    inferenceTimer.Elapsed.TotalMilliseconds, 
+                    inferenceMs, 
                     wallTimer.Elapsed.TotalMilliseconds,
                     (Process.GetCurrentProcess().TotalProcessorTime - cpuStart).TotalMilliseconds, 
                     Cube!,
                     _cachedPreprocessing.Value.Cube);
-            // ================================================================
-            
-            InferenceOutput = "";
-            Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
-            InferenceOutput = "";
+            // __________________________________________________________________________
         }
         catch (OperationCanceledException)
         {
@@ -336,9 +329,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cachedSyntheticRgb = bitmap;
         return bitmap;
     }
+    //___________________________________________________
 
 
-    // Persistence Logic _______________________________
+    //__ Persistence Logic _______________________________
 
     /// <summary>
     /// Silently tries to save a thumbnail of the given bitmap.
@@ -458,7 +452,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // === ResourceLogging =======================================
+    // __ ResourceLogging _______________________________________________
     private const bool LogMetrics = true;
     private static bool _headerPrinted;
 
@@ -511,7 +505,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isSplitViewEnabled;
 
 
-    // Spectral Signature _______________________________________________
+    // __ Spectral Signature _______________________________________________
 
     [ObservableProperty] private int? _pixel1X;
     [ObservableProperty] private int? _pixel1Y;
