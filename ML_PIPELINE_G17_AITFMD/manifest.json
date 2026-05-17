@@ -10,20 +10,41 @@
     "input_spec": {
         "input_rank": 5,
         "tensor_layout": "NCDHW",
-        "input_shape": [1, 1, 16, 64, 64],
+        "input_shape": [
+            1,
+            1,
+            16,
+            64,
+            64
+        ],
         "spectral_bands": 16,
-        "spatial_patch_size": [64, 64],
-		"default_stride": [32, 32],
+        "spatial_patch_size": [
+            64,
+            64
+        ],
+        "default_stride": [
+            32,
+            32
+        ],
         "dtype": "float32"
     },
     "output_spec": {
         "type": "logits",
         "num_classes": 2,
-        "classes": ["class_0", "class_1"]
+        "classes": [
+            "class_0",
+            "class_1"
+        ]
     },
     "pipeline": {
         "preprocessing": {
-            "steps": ["calibrate", "clip", "neighbor_average", "tissue_mask", "wavelet"],
+            "steps": [
+                "calibrate",
+                "clip",
+                "neighbor_average",
+                "tissue_mask",
+                "wavelet"
+            ],
             "params": {
                 "calibration_epsilon": 1e-08,
                 "clip_min": 0.0,
@@ -34,7 +55,8 @@
                 "tissue_mask_q_std": 0.4,
                 "tissue_mask_min_object_size": 500,
                 "tissue_mask_min_hole_size": 1000,
-                "band_reduce_out_bands": 16
+                "band_reduce_out_bands": 16,
+                "patch_min_tissue_ratio": 0.3
             }
         },
         "spectral_reducer": {
@@ -72,7 +94,7 @@
     },
     "artifacts": {
         "model_onnx": "model.onnx",
-		"architecture_diagram": "architecture.png"
+        "architecture_diagram": "architecture.png"
     },
     "validation": {
         "status": "ready",
@@ -85,8 +107,14 @@
             "w": 64
         },
         "expected_output": {
-            "logits": [1.487705, -1.168717],
-            "softmax": [0.934406, 0.065594],
+            "logits": [
+                1.487705,
+                -1.168717
+            ],
+            "softmax": [
+                0.934406,
+                0.065594
+            ],
             "predicted_class": 0
         }
     }

@@ -1,76 +1,108 @@
-# HistologyHSI-GB 3D CNN Pipeline
+# ML Pipeline — HistologyHSI-GB 3D CNN
 
-This project structure is organized for a clean workflow:
+Maskinlæringspipeline for klassifisering av glioblastomvev ved hjelp av hyperspektrale histologibilder (HSI). Pipelinen trener 3D CNN-modeller på PCA-reduserte spektrale kuber og eksporterer modeller til ONNX for bruk i SpectralAssist-applikasjonen.
 
-1. Preprocessing ENVI hyperspectral cubes.
-2. Generating tissue-aware 3D patches.
-3. Training and evaluating a 3D CNN classifier.
+## Prosjektstruktur
 
-## Project Layout
-
-```text
-hsi_3dcnn_project/
-  configs/
-  models/              # PCA + AE for inference (committed for colleagues)
-  data/
-    raw/
-    interim/
-    processed/
-    splits/
-  docs/
-  notebooks/
-  outputs/
-    checkpoints/
-    figures/
-    logs/
-    reports/
-  scripts/
-  src/
-    preprocessing/
-    datasets/
-    models/
-      cnn3d/
-    training/
-    evaluation/
-    utils/
+```
+ML_PIPELINE_G17_AITFMD/
+├── configs/
+│   ├── train.yaml                  # Hoved-treningskonfig
+│   ├── models/                     # Arkitekturkonfiger (baseline, resnet, msd_dense, ad_hybrid_sn)
+│   ├── preprocessing/              # PCA- og pipeline-konfiger
+│   ├── grid_search/                # Grid search-konfiger
+│   └── inference/                  # Inferenskonfiger
+├── data/
+│   ├── raw/                        # Rådata (ENVI-kuber fra PKG-mappen)
+│   ├── interim/                    # Mellomprodukt: masker, manifester, PCA-modeller
+│   ├── processed/                  # PCA-reduserte kuber klar for trening
+│   └── splits/                     # Tog/val/test-splitter (JSON)
+├── models/
+│   ├── ae_avg3_16.pt               # Autoencoder for inferens
+│   └── pca_avg3_16.joblib          # PCA-modell for inferens
+├── outputs/
+│   ├── training/                   # Alle treningskjøringer (k-fold per modell)
+│   ├── onnx/
+│   │   ├── final/                  # Produksjonsklare ONNX-modeller
+│   │   ├── kfold/                  # K-fold eksporterte ONNX-modeller
+│   │   ├── export/                 # Eksport-tester
+│   │   └── experimental/          # Eksperimentelle eksporter
+│   ├── checkpoints/                # Beste modell-checkpoints
+│   ├── plots/                      # Trenings- og evalueringsplott
+│   ├── reports/                    # Evalueringsrapporter og metrikker
+│   ├── logs/                       # Trenings- og inferenslogger
+│   └── test/                       # Testutdata og grid search-resultater
+├── scripts/
+│   ├── run_train.py                # Start enkelt treningskjøring
+│   ├── run_kfold.py                # K-fold kryssvalidering
+│   ├── run_eval.py                 # Evaluering av trent modell
+│   ├── preprocessing/              # Forprosesseringsskript (PCA, masker, indeksering)
+│   └── export/                     # ONNX-eksportskript
+├── src/
+│   ├── datasets/                   # Dataset-klasser (CubePatchDataset)
+│   ├── models/cnn3d/               # Modellarkitekturer (baseline, resnet, msd_dense, ad_hybrid_sn)
+│   ├── preprocessing/              # PCA, autoencoder, vevsmaskering, patching
+│   ├── training/                   # Treningsloop, callbacks, early stopping
+│   ├── evaluation/                 # Evalueringspipeline, metrikker, rapportering
+│   ├── inference/                  # Inferenspipeline og heatmap-generering
+│   └── utils/                      # Logging og hjelpefunksjoner
+├── tests/                          # Enhetstester
+├── docs/visualizations/            # Visualiseringsskript
+├── requirements.txt
+└── run_inference.py                # Inferens-inngangspunkt
 ```
 
-## Python (maskinlæring)
-
-**Aktiver alltid prosjektets virtuelle miljø** før du kjører `python`, `pip` eller skript under `scripts/` i denne mappen:
+## Oppsett
 
 ```bash
-cd ML_PIPELINE_G17_AITFMD   # rot for ML-pipelinen
-source .venv/bin/activate   # macOS/Linux
+cd ML_PIPELINE_G17_AITFMD
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Uten aktivt `.venv` mangler ofte `numpy`, `scikit-image` osv., og stier til `src/` feiler.
+Kontroller at stier i `configs/preprocessing/pipeline.yaml` peker til riktig datasettlokasjon (`PKG - HistologyHSI-GB`).
 
-**3D-CNN → ONNX → SpectralAssist:** se [`docs/CNN3D_ONNX_WORKFLOW.md`](docs/CNN3D_ONNX_WORKFLOW.md) og `scripts/export/export_cnn3d_onnx.py`.
+## Vanlige kommandoer
 
-## Notes
+```bash
+# Forprosessering (PCA-reduksjon + vevsmaskering)
+python scripts/preprocessing/run_pipeline.py --config configs/preprocessing/pipeline.yaml
 
-- **Gjenoppbygging av avg16 / PCA / wavelet / AE med vevsmaske:** se [`docs/DATASET_REBUILD.md`](docs/DATASET_REBUILD.md).
-- Keep your original dataset in `PKG - HistologyHSI-GB` unchanged.
-- Point the preprocessing config to that folder as input.
-- Write only derived artifacts into `hsi_3dcnn_project/data/*` and `outputs/*`.
+# Trening (enkelt kjøring)
+python scripts/run_train.py --config configs/train.yaml
 
-## Team Setup (Git + Colleague)
+# K-fold kryssvalidering
+python scripts/run_kfold.py --config configs/train.yaml
 
-Use the same steps on both machines for reproducible runs.
+# Evaluering
+python scripts/run_eval.py --config configs/train.yaml
 
-1. Clone repo and enter project folder.
-2. Create and activate virtual environment:
-   - `python3 -m venv .venv`
-   - `source .venv/bin/activate` (macOS/Linux)
-3. Install dependencies:
-   - `python -m pip install --upgrade pip`
-   - `pip install -r requirements.txt`
-4. Verify paths in `configs/preprocessing/preprocessing.yaml` match local dataset location.
-5. **Inference:** `models/` contains PCA and AE models. Run `run_inference.py --input <ROI> --output-dir <dir>` – no extra setup needed.
+# ONNX-eksport
+python scripts/export/export_cnn3d_onnx.py
 
-### Recommended Git Practice
+# Inferens på ny ROI
+python run_inference.py --input <sti-til-kube> --output-dir outputs/
+```
 
-- Do not commit `.venv`, generated patches, checkpoints, logs, or derived data.
-- Commit code, configs, lightweight metadata, and `models/` (PCA + AE for inference).
-- Keep branch names task-based (example: `feat/preprocessing-indexer`).
+## Modeller
+
+Fire 3D CNN-arkitekturer er implementert og evaluert:
+
+| Modell | Beskrivelse |
+|--------|-------------|
+| `baseline_3dcnn` | Enkel 3D CNN med konvolusjonsblokker |
+| `resnet_3dcnn` | ResNet-inspirert med residualforbindelser |
+| `msd_dense_3dcnn` | Multi-scale dense connections |
+| `ad_hybrid_sn` | Hybrid spektral-romlig arkitektur |
+
+Modellkonfiger velges via `model_config` i `configs/train.yaml`.
+
+## Data
+
+Rådata (ENVI hyperspektrale kuber) ligger i `PKG - HistologyHSI-GB/` og må ikke endres. Forprosessering genererer PCA-reduserte `.npy`-kuber til `data/processed/` og mellomprodukter til `data/interim/`.
+
+## ONNX-eksport og SpectralAssist
+
+Ferdigtrente modeller eksporteres til ONNX-format og lastes inn av SpectralAssist (C# WPF-applikasjon i `GUI_G17_AITFMD/`). Produksjonsklare modeller ligger i `outputs/onnx/final/`.

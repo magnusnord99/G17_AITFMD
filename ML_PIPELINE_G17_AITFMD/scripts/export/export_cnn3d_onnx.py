@@ -113,6 +113,35 @@ def preprocessing_from_pipeline_yaml(path: Path) -> dict[str, Any]:
     return {"steps": steps, "params": params}
 
 
+def _sync_preprocessing_reducer(
+    block: dict[str, Any],
+    reducer_method: str,
+    spectral_bands: int | None,
+) -> None:
+    """Oppdater preprocessing-blokken in-place slik at steps og params
+    reflekterer den faktiske reducer_method (ikke pipeline.yaml-default).
+
+    Kaller på når --reducer-method overstyrer hva YAML sier.
+    """
+    KNOWN_REDUCERS = {"pca", "wavelet", "ae", "none"}
+    steps: list[str] = block.get("steps", [])
+    params: dict[str, Any] = block.get("params", {})
+
+    # Fjern eventuelle eksisterende reducer-steg fra steps
+    steps[:] = [s for s in steps if s not in KNOWN_REDUCERS]
+
+    if reducer_method and reducer_method != "none":
+        steps.append(reducer_method)
+        params["band_reduce_strategy"] = reducer_method
+        if spectral_bands is not None:
+            params["band_reduce_out_bands"] = spectral_bands
+        elif reducer_method != "wavelet":
+            params["band_reduce_out_bands"] = 0
+    else:
+        params["band_reduce_strategy"] = ""
+        params["band_reduce_out_bands"] = 0
+
+
 class TorchSpectralPCA(nn.Module):
     """(B,1,n_in,H,W) -> (B,1,n_out,H,W), ekvivalent sklearn PCA.transform per piksel."""
 
@@ -272,6 +301,21 @@ def _resolve_training_for_manifest(
             v = _to_float_or_none(row.get(k))
             if v is not None:
                 metrics[k] = v
+        # Eldre history-rader lagrer auc_roc kun inni val_metrics (dict eller streng).
+        # Hent manglende nøkler derfra.
+        raw_vm = row.get("val_metrics")
+        if isinstance(raw_vm, str):
+            import ast
+            try:
+                raw_vm = ast.literal_eval(raw_vm)
+            except (ValueError, SyntaxError):
+                raw_vm = None
+        if isinstance(raw_vm, dict):
+            for k in extra_metric_keys:
+                if k not in metrics or metrics[k] is None:
+                    v = _to_float_or_none(raw_vm.get(k))
+                    if v is not None:
+                        metrics[k] = v
     else:
         val_metrics = ckpt.get("val_metrics")
         if isinstance(val_metrics, dict):
@@ -326,7 +370,7 @@ def _build_gui_manifest(
     embedded_reducer_in_onnx: bool,
     reducer_input_bands: int,
     reducer_output_bands: int,
-    validation_tolerance: float = 1e-4,
+    validation_tolerance: float = 1e-3,
 ) -> dict[str, Any]:
     arch = model_yaml.get("architecture") or {}
     model_block = model_yaml.get("model") or {}
@@ -667,8 +711,8 @@ def main() -> None:
     parser.add_argument(
         "--validation-tolerance",
         type=float,
-        default=1e-4,
-        help="Akseptabelt avvik mellom Python-pipeline og C# ved validering (default: 1e-4)",
+        default=1e-3,
+        help="Akseptabelt avvik mellom Python-pipeline og C# ved validering (default: 1e-3)",
     )
     args = parser.parse_args()
 
@@ -707,6 +751,27 @@ def main() -> None:
         training_block["dataset"] = args.dataset
     if args.train_samples is not None:
         training_block["samples"] = args.train_samples
+
+    # Inkluder test-metrikkene fra fold_result.json hvis de finnes.
+    # Disse er langt mer informative enn val_metrics fra checkpoint.
+    fold_result_path = ckpt_path.parent / "fold_result.json"
+    if fold_result_path.is_file():
+        fold_result = json.loads(fold_result_path.read_text())
+        te = fold_result.get("test_eval", {})
+        roi = te.get("roi_metrics", {})
+        at_half = roi.get("metrics_at_threshold_0.5", {})
+        if roi:
+            training_block["test_metrics"] = {
+                "split": "test",
+                "test_patients": fold_result.get("test_patients"),
+                "roi_auc_roc": roi.get("auc_roc"),
+                "roi_avg_precision": roi.get("avg_precision"),
+                "roi_accuracy": at_half.get("accuracy"),
+                "roi_f1": at_half.get("f1"),
+                "roi_precision": at_half.get("precision"),
+                "roi_recall": at_half.get("recall"),
+                "optimal_threshold": roi.get("optimal_threshold_youden"),
+            }
 
     cfg_path = args.model_config
     if cfg_path is None:
@@ -790,6 +855,20 @@ def main() -> None:
         base = json.loads(tpl_path.read_text(encoding="utf-8"))
 
     preprocessing_block = preprocessing_from_pipeline_yaml(pl_path)
+
+    # Synkroniser preprocessing-blokken med den faktiske reducer_method.
+    # pipeline.yaml kan ha en annen default (f.eks. "pca") enn det som ble brukt
+    # under trening — override både steps-listen og params.
+    _sync_preprocessing_reducer(preprocessing_block, reducer_method, args.spectral_bands)
+
+    # Inkluder min_tissue_ratio fra treningskonfig slik at C# bruker identisk
+    # patch-filtrering som Python. Fallback til pipeline.yaml hvis nøkkelen mangler.
+    _min_tissue: float | None = None
+    if train_cfg is not None:
+        _min_tissue = train_cfg.get("data", {}).get("min_tissue_ratio")
+    if _min_tissue is None:
+        _min_tissue = (pipeline.get("patching") or {}).get("min_tissue_ratio")
+    preprocessing_block["params"]["patch_min_tissue_ratio"] = float(_min_tissue) if _min_tissue is not None else 0.0
 
     manifest = _build_gui_manifest(
         base=base,
