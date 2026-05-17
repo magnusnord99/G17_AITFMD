@@ -212,49 +212,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                     _cachedPreprocessing.Value.Cube);
             // ================================================================
             
-            /*
-             *
-
-            var pipelineCpuUsedMs = (process.TotalProcessorTime - pipelineCpuStart).TotalMilliseconds;
-            var pipelineElapsedMs = pipelineWallClock.Elapsed.TotalMilliseconds;
-            var avgCpuUtilizationPct = pipelineElapsedMs > 0
-                ? (pipelineCpuUsedMs / (pipelineElapsedMs * Environment.ProcessorCount)) * 100.0
-                : 0.0;
-
-            var sourceCube = Cube!;
-            var sourceDataTypeBytes = GetBytesPerElement(sourceCube.Header.DataType);
-            var sourceBytes = TryGetOnDiskBytes(sourceCube.Header)
-                              ?? ((long)sourceCube.Samples * sourceCube.Lines * sourceCube.Bands * sourceDataTypeBytes);
-            var preprocessedCube = _cachedPreprocessing.Value.Cube;
-            // Keep byte ratio consistent by using the same data-type width before/after.
-            var preprocessedBytes = (long)preprocessedCube.Samples * preprocessedCube.Lines * preprocessedCube.Bands * sourceDataTypeBytes;
-            // Also expose in-memory size (float32) used by the ONNX pipeline.
-            var preprocessedInMemoryBytes = (long)preprocessedCube.Samples * preprocessedCube.Lines * preprocessedCube.Bands * sizeof(float);
-            var compressionRate = sourceBytes > 0 ? (double)preprocessedBytes / sourceBytes : 1.0;
-            var compressionPercent = (1.0 - compressionRate) * 100.0;
-            var sourceElements = (long)sourceCube.Samples * sourceCube.Lines * sourceCube.Bands;
-            var preprocessedElements = (long)preprocessedCube.Samples * preprocessedCube.Lines * preprocessedCube.Bands;
-            var elementCompressionRate = sourceElements > 0 ? (double)preprocessedElements / sourceElements : 1.0;
-            var elementCompressionPercent = (1.0 - elementCompressionRate) * 100.0;
-
-            var metrics = new PipelineMetrics(
-                preprocessingMs,
-                inferenceMs,
-                pipelineElapsedMs,
-                pipelineCpuUsedMs,
-                avgCpuUtilizationPct,
-                sourceBytes,
-                preprocessedBytes,
-                preprocessedInMemoryBytes,
-                compressionRate,
-                compressionPercent,
-                sourceElements,
-                preprocessedElements,
-                elementCompressionRate,
-                elementCompressionPercent);
-            running = false;
-               */
-
             InferenceOutput = "";
             Overlay.ApplyResult(classificationResult, Cube!.Samples, Cube!.Lines);
         }
@@ -268,78 +225,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    // -- Debug Summary (remove for production) -- //
-    private static string FormatResultSummary(ClassificationResult result, PipelineMetrics metrics)
-    {
-        var text = new StringBuilder();
-        text.AppendLine($"Model: {result.ModelName}");
-        text.AppendLine($"Evaluated: {result.Evaluated} patches ({result.Skipped} skipped as background)");
-        text.AppendLine();
-        text.AppendLine("--- Pipeline Metrics ---");
-        text.AppendLine($"Preprocessing time: {metrics.PreprocessingMs:F2} ms");
-        text.AppendLine($"Inference time: {metrics.InferenceMs:F2} ms");
-        text.AppendLine($"Total pipeline time: {metrics.TotalElapsedMs:F2} ms");
-        text.AppendLine($"CPU time used: {metrics.CpuUsedMs:F2} ms");
-        text.AppendLine(
-            $"Avg CPU utilization: {metrics.AvgCpuUtilizationPct:F2}% ({Environment.ProcessorCount} logical cores)");
-        text.AppendLine($"Cube size before preprocessing: {metrics.SourceBytes / (1024.0 * 1024.0):F3} MiB");
-        text.AppendLine(
-            $"Cube size after preprocessing (data-type equivalent): {metrics.PreprocessedBytes / (1024.0 * 1024.0):F3} MiB");
-        text.AppendLine(
-            $"Cube size after preprocessing (in-memory float32): {metrics.PreprocessedInMemoryBytes / (1024.0 * 1024.0):F3} MiB");
-        text.AppendLine($"Byte ratio (after/before): {metrics.CompressionRate:F4}");
-        text.AppendLine($"Byte reduction: {metrics.CompressionPercent:F2}%");
-        text.AppendLine($"Element ratio (after/before): {metrics.ElementCompressionRate:F4}");
-        text.AppendLine($"Element reduction: {metrics.ElementCompressionPercent:F2}%");
-        text.AppendLine();
-
-        foreach (var pred in result.Predictions)
-        {
-            var className = result.Classes[pred.PredictedClass];
-            text.AppendLine($"  ({pred.X},{pred.Y}): {className} ({pred.Confidence:P1})");
-        }
-
-        return text.ToString();
-    }
-
-    private readonly record struct PipelineMetrics(
-        double PreprocessingMs,
-        double InferenceMs,
-        double TotalElapsedMs,
-        double CpuUsedMs,
-        double AvgCpuUtilizationPct,
-        long SourceBytes,
-        long PreprocessedBytes,
-        long PreprocessedInMemoryBytes,
-        double CompressionRate,
-        double CompressionPercent,
-        long SourceElements,
-        long PreprocessedElements,
-        double ElementCompressionRate,
-        double ElementCompressionPercent);
-
-    private static long? TryGetOnDiskBytes(HsiHeader header)
-    {
-        if (string.IsNullOrWhiteSpace(header.DataFilePath) || !File.Exists(header.DataFilePath))
-            return null;
-
-        var fileBytes = new FileInfo(header.DataFilePath).Length;
-        var payloadBytes = fileBytes - header.HeaderOffset;
-        return payloadBytes > 0 ? payloadBytes : fileBytes;
-    }
-
-    private static int GetBytesPerElement(int enviDataType) => enviDataType switch
-    {
-        1 => 1, // byte
-        2 => 2, // int16
-        3 => 4, // int32
-        4 => 4, // float32
-        5 => 8, // float64
-        12 => 2, // uint16
-        _ => sizeof(float)
-    };
-
-
+    
     // -- Display -- //
     private void UpdateBitmap()
     {
