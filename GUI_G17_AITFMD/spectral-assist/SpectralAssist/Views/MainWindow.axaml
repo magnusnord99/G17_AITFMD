@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="SpectralAssist.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/icon-256x256px.ico"
         Title="SpectralAssist">
 
     <Design.DataContext>

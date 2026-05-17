@@ -3,12 +3,15 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets/icon-256x256px.ico</ApplicationIcon>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
 
-        <!-- Set OSPlatform type boolean -->
-        <IsMacOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">true</IsMacOS>
-        <IsWinOrLinux Condition="$([MSBuild]::IsOSPlatform('Windows')) Or $([MSBuild]::IsOSPlatform('Linux'))">true</IsWinOrLinux>
+    <!-- Set OSPlatform type boolean -->
+    <PropertyGroup>
+        <IsMacOSTarget Condition="$(RuntimeIdentifier.StartsWith('osx'))">true</IsMacOSTarget>
+        <IsMacOSTarget Condition="'$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">true</IsMacOSTarget>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Debug'">
@@ -51,16 +54,17 @@
         <PackageReference Include="PanAndZoom" Version="11.3.9.1"/>
         <PackageReference Include="QuestPDF" Version="2026.2.4" />
         <PackageReference Include="ScottPlot.Avalonia" Version="5.1.58" />
+        <PackageReference Include="Tmds.DBus.Protocol" Version="0.93.0" />
         <!-- <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1"/> -->
     </ItemGroup>
 
     <!-- If macOS: CPU and CoreML OnnxRuntime -->
-    <ItemGroup Condition="'$(IsMacOS)' == 'true'">
+    <ItemGroup Condition="'$(IsMacOSTarget)' == 'true'">
         <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     </ItemGroup>
 
     <!-- If Windows/Linux: CUDA and CPU OnnxRuntime -->
-    <ItemGroup Condition="'$(IsWinOrLinux)' == 'true'">
+    <ItemGroup Condition="'$(IsMacOSTarget)' != 'true'">
         <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.1" />
     </ItemGroup>
 
