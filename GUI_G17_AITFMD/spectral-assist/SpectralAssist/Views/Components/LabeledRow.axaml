@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SpectralAssist.Views.Components.LabeledRow"
+             x:Name="Root">
+    <Grid ColumnDefinitions="160,*">
+        <TextBlock Grid.Column="0"
+                   Classes="label"
+                   VerticalAlignment="Top"
+                   Text="{Binding Label, ElementName=Root}" />
+        <TextBlock Grid.Column="1"
+                   Classes="value"
+                   TextWrapping="Wrap"
+                   Text="{Binding Value, ElementName=Root}" />
+    </Grid>
+</UserControl>

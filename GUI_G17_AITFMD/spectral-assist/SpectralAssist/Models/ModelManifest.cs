@@ -75,7 +75,7 @@ public class ManifestMetadata
     public string Version { get; set; } = string.Empty;
 
     [JsonPropertyName("created")]
-    public string Created { get; set; } = string.Empty;
+    public System.DateTime? Created { get; set; }
 
     [JsonPropertyName("author")]
     public string Author { get; set; } = string.Empty;
@@ -95,6 +95,27 @@ public class PipelineInfo
 
     [JsonPropertyName("model")]
     public ModelInfo Model { get; set; } = new();
+
+    /// <summary>
+    /// Preprocessing steps with the trailing reducer step stripped when it
+    /// duplicates the spectral reducer method. Use for display so the reducer
+    /// only appears once across the pipeline diagram.
+    /// </summary>
+    [JsonIgnore]
+    public List<string> PreprocessingStepsForDisplay
+    {
+        get
+        {
+            var steps = new List<string>(Preprocessing.Steps);
+            if (steps.Count > 0 &&
+                !string.IsNullOrEmpty(SpectralReducer.Method) &&
+                string.Equals(steps[^1], SpectralReducer.Method, System.StringComparison.OrdinalIgnoreCase))
+            {
+                steps.RemoveAt(steps.Count - 1);
+            }
+            return steps;
+        }
+    }
 }
 
 /// <summary>Ordered preprocessing steps and their parameters.
@@ -274,11 +295,25 @@ public class ArtifactPaths
 /// <summary>Validation information used for the smoke test at import time.</summary>
 public class ValidationInfo
 {
-    [JsonPropertyName("status")] 
+    [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("summary")]
     public string Summary { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public bool IsPassed => string.Equals(Status, "passed", System.StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsFailed => string.Equals(Status, "failed", System.StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when validation couldn't run — missing data, missing files, etc.
+    /// Distinct from <see cref="IsFailed"/> (model produced wrong output).</summary>
+    [JsonIgnore]
+    public bool IsSkipped => string.Equals(Status, "skipped", System.StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public string StatusDisplay => string.IsNullOrEmpty(Status) ? "Not validated" : char.ToUpper(Status[0]) + Status[1..].ToLower();
 
     [JsonPropertyName("roi_dir")]
     public string? RoiDir { get; set; }

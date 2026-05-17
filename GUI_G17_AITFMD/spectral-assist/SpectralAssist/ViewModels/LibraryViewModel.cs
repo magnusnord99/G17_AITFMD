@@ -143,6 +143,9 @@ public partial class LibraryViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private void CancelScan() => _scanCts?.Cancel();
+
     [RelayCommand(CanExecute = nameof(IsLoaded))]
     private async Task RescanAsync()
     {

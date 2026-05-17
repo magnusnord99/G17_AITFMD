@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SpectralAssist.Views.Components.SidebarLayout"
+             x:Name="Root">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{Binding SidebarWidth, ElementName=Root}" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT: Sidebar (Header + Content + Actions) -->
+        <Border Grid.Column="0" Classes="sidebar">
+            <DockPanel LastChildFill="True">
+
+                <!-- Optional header at top -->
+                <Border DockPanel.Dock="Top"
+                        Padding="12,10,12,6"
+                        IsVisible="{Binding SidebarHeader, ElementName=Root,
+                                    Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <ContentPresenter Content="{Binding SidebarHeader, ElementName=Root}" />
+                </Border>
+
+                <!-- Optional actions at bottom -->
+                <Border DockPanel.Dock="Bottom"
+                        Padding="12,10"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="0,1,0,0"
+                        IsVisible="{Binding SidebarActions, ElementName=Root,
+                                    Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <ContentPresenter Content="{Binding SidebarActions, ElementName=Root}" />
+                </Border>
+
+                <!-- Main sidebar content fills remaining space -->
+                <ContentPresenter Content="{Binding SidebarContent, ElementName=Root}" />
+            </DockPanel>
+        </Border>
+
+        <!-- RIGHT: Main content area -->
+        <ContentPresenter Grid.Column="1"
+                          Content="{Binding MainContent, ElementName=Root}" />
+    </Grid>
+</UserControl>

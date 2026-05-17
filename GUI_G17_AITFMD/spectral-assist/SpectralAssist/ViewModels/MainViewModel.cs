@@ -80,7 +80,7 @@ public partial class MainViewModel : ViewModelBase
         OpenImage?.Dispose();
         var transientNode = ImageNode.CreateTransient(filePath);
         OpenImage = _imageVmFactory(transientNode);
-        //OpenImage.CloseRequested += CloseOpenImage;  // ToDO: Is this needed?
+        OpenImage.CloseRequested += CloseOpenImage;
         Session.ActiveImageId = transientNode.ImageId;
         CurrentView = OpenImage;
     }
@@ -105,7 +105,7 @@ public partial class MainViewModel : ViewModelBase
 
         OpenImage?.Dispose();
         OpenImage = _imageVmFactory(imageNode);
-        //OpenImage.CloseRequested += CloseOpenImage;  // ToDO: Is this needed?
+        OpenImage.CloseRequested += CloseOpenImage;
         Session.ActiveImageId = imageNode.ImageId;
         CurrentView = OpenImage;
     }

@@ -19,21 +19,35 @@ public partial class ImageTileViewModel : ObservableObject
         Thumbnail = ThumbnailService.TryLoadThumbnail(libraryRoot, source);
     }
     
-    // States __________________________________________________________
+    //__ States __________________________________________________________
     private readonly Action<ImageNode> _onOpen;
     [ObservableProperty] private ImageNode _source;
     [ObservableProperty] private Bitmap? _thumbnail;
     [ObservableProperty] private bool _isActive;
     
-    // Properties ______________________________________________________
+    //__ Properties ______________________________________________________
+    private RunSummary? MostSevereRun => Source.MostSevereRun();
+    private RunSummary? LatestRun => Source.LatestRun();
     public string FileName => Source.SceneFileName;
     public bool MissingCalibration => !Source.HasCalibration;
+    
     public int ReportCount => Source.Runs.Count;
     public bool HasReports => ReportCount > 0;
     public bool IsNotAnalyzed => ReportCount == 0;
     
     public void RefreshActive(string? activeImageId)
         => IsActive = activeImageId is not null && Source.ImageId == activeImageId;
+    
+    public double PositiveClassPercentAbove50 =>
+        MostSevereRun?.PositiveClassPercentAbove50 ?? 0;
+
+    public double PositiveClassPercentAbove80 =>
+        MostSevereRun?.PositiveClassPercentAbove80 ?? 0;
+
+    public string PositiveClassName =>
+        string.IsNullOrWhiteSpace(MostSevereRun?.PositiveClassName)
+            ? "positive"
+            : MostSevereRun!.PositiveClassName;
     
     public string DisplayName
     {
@@ -48,35 +62,22 @@ public partial class ImageTileViewModel : ObservableObject
         }
     }
 
-    public string PrimarySummary
+    public string FooterSummary
     {
         get
         {
-            var mostSevereRun = Source.MostSevereRun();
-            if (mostSevereRun == null)
-                return "Not analyzed yet";
+            if (LatestRun is null)
+                return $"{ReportCount} reports";
+            
+            var date = LatestRun.CompletedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
-            var name = string.IsNullOrWhiteSpace(mostSevereRun.PositiveClassName)
-                ? "positive"
-                : mostSevereRun.PositiveClassName;
-
-            return $"Peak: {mostSevereRun.PositiveClassPercentAbove50:0}% {name}";
-        }
-    }
-
-    public string SecondarySummary
-    {
-        get
-        {
-            var latestRun = Source.LatestRun();
-            var date = latestRun?.CompletedAt.ToLocalTime().ToString("MMM d");
             return ReportCount == 1
-                ? $"1 report · {date}"
-                : $"{ReportCount} reports · Last {date}";
+                ? $"1 report - Last run {date}"
+                : $"{ReportCount} reports - Last run {date}";
         }
     }
     
-    // Methods ____________________________________________
+    //__ Methods ____________________________________________
     
     [RelayCommand]
     private void Open() => _onOpen(Source);
@@ -92,7 +93,6 @@ public partial class ImageTileViewModel : ObservableObject
         OnPropertyChanged(nameof(HasReports));
         OnPropertyChanged(nameof(IsNotAnalyzed));
         OnPropertyChanged(nameof(DisplayName));
-        OnPropertyChanged(nameof(PrimarySummary));
-        OnPropertyChanged(nameof(SecondarySummary));
+        OnPropertyChanged(nameof(FooterSummary));
     }
 }

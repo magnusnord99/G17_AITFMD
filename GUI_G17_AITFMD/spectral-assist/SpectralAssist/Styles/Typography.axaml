@@ -1,0 +1,90 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- h1: page-level heading -->
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeHero}" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <!-- Section title: header inside a sidebar/card -->
+    <Style Selector="TextBlock.section-title">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <!-- Small uppercase section label (METADATA, INPUT SPEC, ...) -->
+    <Style Selector="TextBlock.section-label">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+    </Style>
+    
+    <!-- Default body / paragraph -->
+    <Style Selector="TextBlock.body">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+    </Style>
+
+    <!-- Caption text -->
+    <Style Selector="TextBlock.caption">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+    </Style>
+
+    <!-- Field label (left column of label/value grid) -->
+    <Style Selector="TextBlock.label">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        <Setter Property="Margin" Value="0,3" />
+    </Style>
+
+    <!-- Field value (right column of label/value grid) -->
+    <Style Selector="TextBlock.value">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,3" />
+    </Style>
+    
+    
+    <!-- Big number/value inside a stat-card -->
+    <Style Selector="TextBlock.stat-value">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeHero}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <!-- Small caption/label inside a stat-card -->
+    <Style Selector="TextBlock.stat-label">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <!-- Mid-size stat value (sidebar mini-stat blocks) -->
+    <Style Selector="TextBlock.mini-value">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeLarge}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <!-- Tiny uppercase label paired with mini-value -->
+    <Style Selector="TextBlock.mini-label">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+    </Style>
+    
+    <!-- Pipeline arrow between model pipeline stages -->
+    <Style Selector="TextBlock.arrow">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeXLarge}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="6,0" />
+    </Style>
+
+</Styles>

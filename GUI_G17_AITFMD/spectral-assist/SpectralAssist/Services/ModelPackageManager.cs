@@ -237,11 +237,9 @@ public class ModelPackageManager : IDisposable
             var manifest = JsonSerializer.Deserialize<ModelManifest>(json);
             if (manifest == null)
                 return ServiceResult<ModelManifest>.Fail("Failed to deserialize manifest");
-
-            //manifest.Id = Path.GetFileName(packageDir);
+            
             manifest.DirectoryPath = Path.GetFullPath(packageDir);
-
-
+            
             if (string.IsNullOrEmpty(manifest.Metadata.Id))
             {
                 var onnxPath = Path.Combine(packageDir, manifest.Artifacts.ModelOnnx);
@@ -258,6 +256,7 @@ public class ModelPackageManager : IDisposable
                 catch (Exception e)
                 {
                     // ModelManifest.json ID update write failed; skip for now
+                    Debug.WriteLine("Writing updated Model ID failed: " + e.Message);
                 }
             }
 

@@ -5,7 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using SpectralAssist.Models;
 using SpectralAssist.ViewModels;
 using SpectralAssist.Views;
-using SpectralAssist.Views.Shared;
+using ConfirmDialog = SpectralAssist.Views.Components.ConfirmDialog;
 
 namespace SpectralAssist.Services;
 

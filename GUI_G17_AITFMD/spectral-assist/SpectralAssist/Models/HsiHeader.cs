@@ -16,6 +16,17 @@ public class HsiHeader
     public int DataType { get; set; }
     public int ByteOrder { get; set; }
 
+    public string DataTypeName => DataType switch
+    {
+        1 => "byte",
+        2 => "int16",
+        3 => "int32",
+        4 => "float32",
+        5 => "float64",
+        12 => "uint16",
+        _ => $"dtype {DataType}",
+    };
+
     public int[] DefaultBands { get; set; } = [0, 0, 0];
     public string WavelengthUnit { get; set; } = string.Empty;
     public float[] WavelengthValues { get; set; } = [];

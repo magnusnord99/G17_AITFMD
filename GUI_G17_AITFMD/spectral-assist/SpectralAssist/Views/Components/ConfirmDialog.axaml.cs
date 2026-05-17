@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace SpectralAssist.Views.Shared;
+namespace SpectralAssist.Views.Components;
 
 public partial class ConfirmDialog : Window
 {
