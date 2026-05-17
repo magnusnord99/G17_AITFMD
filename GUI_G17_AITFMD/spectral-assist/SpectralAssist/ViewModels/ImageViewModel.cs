@@ -45,11 +45,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public ImageViewModel(
         ImageNode imageNode,
         InferenceService inferenceService,
-        LibraryManager libraryManager)
+        LibraryManager libraryManager,
+        SessionService session,
+        IDialogService dialogService)
     {
         ImageNode = imageNode;
         _inferenceService = inferenceService;
         _libraryManager = libraryManager;
+        _session = session;
+        _dialogService = dialogService;
+        _imageNotes = imageNode.Notes;
 
         // Add listener for overlay changes
         _overlayHandler = (_, e) =>
@@ -69,9 +74,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
     private readonly InferenceService _inferenceService;
     private readonly LibraryManager _libraryManager;
+    private readonly SessionService _session;
+    private readonly IDialogService _dialogService;
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource _loadTcs = new();
     private readonly PropertyChangedEventHandler? _overlayHandler;
+    
     
     [ObservableProperty]
     private bool _isCalibrated;
@@ -107,7 +115,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Bitmap? _currentBitmap;
     [ObservableProperty] private string _inferenceOutput = "";
     [ObservableProperty] private bool _showNotes;
-    [ObservableProperty] private string _runNotes = "";
+    [ObservableProperty] private string _imageNotes = "";
 
     // -- Computed properties -- //
     public bool IsLoading => LoadingState == LoadingState.Loading;
@@ -204,6 +212,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _hasPreprocessedCube;
     private PreprocessingResult? _cachedPreprocessing;
     private ModelPackage? _lastPackage;
+    
+    [ObservableProperty]
+    private double _inferenceProgress;
 
     /// <summary>
     /// Runs inference using the set model package optional stride override.
@@ -233,6 +244,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
+            InferenceProgress = 0;
             var progress = new Progress<string>(s => { InferenceOutput = s; });
 
             // Preprocess (cache invalidation by package change)
@@ -246,18 +258,21 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             }
 
             // Perform Inference
+            var patchProgress = new Progress<(int Done, int Total)>(p =>
+            {
+                InferenceProgress = p.Total > 0 ? (double)p.Done / p.Total : 0;
+            });
+
             var runResult = await _inferenceService.RunAsync(
-                _cachedPreprocessing.Value, package, progress, ct);
-            
+                _cachedPreprocessing.Value, package, patchProgress, ct);
+
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
             var summary = await TryAutoSaveRunAsync(runResult, ct);
             if (summary != null)
             {
                 ActiveRun = summary;
-                RunNotes = string.Empty;
-                SaveNotesCommand.NotifyCanExecuteChanged();
             }
-            
+
             InferenceOutput = "";
         }
         catch (OperationCanceledException)
@@ -267,6 +282,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             InferenceOutput = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            InferenceProgress = 0;
         }
     }
 
@@ -352,7 +371,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         Overlay.ApplyResult(report, Cube.Samples, Cube.Lines);
         ActiveRun = summary;
-        RunNotes = report.Notes;
         SaveNotesCommand.NotifyCanExecuteChanged();
         InferenceOutput = $"Loaded report from {summary.CompletedAt:yyyy-MM-dd HH:mm} ({summary.ModelDisplayName})";
     }
@@ -384,7 +402,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void ToggleNotes() => ShowNotes = !ShowNotes;
 
-    private bool CanSaveNotes() => InLibraryMode && ActiveRun != null;
+    private bool CanSaveNotes() => InLibraryMode;
 
     [RelayCommand(CanExecute = nameof(CanSaveNotes))]
     private async Task SaveNotes(CancellationToken ct)
@@ -392,9 +410,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         if (ActiveRun == null) return;
         try
         {
-            await _libraryManager.UpdateRunNotesAsync(ImageNode.ImageId, ActiveRun.RunId, RunNotes, ct);
-            if (Overlay.ClassificationResult != null)
-                Overlay.ClassificationResult.Notes = RunNotes;
+            await _libraryManager.UpdateImageNotesAsync(ImageNode.ImageId, ImageNotes, ct);
         }
         catch (Exception ex)
         {
@@ -516,8 +532,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>Design preview constructor filled with dummy data.</summary>
-    public ImageViewModel()
+    public ImageViewModel(SessionService session)
     {
+        _session = session;
         ImageNode = ImageNode.CreateTransient("design.hdr");
         _libraryManager = null!;
         _inferenceService = null!;
