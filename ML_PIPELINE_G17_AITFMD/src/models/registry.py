@@ -30,16 +30,7 @@ _REGISTRY: dict[str, type[nn.Module]] = {
 
 
 def build_model(name: str, cfg: dict[str, Any]) -> nn.Module:
-    """
-    Bygg modell fra navn og config.
-
-    Args:
-        name: Modellnavn (f.eks. "baseline_3dcnn")
-        cfg: Hele config-dict eller model/architecture-delen
-
-    Returns:
-        nn.Module klar for trening
-    """
+    """Bygg modell fra navn og config-dict. Returner nn.Module klar for trening."""
     if name not in _REGISTRY:
         raise ValueError(f"Unknown model: {name}. Available: {list(_REGISTRY)}")
 
@@ -146,15 +137,7 @@ def list_models() -> list[str]:
 
 
 def build_model_from_config(config_path: str | Path) -> nn.Module:
-    """
-    Last config fra fil og bygg modell.
-
-    Args:
-        config_path: Sti til YAML (f.eks. configs/models/baseline_3dcnn.yaml)
-
-    Returns:
-        nn.Module
-    """
+    """Last YAML-config og bygg modell direkte fra fil."""
     path = Path(config_path)
     if not path.is_absolute():
         root = Path(__file__).resolve().parent.parent.parent

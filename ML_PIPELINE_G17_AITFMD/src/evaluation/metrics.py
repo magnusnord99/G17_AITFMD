@@ -14,12 +14,7 @@ def compute_roc(
     y_true: np.ndarray,
     y_prob: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Compute ROC curve.
-
-    Returns:
-        ``(fpr, tpr, thresholds)`` — arrays suitable for plotting and
-        threshold selection.
-    """
+    """Returner (fpr, tpr, thresholds) for ROC-kurven."""
     from sklearn.metrics import roc_curve  # type: ignore
 
     return roc_curve(np.asarray(y_true), np.asarray(y_prob))
@@ -29,11 +24,9 @@ def compute_pr(
     y_true: np.ndarray,
     y_prob: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Compute Precision-Recall curve.
+    """Returner (precision, recall, thresholds) for PR-kurven.
 
-    Returns:
-        ``(precision, recall, thresholds)`` — note sklearn's PR curve
-        has ``len(thresholds) == len(precision) - 1``.
+    Merk: sklearn sin PR-kurve har len(thresholds) == len(precision) - 1.
     """
     from sklearn.metrics import precision_recall_curve  # type: ignore
 
@@ -46,16 +39,9 @@ def find_optimal_threshold(
     thresholds: np.ndarray,
     strategy: str = "youden",
 ) -> float:
-    """Select the optimal probability threshold from an ROC curve.
+    """Velg optimal sannsynlighetsterskelen fra en ROC-kurve.
 
-    Args:
-        fpr: False-positive rates from ``compute_roc``.
-        tpr: True-positive rates from ``compute_roc``.
-        thresholds: Thresholds from ``compute_roc``.
-        strategy: ``"youden"`` maximises Youden's J (sensitivity + specificity - 1).
-
-    Returns:
-        Optimal threshold value.
+    strategy="youden" maksimerer Youden's J (sensitivitet + spesifisitet - 1).
     """
     if strategy == "youden":
         j = tpr - fpr
@@ -69,21 +55,7 @@ def compute_eval_metrics(
     y_prob: np.ndarray,
     threshold: float = 0.5,
 ) -> dict[str, float | int]:
-    """Full evaluation metric set for one split.
-
-    Computes binary metrics at the given threshold plus AUC-ROC and
-    average precision (area under PR curve).
-
-    Args:
-        y_true: Ground-truth labels, shape ``(N,)``.
-        y_prob: Probability for class 1, shape ``(N,)``.
-        threshold: Decision threshold applied to probabilities.
-
-    Returns:
-        Dict with keys: ``threshold_used``, ``accuracy``, ``precision``,
-        ``recall``, ``f1``, ``tp``, ``tn``, ``fp``, ``fn``,
-        ``auc_roc``, ``avg_precision``.
-    """
+    """Beregn binære evalueringsmetrikker ved gitt terskel pluss AUC-ROC og avg. presisjon."""
     from sklearn.metrics import average_precision_score, roc_auc_score  # type: ignore
 
     y_true = np.asarray(y_true, dtype=np.int64)

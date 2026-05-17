@@ -797,6 +797,11 @@ def main() -> None:
     sk_pca = None
     if embedded_in_onnx:
         pca_path = pca_path_auto
+        if pca_path is None:
+            # Fallback: les pca_model direkte fra YAML uavhengig av aktiv reducer
+            raw_pca = (pipeline.get("spectral_reduction") or {}).get("pca_model")
+            if raw_pca:
+                pca_path = (PROJECT_ROOT / str(raw_pca)).resolve()
         if pca_path is None or not pca_path.is_file():
             raise FileNotFoundError(
                 f"PCA-eksport krever pipeline.spectral_reduction.pca_model (fant ikke {pca_path})"
@@ -857,9 +862,10 @@ def main() -> None:
     preprocessing_block = preprocessing_from_pipeline_yaml(pl_path)
 
     # Synkroniser preprocessing-blokken med den faktiske reducer_method.
-    # pipeline.yaml kan ha en annen default (f.eks. "pca") enn det som ble brukt
-    # under trening — override både steps-listen og params.
-    _sync_preprocessing_reducer(preprocessing_block, reducer_method, args.spectral_bands)
+    # Ved PCA brukes "none" fordi PCA er bakt inn i ONNX-grafen — C# skal ikke
+    # gjøre noe spektralt reduksjonssteg selv (det håndteres av spectral_reducer-blokken).
+    effective_reducer = "none" if embedded_in_onnx else reducer_method
+    _sync_preprocessing_reducer(preprocessing_block, effective_reducer, args.spectral_bands)
 
     # Inkluder min_tissue_ratio fra treningskonfig slik at C# bruker identisk
     # patch-filtrering som Python. Fallback til pipeline.yaml hvis nøkkelen mangler.

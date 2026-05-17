@@ -4,13 +4,11 @@ from __future__ import annotations
 
 
 class EarlyStopping:
-    """Stop training when a monitored metric stops improving.
+    """Stopp trening når en overvåket metrikk slutter å forbedre seg.
 
-    Args:
-        patience: Number of epochs to wait after the last improvement.
-        min_delta: Minimum change to qualify as an improvement.
-        mode: ``"min"`` (lower is better, e.g. val_loss) or
-              ``"max"`` (higher is better, e.g. val_f1).
+    patience: antall epoker uten forbedring før stopp.
+    min_delta: minimalt krav til forbedring.
+    mode: "min" (lavere er bedre) eller "max" (høyere er bedre).
     """
 
     def __init__(
@@ -30,7 +28,7 @@ class EarlyStopping:
         self.triggered: bool = False
 
     def __call__(self, metric_value: float) -> bool:
-        """Evaluate the metric and return True when training should stop."""
+        """Oppdater teller og returner True om trening skal stoppes."""
         if self.mode == "min":
             improved = metric_value < self.best_value - self.min_delta
         else:
@@ -48,7 +46,7 @@ class EarlyStopping:
         return False
 
     def reset(self) -> None:
-        """Reset state so the instance can be reused."""
+        """Nullstill tilstand slik at instansen kan gjenbrukes."""
         self.best_value = float("inf") if self.mode == "min" else float("-inf")
         self.counter = 0
         self.triggered = False

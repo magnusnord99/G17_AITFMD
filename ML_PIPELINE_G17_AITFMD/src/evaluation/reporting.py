@@ -25,18 +25,7 @@ def save_eval_json(
     output_path: Path,
     metadata: dict[str, Any] | None = None,
 ) -> Path:
-    """Write the full eval report to a JSON file.
-
-    Args:
-        per_roi: List of per-ROI result dicts.
-        metrics: Top-level metric dict (may contain nested dicts per strategy).
-        output_path: Destination ``.json`` path (parent created if absent).
-        metadata: Optional extra fields written at the top of the report
-                  (e.g. checkpoint path, split, timestamp).
-
-    Returns:
-        Resolved path of the written file.
-    """
+    """Skriv evalueringsrapport til JSON-fil og returner faktisk filsti."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -60,15 +49,7 @@ def plot_roc_curve(
     output_path: Path,
     title: str = "ROC Curve",
 ) -> None:
-    """Save a ROC curve plot as PNG.
-
-    Args:
-        fpr: False-positive rates.
-        tpr: True-positive rates.
-        auc: AUC-ROC value for the legend.
-        output_path: Destination ``.png`` path.
-        title: Plot title.
-    """
+    """Lagre ROC-kurve som PNG."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -93,15 +74,7 @@ def plot_pr_curve(
     output_path: Path,
     title: str = "Precision-Recall Curve",
 ) -> None:
-    """Save a Precision-Recall curve plot as PNG.
-
-    Args:
-        precision: Precision values.
-        recall: Recall values.
-        avg_precision: Average precision score for the legend.
-        output_path: Destination ``.png`` path.
-        title: Plot title.
-    """
+    """Lagre presisjon-tilbakekall-kurve som PNG."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -124,17 +97,7 @@ def append_eval_summary_csv(
     run_id: str,
     split: str,
 ) -> None:
-    """Append one row to a persistent eval summary CSV.
-
-    Creates the file with headers if it does not yet exist, enabling an
-    accumulating history of all eval runs.
-
-    Args:
-        metrics: Flat or nested metric dict.  Nested values are JSON-serialised.
-        csv_path: Path to the CSV file.
-        run_id: Training run identifier.
-        split: Dataset split evaluated (``"val"`` or ``"test"``).
-    """
+    """Legg til én rad i persistent eval-CSV. Oppretter fil med header om den ikke finnes."""
     csv_path = Path(csv_path)
     csv_path.parent.mkdir(parents=True, exist_ok=True)
 

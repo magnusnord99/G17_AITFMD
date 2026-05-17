@@ -28,6 +28,9 @@ data/processed/*
 data/splits/*
 !data/splits/.gitkeep
 
+# Matplotlib cache
+.mpl_cache/
+
 # Training artifacts (keep folder structure via .gitkeep)
 outputs/checkpoints/*
 !outputs/checkpoints/.gitkeep
@@ -41,3 +44,8 @@ outputs/plots/*
 !outputs/plots/.gitkeep
 # Lokale test-artifakter fra scripts/export/test_export_cnn3d_onnx.py
 outputs/_test*/
+# Trenings- og eksport-output (ikke committ store binærfiler)
+outputs/training/
+outputs/onnx/
+outputs/test/
+outputs/eval_history.csv

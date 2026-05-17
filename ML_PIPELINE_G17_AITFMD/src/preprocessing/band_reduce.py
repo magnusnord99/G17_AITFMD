@@ -33,16 +33,9 @@ def reduce_bands_by_avg(
     n_out_bands: int,
     strategy: str = "crop",
 ) -> np.ndarray:
-    """
-    Reduce spectral bands by averaging adjacent bands.
+    """Reduser spektrale bånd ved å gjennomsnittsberegne tilstøtende bånd.
 
-    Args:
-        cube: (H, W, B) hyperspectral cube.
-        n_out_bands: Number of output bands.
-        strategy: "crop" (crop to divisible, even groups) or "uneven" (no crop, variable group sizes).
-
-    Returns:
-        (H, W, n_out_bands) reduced cube.
+    strategy: "crop" (jevne grupper) eller "uneven" (ingen info-tap, ujevne grupper).
     """
     if cube.ndim != 3:
         raise ValueError(f"Expected 3D cube (H, W, B), got shape={cube.shape}")

@@ -18,16 +18,9 @@ def configure_logging(
     level: int = logging.INFO,
     console: bool = True,
 ) -> None:
-    """Set up root logger with a rotating file handler and optional console handler.
+    """Sett opp root-logger med roterende filhåndterer og valgfri konsollhåndterer.
 
-    Idempotent: if the root logger already has handlers this call is a no-op,
-    so it is safe to call multiple times from scripts and modules.
-
-    Args:
-        log_dir: Directory where log files are written (created if absent).
-        run_name: Base name for the log file ({run_name}.log).
-        level: Logging level applied to root logger and all handlers.
-        console: If True, also attach a StreamHandler to stdout.
+    Idempotent: trygt å kalle flere ganger — no-op om root-logger allerede har handlere.
     """
     root = logging.getLogger()
     if root.handlers:
@@ -57,10 +50,5 @@ def configure_logging(
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a named logger.
-
-    Every module should call ``get_logger(__name__)`` at module level instead of
-    using ``print()``.  ``configure_logging()`` must be called once (in the
-    entry-point script) before any log messages are emitted.
-    """
+    """Returner navngitt logger. Kall configure_logging() én gang fra entry-point før bruk."""
     return logging.getLogger(name)
