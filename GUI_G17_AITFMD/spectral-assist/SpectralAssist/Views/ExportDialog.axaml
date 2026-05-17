@@ -1,0 +1,105 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
+        x:Class="SpectralAssist.Views.ExportDialog"
+        x:DataType="vm:ExportDialogViewModel"
+        Title="PDF Export Options"
+        Width="380"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E">
+    
+    <Border Padding="20">
+        <StackPanel Spacing="16">
+            
+            <!-- Info -->
+            <StackPanel Spacing="6">
+                <TextBlock Text="The exported PDF will include four images:"
+                           Foreground="#888888"
+                           FontSize="11" />
+
+                <StackPanel Margin="0,4,0,0" Spacing="2">
+                    <TextBlock Text="• Original RGB image"
+                               Foreground="#666666" FontSize="11" />
+                    <TextBlock Text="• Full overlay (0% threshold)"
+                               Foreground="#666666" FontSize="11" />
+                    <TextBlock Text="• Overlay using threshold 1"
+                               Foreground="#666666" FontSize="11" />
+                    <TextBlock Text="• Overlay using threshold 2"
+                               Foreground="#666666" FontSize="11" />
+                </StackPanel>
+            </StackPanel>
+            
+            <Border Height="1" Background="#2D2D2D" />
+            
+            <!-- Colormap -->
+            <StackPanel Spacing="6">
+                <TextBlock Text="Overlay colormap"
+                           Foreground="#888888" FontSize="11" FontWeight="SemiBold" />
+                <ComboBox ItemsSource="{Binding AvailableColorMaps}"
+                          SelectedItem="{Binding SelectedColorMapName}"
+                          HorizontalAlignment="Stretch"
+                          FontSize="12" />
+            </StackPanel>
+
+            <!-- Opacity -->
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Overlay opacity"
+                               Foreground="#888888" FontSize="11" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Opacity, StringFormat='{}{0:P0}'}"
+                               Foreground="#CCCCCC" FontSize="11" Width="36" TextAlignment="Right" />
+                </Grid>
+                <Slider Value="{Binding Opacity}"
+                        Minimum="0" Maximum="1" />
+            </StackPanel>
+
+            <!-- Threshold 1 -->
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Overlay threshold 1"
+                               Foreground="#888888" FontSize="11" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Overlay1Threshold, StringFormat='{}{0:P0}'}"
+                               Foreground="#CCCCCC" FontSize="11" Width="36" TextAlignment="Right" />
+                </Grid>
+                <Slider Value="{Binding Overlay1Threshold}"
+                        Minimum="0" Maximum="1" />
+            </StackPanel>
+
+            <!-- Threshold 2 -->
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Overlay threshold 2"
+                               Foreground="#888888" FontSize="11" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Overlay2Threshold, StringFormat='{}{0:P0}'}"
+                               Foreground="#CCCCCC" FontSize="11" Width="36" TextAlignment="Right" />
+                </Grid>
+                <Slider Value="{Binding Overlay2Threshold}"
+                        Minimum="0" Maximum="1" />
+            </StackPanel>
+            
+            <Border Height="1" Background="#2D2D2D" />
+
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Export"
+                        Command="{Binding ConfirmCommand}"
+                        Background="#2D5A8F"
+                        Foreground="#FFFFFF"
+                        Padding="12,6"
+                        CornerRadius="4" />
+                
+                <Button Content="Cancel"
+                        Command="{Binding CancelCommand}"
+                        Background="#2D2D2D"
+                        Foreground="#AAAAAA"
+                        Padding="12,6"
+                        CornerRadius="4" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

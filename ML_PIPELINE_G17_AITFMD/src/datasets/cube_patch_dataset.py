@@ -42,6 +42,8 @@ class CubePatchDataset(Dataset):
         stride_w: int = 32,
         use_all_patches: bool = False,
         max_cached_cubes: int = 12,
+        augment: bool = False,
+        return_cube_idx: bool = False,
     ):
         required = {"output_path", "label_id", "split"}
         missing = required - set(rows.columns)
@@ -60,6 +62,8 @@ class CubePatchDataset(Dataset):
         self.stride_h = stride_h
         self.stride_w = stride_w
         self.use_all_patches = use_all_patches
+        self.augment = augment and not self._is_val  # aldri augmenter val/test
+        self.return_cube_idx = return_cube_idx
         # Hold nylig brukte kuber i RAM (viktig når shuffle hopper mellom ROI-er — ellers full npy-load hver batch)
         self.max_cached_cubes = max(0, int(max_cached_cubes))
         self._cube_cache: dict[int, np.ndarray] = {}
@@ -182,6 +186,26 @@ class CubePatchDataset(Dataset):
                     y, x = random.choice(positions)
             patch = cube[y : y + self.patch_h, x : x + self.patch_w, :]
 
+        if self.augment:
+            patch = self._augment_patch(patch)
+
         x_t = torch.from_numpy(patch.astype(np.float32, copy=False)).permute(2, 0, 1).unsqueeze(0)
         y_t = torch.tensor(int(row["label_id"]), dtype=torch.long)
+        if self.return_cube_idx:
+            return x_t, y_t, torch.tensor(cube_idx, dtype=torch.long)
         return x_t, y_t
+
+    def _augment_patch(self, patch: np.ndarray) -> np.ndarray:
+        """Random spatial augmentation: flip H, flip W, 90°-rotasjon (0/90/180/270).
+
+        Opererer på (H, W, C) — spektral-dimensjonen C berøres ikke.
+        Copy gjøres på slutten for å unngå negative strides i torch.
+        """
+        if random.random() < 0.5:
+            patch = patch[::-1, :, :]   # flip H
+        if random.random() < 0.5:
+            patch = patch[:, ::-1, :]   # flip W
+        k = random.randint(0, 3)
+        if k > 0:
+            patch = np.rot90(patch, k=k, axes=(0, 1))
+        return np.ascontiguousarray(patch)

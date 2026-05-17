@@ -11,14 +11,14 @@ namespace SpectralAssist.Services;
 
 /// <summary>
 /// The model package import smoke test validation.
-/// Feeds a reference patch through preprocessing + ONNX inference and 
-/// compares against expected outputs from the Python export script.
+/// Feeds a reference patch through preprocessing and ONNX inference,
+/// then compares against expected outputs from the Python export script.
 /// Validation is warn-only: a failed validation does not block inference.
 /// </summary>
 public static class ModelPackageValidator
 {
     public static async Task<(bool Passed, string Summary)> ValidateAsync(
-        ModelManifest manifest, ModelPackageService packageService, InferenceService inferenceService)
+        ModelManifest manifest, ModelPackageManager packageManager, InferenceService inferenceService)
     {
         var validationInfo = manifest.Validation;
         
@@ -43,7 +43,7 @@ public static class ModelPackageValidator
             var preprocessingResult = PreprocessingService.RunFromCalibrated(imageResult.Cube, preprocessingInfo);
             
             // Step 3: Perform model inference
-            var package = packageService.LoadPackage(manifest.DirectoryPath);
+            var package = packageManager.LoadPackage(manifest.DirectoryPath);
             var classificationResult = await inferenceService.RunAsync(preprocessingResult, package);
 
             // Step 4: Compare actual values vs expected values

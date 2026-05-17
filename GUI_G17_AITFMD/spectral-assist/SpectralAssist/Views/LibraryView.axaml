@@ -1,0 +1,168 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:SpectralAssist.ViewModels"
+             xmlns:components="clr-namespace:SpectralAssist.ViewModels.Components"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SpectralAssist.Views.LibraryView"
+             x:DataType="viewModels:LibraryViewModel">
+
+    <Grid>
+        <!-- Empty state -->
+        <StackPanel IsVisible="{Binding IsEmpty}"
+                    VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+            <TextBlock Text="No library folder open" FontSize="18" Opacity="0.7" HorizontalAlignment="Center" />
+            <TextBlock Text="Pick a root folder containing patient sub-folders to get started."
+                       Opacity="0.5" HorizontalAlignment="Center" />
+            <Button Content="Open Folder" Click="OpenFolderButton_Click"
+                    HorizontalAlignment="Center" Padding="16,8" />
+        </StackPanel>
+
+        <!-- Scanning state -->
+        <StackPanel IsVisible="{Binding IsScanning}"
+                    VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Width="360">
+            <ProgressBar IsIndeterminate="True" Height="4" />
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Failed state -->
+        <StackPanel IsVisible="{Binding IsFailed}"
+                    VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Width="400">
+            <TextBlock Text="⚠ Scan failed" FontSize="16" Foreground="#d97706" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <Button Content="Try Again" Click="OpenFolderButton_Click" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Loaded state -->
+        <DockPanel IsVisible="{Binding IsLoaded}" LastChildFill="True">
+            <!-- Top action bar -->
+            <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="#22000000" BorderThickness="0,0,0,1">
+                <DockPanel LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Vertical">
+                        <TextBlock Text="{Binding DatasetName}"
+                                   FontWeight="SemiBold" FontSize="14"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding LibraryRoot}" />
+                        <TextBlock Opacity="0.6" FontSize="11">
+                            <Run Text="{Binding PatientCount}" /><Run Text=" folder(s)" />
+                            <Run Text=" · " />
+                            <Run Text="{Binding ScanCount}" /><Run Text=" images(s)" />
+                            <Run Text=" · " />
+                            <Run Text="{Binding ReportedScanCount}" /><Run Text=" analyzed" />
+                        </TextBlock>
+                        <TextBlock FontSize="11" Foreground="#d97706"
+                                   IsVisible="{Binding MissingCalibrationCount}">
+                            <Run Text="⚠ " /><Run Text="{Binding MissingCalibrationCount}" />
+                            <Run Text=" missing calibration" />
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Change Folder…" Click="OpenFolderButton_Click" />
+                        <Button Content="Rescan" Command="{Binding RescanCommand}" />
+                        <Button Content="Close" Command="{Binding CloseLibraryCommand}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Left folder tree and right gallery -->
+            <Grid ColumnDefinitions="280,*">
+                <TreeView Grid.Column="0"
+                          ItemsSource="{Binding TreeRoots}"
+                          SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
+                          BorderThickness="0,0,1,0" BorderBrush="#22000000">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="IsExpanded"
+                                    Value="{Binding IsExpanded, Mode=TwoWay, DataType=viewModels:LibraryTreeItem}" />
+                        </Style>
+                    </TreeView.Styles>
+                    
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate DataType="viewModels:LibraryTreeItem"
+                                          ItemsSource="{Binding Children}">
+                            <StackPanel Margin="0,3">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Opacity="0.55" FontSize="11">
+                                    <Run Text="{Binding ImageCount}" /><Run Text=" images" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding ReportCount}" /><Run Text=" reports" />
+                                </TextBlock>
+                            </StackPanel>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+
+                <ScrollViewer Grid.Column="1" Padding="12"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding CurrentImages}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="components:ImageTileViewModel">
+                                <Button Command="{Binding OpenCommand}"
+                                        Classes="tile"
+                                        Classes.active="{Binding IsActive}"
+                                        Padding="0" Margin="6" Background="Transparent" CornerRadius="6">
+                                    <Button.Styles>
+                                        <Style Selector="Button.tile">
+                                            <Setter Property="BorderBrush" Value="#22000000" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                        </Style>
+                                        <Style Selector="Button.tile.active">
+                                            <Setter Property="BorderBrush" Value="#3b82f6" />
+                                        </Style>
+                                    </Button.Styles>
+                                    <StackPanel Width="220" Margin="0">
+                                        <Border Height="140" Background="#0E0E0E" CornerRadius="4,4,0,0">
+                                            <Grid>
+                                                <Image Source="{Binding Thumbnail}"
+                                                       Stretch="UniformToFill"
+                                                       IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                <TextBlock Text="No preview"
+                                                           Foreground="#555"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Margin="10,8" Spacing="2" MinHeight="72">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       TextTrimming="CharacterEllipsis" FontWeight="SemiBold"
+                                                       ToolTip.Tip="{Binding FileName}" />
+                                            <TextBlock Text="⚠ calibration missing"
+                                                       IsVisible="{Binding MissingCalibration}"
+                                                       Foreground="#d97706" FontSize="11" />
+
+                                            <!-- Not-yet-analyzed state -->
+                                            <TextBlock Text="Not analyzed yet"
+                                                       IsVisible="{Binding IsNotAnalyzed}"
+                                                       Opacity="0.5" FontSize="11"
+                                                       FontStyle="Italic" />
+
+                                            <!-- Analyzed state -->
+                                            <StackPanel IsVisible="{Binding HasReports}" Spacing="2">
+                                                <TextBlock Text="{Binding PrimarySummary}"
+                                                           FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding SecondarySummary}"
+                                                           Opacity="0.55" FontSize="11"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </DockPanel>
+    </Grid>
+
+
+</UserControl>

@@ -35,7 +35,7 @@ Aktiver venv, kjør fra `ML_PIPELINE_G17_AITFMD`:
 
 ```bash
 source .venv/bin/activate
-python scripts/export_cnn3d_onnx.py \
+python scripts/export/export_cnn3d_onnx.py \
   --checkpoint path/til/best.pt \
   --model-config configs/models/baseline_3dcnn.yaml \
   --spectral-bands 16 \
@@ -47,7 +47,11 @@ python scripts/export_cnn3d_onnx.py \
 Dette skriver:
 
 - `model.onnx`
-- `manifest.json` (med `input_rank: 5` og `input_shape` for NCDHW)
+- `manifest.json` — bygges i `export_cnn3d_onnx.py`. **Preprocessing** (calibrate, clip, avg3→neighbor_average, tissue_mask) hentes fra **`configs/preprocessing/pipeline.yaml`** (standard; overstyr med `--pipeline-config`). **`spectral_reduction.reducer`** i samme YAML styrer om PCA er **innebygd i ONNX** (`embedded_in_onnx: true` når reducer er `pca`). Uten `--reducer-method` brukes denne verdien; du kan **overstyre** med `--reducer-method wavelet` (eller `none`) hvis du vil eksportere kun CNN mot pipeline som ellers har PCA. Patch og CNN-bånd: `--spectral-bands`, `--patch-h/w`. Valgfritt: `--manifest-template`.
+
+**PCA-eksport:** Når reducer er `pca`, eksporteres PCA (fra `pca_model` i YAML) + CNN i én graf; ONNX-input har **rå antall bånd** (f.eks. 275) langs den spektrale aksen; `--spectral-bands` må være lik PCA `n_components` (f.eks. 16). Manifest `input_spec.spectral_bands` er da rå-bånd; `pipeline.spectral_reducer` har `input_bands`/`output_bands` rå→redusert.
+
+Valgfrie flagg bl.a.: `--dataset`, `--train-samples`, `--reducer-method`, `--description`.
 
 ---
 
@@ -57,7 +61,7 @@ Kopier **hele** output-mappen (minst `model.onnx` + `manifest.json`, ev. `.onnx.
 
 `GUI_G17_AITFMD/spectral-assist/SpectralAssist/Assets/models/<navn>/`
 
-Oppdater `manifest.json` feltet `artifacts.pipeline_onnx` hvis du bruker annet filnavn enn `model.onnx`.
+Oppdater `manifest.json` feltet `artifacts.model_onnx` hvis du bruker annet filnavn enn `model.onnx`.
 
 **Eksempel i repo:** `baseline_3dcnn_20260324_083658_last` (16 bånd PCA, patch 32×32) ligger under `Assets/models/` etter eksport.
 

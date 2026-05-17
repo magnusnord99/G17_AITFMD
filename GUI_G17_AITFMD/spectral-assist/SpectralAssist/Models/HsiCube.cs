@@ -16,6 +16,24 @@ public class HsiCube(HsiHeader header, float[] data)
         return data.AsSpan(band * PixelsPerBand, PixelsPerBand);
     }
 
+    /// <summary>
+    /// Returns the full spectral vector for one spatial pixel.
+    /// </summary>
+    public float[] GetSpectrumAt(int x, int y)
+    {
+        if (x < 0 || y < 0 || x >= Samples || y >= Lines)
+            throw new ArgumentOutOfRangeException(
+                $"Pixel ({x},{y}) is outside image bounds ({Samples}×{Lines})");
+
+        var spectrum = new float[Bands];
+        var pixelIndex = y * Samples + x;
+
+        for (var b = 0; b < Bands; b++)
+            spectrum[b] = GetBand(b)[pixelIndex];
+
+        return spectrum;
+    }
+
     /// <summary>Returns a deep copy of this cube with its own data buffer.</summary>
     public HsiCube Clone()
     {

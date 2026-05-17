@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,7 +11,8 @@ using SpectralAssist.Services;
 namespace SpectralAssist.ViewModels;
 
 /// <summary>The three states of the Models page.</summary>
-public enum ModelViewState { Browsing, Previewing, Importing, }
+public enum ModelViewState
+{ Browsing, Previewing, Importing }
 
 /// <summary>
 /// Controls the three states of the Models page:
@@ -22,23 +24,27 @@ public enum ModelViewState { Browsing, Previewing, Importing, }
 /// </summary>
 public partial class ModelsViewModel : ViewModelBase
 {
-    private readonly ModelPackageService _modelRegistry;
+    private readonly ModelPackageManager _modelManager;
     private readonly InferenceService _inferenceService;
-    private readonly Action<ModelManifest?> _setActiveModel;
-    public ObservableCollection<ModelManifest> AvailableModels => _modelRegistry.AvailableModels;
     private string? _importSourcePath;
 
-    public ModelsViewModel(ModelPackageService modelRegistry, InferenceService inferenceService,
-        ModelManifest? activeModel, Action<ModelManifest?> setActiveModel)
+    public ObservableCollection<ModelManifest> AvailableModels => _modelManager.AvailableModels;
+    public SessionService Session { get; } 
+
+    public ModelsViewModel(
+        ModelPackageManager modelManager,
+        InferenceService inferenceService,
+        SessionService session)
     {
-        _modelRegistry = modelRegistry;
+        _modelManager = modelManager;
         _inferenceService = inferenceService;
-        _setActiveModel = setActiveModel;
-        SelectedModel = activeModel ?? AvailableModels.FirstOrDefault();
+        Session = session;
+
+        Session.ActiveModel ??= AvailableModels.FirstOrDefault();
+        Session.PropertyChanged += OnSessionChanged;
     }
 
     // -- States -- //
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBrowsing))]
     [NotifyPropertyChangedFor(nameof(IsPreviewing))]
@@ -49,10 +55,7 @@ public partial class ModelsViewModel : ViewModelBase
     public bool IsBrowsing => ViewState == ModelViewState.Browsing;
     public bool IsPreviewing => ViewState == ModelViewState.Previewing;
     public bool IsImporting => ViewState == ModelViewState.Importing;
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(DisplayedModel))]
-    private ModelManifest? _selectedModel;
-
+    
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(DisplayedModel))]
     private ModelManifest? _previewModel;
 
@@ -62,23 +65,21 @@ public partial class ModelsViewModel : ViewModelBase
     public ModelManifest? DisplayedModel =>
         ViewState is ModelViewState.Previewing or ModelViewState.Importing
             ? PreviewModel
-            : SelectedModel;
-
-
+            : Session.ActiveModel;
+    
     // -- Actions -- //
-
     [RelayCommand]
     private void DismissError() => ErrorMessage = null;
-    
+
     [RelayCommand]
-    private void DismissSuccess() => ErrorMessage = null;
+    private void DismissSuccess() => SuccessMessage = null;
 
     public void PreviewImport(string folderPath)
     {
         ErrorMessage = null;
         SuccessMessage = null;
-        
-        var result = ModelPackageService.TryLoadManifest(folderPath);
+
+        var result = ModelPackageManager.TryLoadManifest(folderPath);
         if (!result.IsSuccess)
         {
             ErrorMessage = result.Error;
@@ -99,17 +100,17 @@ public partial class ModelsViewModel : ViewModelBase
         ErrorMessage = null;
         SuccessMessage = null;
 
-        var importResult = await Task.Run(() => _modelRegistry.ImportPackage(_importSourcePath));
+        var importResult = await Task.Run(() => _modelManager.ImportPackage(_importSourcePath));
         if (!importResult.IsSuccess)
         {
             ErrorMessage = importResult.Error;
             ResetImportState();
             return;
         }
-        
+
         var modelManifest = importResult.Value!;
         var (passed, summary) = await ModelPackageValidator.ValidateAsync(
-            modelManifest, _modelRegistry, _inferenceService);
+            modelManifest, _modelManager, _inferenceService);
 
         if (passed)
             SuccessMessage = summary;
@@ -117,7 +118,7 @@ public partial class ModelsViewModel : ViewModelBase
             ErrorMessage = summary;
 
         ResetImportState();
-        SelectedModel = modelManifest;
+        Session.ActiveModel = modelManifest;
     }
 
     [RelayCommand]
@@ -126,22 +127,15 @@ public partial class ModelsViewModel : ViewModelBase
     [RelayCommand]
     private void DeleteModel(ModelManifest modelInfo)
     {
-        var result = _modelRegistry.DeletePackage(modelInfo.Id);
+        var result = _modelManager.DeletePackage(modelInfo.Metadata.Id);
         if (!result.IsSuccess)
         {
             ErrorMessage = result.Error;
             return;
         }
-
-        if (SelectedModel == modelInfo)
-            SelectedModel = AvailableModels.FirstOrDefault(); 
-        //ToDo: SelectedModel = AvailableModels.Count > 0 ? AvailableModels[0] : null;
-    }
-    
-    partial void OnSelectedModelChanged(ModelManifest? value)
-    {
-        if (IsBrowsing)
-            _setActiveModel(value);
+        
+        if (Session.ActiveModel?.Metadata.Id == modelInfo.Metadata.Id)
+            Session.ActiveModel = AvailableModels.FirstOrDefault();
     }
     
     private void ResetImportState()
@@ -150,19 +144,26 @@ public partial class ModelsViewModel : ViewModelBase
         _importSourcePath = null;
         ViewState = ModelViewState.Browsing;
     }
-
-
+    
+    private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SessionService.ActiveModel))
+            OnPropertyChanged(nameof(DisplayedModel));
+    }
+    
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ModelsViewModel()
     {
-        _modelRegistry = new ModelPackageService();
-        _setActiveModel = _ => { };
+        _modelManager = new ModelPackageManager();
+        _inferenceService = null!;
+        Session = new SessionService();
+
         var sample = new ModelManifest
         {
-            Id = "baseline_3dcnn_20260324",
             DirectoryPath = "",
             Metadata = new ManifestMetadata
             {
+                Id = "baseline_3dcnn_20260324",
                 Name = "Baseline 3D-CNN",
                 Version = "1.0.0",
                 Description = "3D convolutional classifier for hyperspectral tissue analysis.",
@@ -195,7 +196,7 @@ public partial class ModelsViewModel : ViewModelBase
             },
         };
 
-        _modelRegistry.AvailableModels.Add(sample);
-        _selectedModel = sample;
+        _modelManager.AvailableModels.Add(sample);
+        Session.ActiveModel = sample;
     }
 }

@@ -1,0 +1,25 @@
+# AD-HybridSN-inspirert: 2×3D (kanal-attention) → 3D→2D → 2×2D (romlig attention).
+# spectral_bands må matche wavelet16 (16) eller annen reduksjon.
+
+model:
+  name: "ad_hybrid_sn_3dcnn"
+  type: "3dcnn"
+
+architecture:
+  in_channels: 1
+  num_classes: 2
+  dropout: 0.30
+  stem_channels: 16
+  channels_3d: [32, 64]
+  kernel_size_3d: 3
+  transition_3d_out: 32
+  spectral_bands: 16
+  channels_2d: [128, 128]
+  kernel_size_2d: 3
+  spatial_attn_kernel: 7
+  se_reduction: 4
+  pool_after_stem: true
+
+input:
+  patch_h: 64
+  patch_w: 64

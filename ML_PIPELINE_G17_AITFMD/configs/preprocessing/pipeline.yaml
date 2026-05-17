@@ -6,6 +6,12 @@
 # Rekkefølge: calibration → clip → avg3 → tissue_mask → spectral_reduction → patching
 
 pipeline:
+
+  neighbor_average:
+    enabled: true
+    window: 3
+    out_bands: 275
+
   calibration:
     enabled: true
     eps: 1.0e-8
@@ -22,6 +28,9 @@ pipeline:
   tissue_mask:
     enabled: true
     method: "mean_std_percentile"
+    # GUI-manifest (SpectralAssist) — valgfrie; standard 0.5 / 0.4 hvis utelatt
+    q_mean: 0.5
+    q_std: 0.4
     min_object_size: 500
     min_hole_size: 1000
     tissue_side: "dark"
