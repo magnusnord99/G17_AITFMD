@@ -174,7 +174,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 Progress = p.Progress;
             });
 
-            var result = await ImageLoadingService.LoadAsync(ImageNode.AbsolutePath, progress, _cts.Token);
+            var result = await ImageLoadingService.LoadAsync(ImageNode.AbsolutePath, progress, null, _cts.Token);
             Cube = result.Cube;
             IsCalibrated = result.HasCalibration;
 

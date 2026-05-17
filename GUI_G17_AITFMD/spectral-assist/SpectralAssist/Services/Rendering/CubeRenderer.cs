@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -36,39 +39,9 @@ public static class CubeRenderer
 
         return CreateOpaqueBitmap(pixels, cube.Samples, cube.Lines, stride);
     }
-
+    
     /// <summary>
-    /// Renders three explicit band indices as an RGB composite bitmap.
-    /// Each band is independently normalized to preserve per-channel contrast.
-    /// </summary>
-    public static Bitmap RgbToBitmap(HsiCube cube, int redBand, int greenBand, int blueBand)
-    {
-        var r = cube.GetBand(redBand);
-        var g = cube.GetBand(greenBand);
-        var b = cube.GetBand(blueBand);
-
-        MinMax(r, out var rMin, out var rRange);
-        MinMax(g, out var gMin, out var gRange);
-        MinMax(b, out var bMin, out var bRange);
-
-        var stride = cube.Samples * 4;
-        var pixels = new byte[cube.Lines * stride];
-        for (var i = 0; i < r.Length; i++)
-        {
-            // Pixel layout is BGRA to match Bgra8888 format
-            pixels[i * 4 + 0] = NormalizeClamp(b[i], bMin, bRange); // B
-            pixels[i * 4 + 1] = NormalizeClamp(g[i], gMin, gRange); // G
-            pixels[i * 4 + 2] = NormalizeClamp(r[i], rMin, rRange); // R
-            pixels[i * 4 + 3] = 255;                                // A
-        }
-
-        return CreateOpaqueBitmap(pixels, cube.Samples, cube.Lines, stride);
-    }
-
-    /// <summary>
-    /// Builds a Skia-native immutable <see cref="Bitmap"/> from a pre-filled BGRA byte buffer.
-    /// The Bitmap ctor copies pixel data into Skia on construction, so <paramref name="pixels"/>
-    /// may be collected afterwards.
+    /// Builds immutable <see cref="Bitmap"/> from a pre-filled BGRA byte buffer.
     /// </summary>
     private static Bitmap CreateOpaqueBitmap(byte[] pixels, int width, int height, int stride)
     {
@@ -125,26 +98,26 @@ public static class CubeRenderer
         var pixelCount = cube.PixelsPerBand;
         var nBands = cube.Bands;
         
-        var wR = new float[nBands];
-        var wG = new float[nBands];
-        var wB = new float[nBands];
+        var weightR = new float[nBands];
+        var weightG = new float[nBands];
+        var weightB = new float[nBands];
         
         float sumR = 0, sumG = 0, sumB = 0;
 
         for (var b = 0; b < nBands; b++)
         {
-            var wl = wavelengths[b];
-            wR[b] = Gaussian(wl, parameters.MuR, parameters.SigmaR);
-            sumR += wR[b];
-            wG[b] = Gaussian(wl, parameters.MuG, parameters.SigmaG);
-            sumG += wG[b];
-            wB[b] = Gaussian(wl, parameters.MuB, parameters.SigmaB);
-            sumB += wB[b];
+            var wavelength = wavelengths[b];
+            weightR[b] = Gaussian(wavelength, parameters.MuR, parameters.SigmaR);
+            sumR += weightR[b];
+            weightG[b] = Gaussian(wavelength, parameters.MuG, parameters.SigmaG);
+            sumG += weightG[b];
+            weightB[b] = Gaussian(wavelength, parameters.MuB, parameters.SigmaB);
+            sumB += weightB[b];
         }
         
-        Normalize(wR, sumR);
-        Normalize(wG, sumG);
-        Normalize(wB, sumB);
+        Normalize(weightR, sumR);
+        Normalize(weightG, sumG);
+        Normalize(weightB, sumB);
         
         var rCh = ArrayPool<float>.Shared.Rent(pixelCount);
         var gCh = ArrayPool<float>.Shared.Rent(pixelCount);
@@ -156,35 +129,51 @@ public static class CubeRenderer
             Array.Clear(gCh, 0, pixelCount);
             Array.Clear(bCh, 0, pixelCount);
 
-            for (var bandIndex = 0; bandIndex < nBands; bandIndex++)
+            // Skip bands where Gaussian weight is effectively zero in all three channels.
+            var significantBands = new List<int>(nBands);
+            for (var b = 0; b < nBands; b++)
+                if (weightR[b] >= 1e-8f || weightG[b] >= 1e-8f || weightB[b] >= 1e-8f)
+                    significantBands.Add(b);
+            
+            // Process the data in parallel by splitting the index range into chunks
+            Parallel.ForEach(Partitioner.Create(0, pixelCount), range =>
             {
-                // Skip bands with negligible contribution to all channels
-                if (wR[bandIndex] < 1e-8f && wG[bandIndex] < 1e-8f && wB[bandIndex] < 1e-8f)
-                    continue;
-
-                var band = cube.GetBand(bandIndex);
-                for (var i = 0; i < pixelCount; i++)
+                for (var k = 0; k < significantBands.Count; k++)
                 {
-                    rCh[i] += band[i] * wR[bandIndex];
-                    gCh[i] += band[i] * wG[bandIndex];
-                    bCh[i] += band[i] * wB[bandIndex];
+                    var bandIndex = significantBands[k];
+                    var wRb = weightR[bandIndex];
+                    var wGb = weightG[bandIndex];
+                    var wBb = weightB[bandIndex];
+
+                    var band = cube.GetBand(bandIndex);
+                    for (var i = range.Item1; i < range.Item2; i++)
+                    {
+                        var v = band[i];
+                        rCh[i] += v * wRb;
+                        gCh[i] += v * wGb;
+                        bCh[i] += v * wBb;
+                    }
                 }
-            }
+            });
 
             // Normalize each channel independently for display
             MinMax(rCh.AsSpan(0, pixelCount), out var rMin, out var rRange);
             MinMax(gCh.AsSpan(0, pixelCount), out var gMin, out var gRange);
             MinMax(bCh.AsSpan(0, pixelCount), out var bMin, out var bRange);
-
+            
             var stride = cube.Samples * 4;
             var pixels = new byte[cube.Lines * stride];
-            for (var i = 0; i < pixelCount; i++)
+            Parallel.ForEach(Partitioner.Create(0, pixelCount), range =>
             {
-                pixels[i * 4 + 0] = NormalizeClamp(bCh[i], bMin, bRange); // B
-                pixels[i * 4 + 1] = NormalizeClamp(gCh[i], gMin, gRange); // G
-                pixels[i * 4 + 2] = NormalizeClamp(rCh[i], rMin, rRange); // R
-                pixels[i * 4 + 3] = 255;                                  // A
-            }
+                for (var i = range.Item1; i < range.Item2; i++)
+                {
+                    var off = i * 4;
+                    pixels[off + 0] = NormalizeClamp(bCh[i], bMin, bRange); // B
+                    pixels[off + 1] = NormalizeClamp(gCh[i], gMin, gRange); // G
+                    pixels[off + 2] = NormalizeClamp(rCh[i], rMin, rRange); // R
+                    pixels[off + 3] = 255;                                  // A
+                }
+            });
 
             return CreateOpaqueBitmap(pixels, cube.Samples, cube.Lines, stride);
         }
@@ -215,7 +204,8 @@ public static class CubeRenderer
     /// <param name="sum">Precomputed sum of the weights.</param>
     private static void Normalize(float[] w, float sum)
     {
-        if (sum < 1e-12f) return;
+        if (sum < 1e-12f) 
+            return;
         
         for (var i = 0; i < w.Length; i++)
             w[i] /= sum;
@@ -235,8 +225,7 @@ public readonly record struct SyntheticRgbParameters(
 {
     /// <summary>
     /// Balanced RGB composite for histology HSI datasets.
-    /// Uses broad Gaussian bands to reduce noise and produce
-    /// smooth, stain-consistent visualization.
+    /// Uses broad Gaussian bands to produce stain-consistent visualization.
     /// </summary>
     public static SyntheticRgbParameters HistologyBalanced => new(
         MuR: 610f, SigmaR: 25f,
@@ -258,8 +247,7 @@ public readonly record struct SyntheticRgbParameters(
     
     /// <summary>
     /// High-contrast RGB composite for surgical HSI datasets.
-    /// Uses narrow Gaussian bands and shifted wavelengths to enhance
-    /// spectral separability and improve visibility of perfused tissue.
+    /// Uses narrow Gaussian bands to produce more realistic RGB colors.
     /// </summary>
     public static SyntheticRgbParameters DiagnosticHighContrast => new(
         MuR: 630f, SigmaR: 18f,

@@ -13,50 +13,76 @@ public readonly struct ImageLoadResult
 {
     /// <summary>The loaded cube (calibrated if references were found, raw otherwise).</summary>
     public HsiCube Cube { get; init; }
-    
+
     /// <summary>Whether dark/white calibration was applied.</summary>
     public bool HasCalibration { get; init; }
 }
 
 /// <summary>
-/// Encapsulates the full load-parse-calibrate pipeline for hyperspectral images.
+/// Coordinates the full load-parse-calibrate pipeline for hyperspectral images.
+/// All heavy CPU work is dispatched off the UI thread.
 /// </summary>
 public class ImageLoadingService
 {
-    /// <summary>
-    /// Loads an ENVI .hdr file, converts to BSQ, and applies reflectance calibration
-    /// if dark/white reference files are found in the same folder.
-    /// </summary>
-    /// <param name="hdrPath">Path to the .hdr header file.</param>
-    /// <param name="progress">Reports status messages and progress (0–1).</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The loaded (and optionally calibrated) cube.</returns>
-    /// <exception cref="InvalidOperationException">Thrown on band mismatch between scene and references.</exception>
+    private const double HeaderEnd = 0.05;
+    private const double SceneEndNoCal = 1.00;
+    private const double SceneEndWithCal = 0.50;
+    private const double ReferencesEnd = 0.70;
+    private const double CalibrationEnd = 1.00;
+
     public static async Task<ImageLoadResult> LoadAsync(
         string hdrPath,
         IProgress<(string Status, double Progress)>? progress = null,
+        Action<HsiHeader>? onHeaderParsed = null,
         CancellationToken ct = default)
     {
-        // Step 1: Parse header
-        progress?.Report(("Reading image data...", 0));
+        //__ Step 1: Read header (0 - 5%) _______________________________________________
+        progress?.Report(("Reading header...", 0));
         var header = HsiHeaderParser.Parse(hdrPath);
-        progress?.Report(($"{header.Samples}x{header.Lines}x{header.Bands} bands, {header.Interleave.ToUpper()}", 0));
+        onHeaderParsed?.Invoke(header);
+        progress?.Report(("Reading header...", HeaderEnd));
 
-        // Step 2: Load binary data
-        var loadProgress = new Progress<(float percent, int band)>(p =>
-            progress?.Report(($"Loading image data... {p.percent:P0}", p.percent)));
-        var scene = await HsiCubeLoader.LoadAsync(header, loadProgress, ct);
+        var willCalibrate = HsiCalibration.HasReferenceFiles(hdrPath);
+        var sceneEnd = willCalibrate ? SceneEndWithCal : SceneEndNoCal;
 
-        // Step 3: Calibrate if dark/white references exist in same folder
-        var calibrated = await HsiCalibration.TryCalibrateAsync(hdrPath, scene, progress, ct);
-
-        if (calibrated == null)
-            progress?.Report(("Calibration skipped (no dark/white in folder)...", 1));
-
-        return new ImageLoadResult
+        //__ Step 2: Load scene binary data (5 – 50% or 5 – 100%) ________________________
+        var sceneLoadProgress = new Progress<(float percent, int band)>(p =>
         {
-            Cube = calibrated ?? scene,
-            HasCalibration = calibrated != null,
-        };
+            var pct = HeaderEnd + p.percent * (sceneEnd - HeaderEnd);
+            progress?.Report(("Loading image data…", pct));
+        });
+        var scene = await HsiCubeLoader.LoadAsync(header, sceneLoadProgress, ct);
+
+        if (!willCalibrate)
+        {
+            progress?.Report(("Done", 1.0));
+            return new ImageLoadResult { Cube = scene, HasCalibration = false };
+        }
+
+        //__ Step 3: Load dark/white references (50 – 70%) ____________________________
+        progress?.Report(("Loading calibration references…", sceneEnd));
+        var refs = await HsiCalibration.LoadReferencesAsync(hdrPath, ct);
+        if (refs is not { } pair)
+        {
+            progress?.Report(("Done", 1.0));
+            return new ImageLoadResult { Cube = scene, HasCalibration = false };
+        }
+        progress?.Report(("Loading calibration references…", ReferencesEnd));
+
+        //__ Step 4: Apply reflectance (70 – 100%) ___________________________________
+        progress?.Report(("Calibrating reflectance…", ReferencesEnd));
+        var bandProgress = new Progress<float>(p =>
+        {
+            var pct = ReferencesEnd + p * (CalibrationEnd - ReferencesEnd);
+            progress?.Report(("Calibrating reflectance…", pct));
+        });
+
+        var calibrated = await Task.Run(
+            () => HsiCalibration.ApplyReflectance(scene, pair.Dark, pair.White,
+                                                  bandProgress: bandProgress, ct: ct),
+            ct);
+
+        progress?.Report(("Done", 1.0));
+        return new ImageLoadResult { Cube = calibrated, HasCalibration = true };
     }
 }
