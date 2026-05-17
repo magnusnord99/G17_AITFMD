@@ -34,11 +34,7 @@ def fit_pca_from_pixels(
     random_state: int = 42,
     svd_solver: str = "auto",
 ) -> PCA:
-    """
-    Fit PCA on train pixels only.
-
-    train_pixels must be shape (N, B), where N is number of sampled train pixels.
-    """
+    """Tren PCA kun på treningspikslene. train_pixels må ha form (N, B)."""
     if train_pixels.ndim != 2:
         raise ValueError(
             f"Expected train_pixels with shape (N, B), got {train_pixels.shape}"

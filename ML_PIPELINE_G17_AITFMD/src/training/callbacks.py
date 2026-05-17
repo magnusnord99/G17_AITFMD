@@ -29,26 +29,7 @@ class BaseCallback:
 
 
 class CheckpointCallback(BaseCallback):
-    """Save best and last checkpoints after each epoch.
-
-    The checkpoint dict schema is::
-
-        {
-            "epoch": int,
-            "model_state_dict": ...,
-            "optimizer_state_dict": ...,
-            "model_config_path": str,   # embedded so Evaluator can reload
-            "train_config_path": str,
-            "val_metrics": dict,
-        }
-
-    Args:
-        checkpoint_dir: Directory where ``.pt`` files are saved.
-        model_name: Base name used for filenames (e.g. ``"baseline_3dcnn"``).
-        run_id: Unique run identifier (e.g. ``"20250410_120000"``).
-        model_config_path: Path to the model YAML (embedded in checkpoint).
-        train_config_path: Path to the train YAML (embedded in checkpoint).
-    """
+    """Lagrer beste og siste checkpoints etter hver epoke."""
 
     def __init__(
         self,
@@ -117,18 +98,7 @@ class CheckpointCallback(BaseCallback):
 
 
 class EvalCallback(BaseCallback):
-    """Run full ROI-level evaluation on one or more splits after training ends.
-
-    This is the auto-eval hook.  It fires exactly once in ``on_train_end`` so
-    that expensive inference only runs after the best checkpoint is written.
-
-    Args:
-        cfg: Full parsed ``train.yaml`` dict (passed through to ``Evaluator``).
-        output_dir: Base output directory (split sub-dirs are created inside).
-        splits: Splits to evaluate, e.g. ``["val", "test"]``.
-        batch_size: Override batch size for inference.
-        patient_level: Pass through to ``Evaluator``.
-    """
+    """Kjør full ROI-eval på ett eller flere split etter trening er ferdig (on_train_end)."""
 
     def __init__(
         self,

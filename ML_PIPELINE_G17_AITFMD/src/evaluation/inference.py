@@ -18,15 +18,7 @@ log = get_logger(__name__)
 
 @dataclass
 class InferenceResult:
-    """Container for the output of a single inference run.
-
-    Attributes:
-        probs: Probability for class 1, shape ``(N,)``.
-        preds: Hard predicted class (0 or 1), shape ``(N,)``.
-        labels: Ground-truth labels if available, shape ``(N,)`` or empty.
-        roi_id: Identifier string for the ROI (``patient_id/roi_name``).
-        n_patches: Number of patches evaluated.
-    """
+    """Resultatet fra én inferanskjøring over alle patcher i en ROI."""
 
     probs: np.ndarray
     preds: np.ndarray
@@ -39,19 +31,7 @@ class InferenceResult:
 
 
 class InferenceEngine:
-    """Batched patch inference over a 3-D hyperspectral cube.
-
-    The engine is shared between ROI-level eval (``run_eval.py``) and
-    patch-level eval (``run_eval_patch.py``) so the forward-pass logic is
-    never duplicated.
-
-    Args:
-        model: Trained ``nn.Module`` already moved to ``device``.
-        device: Inference device.
-        batch_size: Number of patches per forward pass.
-        amp: Whether to run inference under ``autocast``.  Should normally be
-             ``False`` for eval (no memory benefit, avoids FP16 artifacts in probs).
-    """
+    """Batch-inferans over patcher fra 3D HSI-kuber. Delt mellom ROI-eval og patch-eval."""
 
     def __init__(
         self,
@@ -72,17 +52,7 @@ class InferenceEngine:
         labels: list[int] | None = None,
         roi_id: str = "",
     ) -> InferenceResult:
-        """Run inference on a list of raw numpy patches.
-
-        Args:
-            patches: List of ``(H, W, C)`` float32 arrays.
-            labels: Optional per-patch ground-truth labels (all same value for
-                    ROI-level eval; needed for patch-level eval).
-            roi_id: Human-readable identifier used in log messages.
-
-        Returns:
-            :class:`InferenceResult` with ``probs``, ``preds``, ``labels``.
-        """
+        """Kjør inferans på en liste med rå numpy-patcher."""
         if not patches:
             empty = np.array([], dtype=np.float32)
             return InferenceResult(
@@ -133,19 +103,7 @@ class InferenceEngine:
         mask_path: Path | None = None,
         roi_id: str = "",
     ) -> InferenceResult:
-        """Load a cube, extract its patch grid, and run inference.
-
-        Args:
-            cube_path: Path to the ``.npy`` HSI cube file.
-            patch_cfg: Dict with keys ``patch_h``, ``patch_w``, ``stride_h``,
-                       ``stride_w``, ``min_tissue_ratio``.
-            label: Ground-truth label for the ROI (assigned to all patches).
-            mask_path: Optional tissue mask ``.npy`` path.
-            roi_id: Human-readable identifier.
-
-        Returns:
-            :class:`InferenceResult` for this ROI.
-        """
+        """Last kube, ekstraher patch-rutenett og kjør inferans."""
         from src.preprocessing.patching import iter_patches, load_mask, load_numpy_cube
 
         cube = load_numpy_cube(cube_path)

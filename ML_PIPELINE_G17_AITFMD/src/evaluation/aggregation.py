@@ -13,17 +13,9 @@ def mean_prob_aggregate(
     result: InferenceResult,
     threshold: float = 0.5,
 ) -> dict[str, Any]:
-    """Aggregate patch probabilities to a single ROI prediction via mean.
+    """Aggreger patch-sannsynligheter til ett ROI-estimat via gjennomsnitt.
 
-    The mean P(class=1) across all patches is thresholded to produce the
-    predicted ROI label.
-
-    Args:
-        result: Inference result for one ROI.
-        threshold: Decision threshold applied to mean probability.
-
-    Returns:
-        Dict with keys ``roi_id``, ``mean_prob``, ``pred_label``, ``n_patches``.
+    Gjennomsnitt av P(class=1) over alle patcher terskles til ROI-prediksjon.
     """
     if result.n_patches == 0:
         return {
@@ -45,14 +37,9 @@ def majority_vote_aggregate(
     result: InferenceResult,
     threshold: float = 0.5,
 ) -> dict[str, Any]:
-    """Aggregate patch hard predictions to a single ROI prediction via majority vote.
+    """Aggreger patch-prediksjoner til ett ROI-estimat via majoritetsavstemning.
 
-    Args:
-        result: Inference result for one ROI.
-        threshold: Not used for the vote itself but stored for traceability.
-
-    Returns:
-        Dict with keys ``roi_id``, ``vote_frac_class1``, ``pred_label``, ``n_patches``.
+    threshold brukes ikke direkte i selve votering, men lagres for sporbarhet.
     """
     if result.n_patches == 0:
         return {
@@ -76,18 +63,9 @@ def patient_level_aggregate(
     roi_results: list[dict[str, Any]],
     strategy: str = "mean_prob",
 ) -> list[dict[str, Any]]:
-    """Aggregate ROI predictions to patient level via majority vote over ROIs.
+    """Aggreger ROI-prediksjoner til pasientnivå via majoritetsavstemning over ROI-er.
 
-    Args:
-        roi_results: List of per-ROI dicts, each containing ``patient_id``,
-                     ``true_label``, and either ``pred_mean_prob`` or
-                     ``pred_majority`` depending on ``strategy``.
-        strategy: ``"mean_prob"`` (uses ``pred_mean_prob`` field) or
-                  ``"majority_vote"`` (uses ``pred_majority`` field).
-
-    Returns:
-        List of per-patient dicts with ``patient_id``, ``true_label``,
-        ``pred_label``, ``n_rois``.
+    strategy: "mean_prob" bruker pred_mean_prob, "majority_vote" bruker pred_majority.
     """
     from collections import defaultdict
 

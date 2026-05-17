@@ -13,16 +13,9 @@ def build_optimizer(
     params,
     cfg: dict,
 ) -> torch.optim.Optimizer:
-    """Construct an optimizer from a config dict (train.yaml ``optimizer`` block).
+    """Bygg optimizer fra config-dict (train.yaml optimizer-blokk).
 
-    Supported names: ``adam`` (default), ``adamw``, ``sgd``.
-
-    Args:
-        params: Model parameters (``model.parameters()`` or param groups).
-        cfg: Dict with keys ``lr``, ``weight_decay``, and optionally ``name``.
-
-    Returns:
-        Configured optimizer instance.
+    Støttede navn: adam (default), adamw, sgd.
     """
     lr = float(cfg.get("lr", 1e-4))
     weight_decay = float(cfg.get("weight_decay", 1e-4))
@@ -43,18 +36,9 @@ def build_scheduler(
     cfg: dict,
     num_epochs: int,
 ) -> torch.optim.lr_scheduler.LRScheduler | None:
-    """Construct a learning-rate scheduler from a config dict.
+    """Bygg LR-scheduler fra config-dict. Returner None om scheduling er deaktivert.
 
-    Supported names: ``cosine``, ``step``.  Returns ``None`` when
-    ``cfg["enabled"]`` is False or ``cfg["name"]`` is ``"none"``.
-
-    Args:
-        optimizer: The optimizer whose LR will be scheduled.
-        cfg: Dict from train.yaml ``scheduler`` block.
-        num_epochs: Total training epochs (used for cosine T_max).
-
-    Returns:
-        Scheduler instance, or None if scheduling is disabled.
+    Støttede navn: cosine, step.
     """
     if not cfg.get("enabled", False):
         return None
@@ -80,16 +64,9 @@ def compute_class_weights(
     labels: list[int] | np.ndarray,
     device: torch.device,
 ) -> torch.Tensor:
-    """Compute inverse-frequency class weights for binary classification.
+    """Beregn inverse-frekvens klasseveiere: weight_c = n_total / (2 * n_c).
 
-    Uses the formula: ``weight_c = n_total / (2 * n_c)``
-
-    Args:
-        labels: 1-D array-like of integer class labels (0 or 1).
-        device: Target device for the returned tensor.
-
-    Returns:
-        Float tensor of shape ``(2,)`` with weights for class 0 and class 1.
+    Returner float-tensor med form (2,) for klasse 0 og 1.
     """
     arr = np.asarray(labels, dtype=np.int64)
     n0 = float(np.sum(arr == 0)) or 1.0

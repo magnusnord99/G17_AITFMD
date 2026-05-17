@@ -37,20 +37,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class Evaluator:
-    """Load a checkpoint and run ROI-level evaluation for one data split.
+    """Last checkpoint og kjør ROI-nivå evaluering for ett datasplit.
 
-    Usage::
-
-        ev = Evaluator(checkpoint_path, cfg, output_dir)
-        metrics = ev.run("val")
-        metrics = ev.run("test")
-
-    Args:
-        checkpoint_path: Path to a ``*_best.pt`` checkpoint from ``run_train.py``.
-        cfg: Parsed ``train.yaml`` dict (must contain ``data`` and ``paths`` blocks).
-        output_dir: Directory where reports, plots, and CSV summary are written.
-        batch_size: Override ``data.batch_size`` for inference.
-        patient_level: If True, also compute patient-level metrics.
+    Bruk: ev = Evaluator(checkpoint_path, cfg, output_dir); metrics = ev.run("val")
     """
 
     def __init__(
@@ -110,16 +99,7 @@ class Evaluator:
         return model, device
 
     def run(self, split: str = "val") -> dict[str, Any]:
-        """Evaluate the checkpoint on the given split.
-
-        Args:
-            split: ``"val"`` or ``"test"``.
-
-        Returns:
-            Dict of top-level metrics (``auc_roc``, ``avg_precision``,
-            ``optimal_threshold_youden``, ``metrics_at_threshold_0.5``,
-            ``metrics_at_optimal_threshold``).
-        """
+        """Evaluer checkpoint på gitt split ("val" eller "test"). Returner metrikk-dict."""
         log.info("--- Evaluating split=%s ---", split)
 
         model, device = self._load_model()

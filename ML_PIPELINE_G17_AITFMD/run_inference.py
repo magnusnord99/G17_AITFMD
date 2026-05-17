@@ -1,3 +1,6 @@
+# HISTORISK: Dette scriptet ble brukt som grensesnitt mellom GUI og Python-pipelinen
+# før inferansen ble skrevet om til C# (SpectralAssist). Ikke lenger i aktiv bruk.
+
 """
 Offentlig grensesnitt for inferanse (nivå 1).
 

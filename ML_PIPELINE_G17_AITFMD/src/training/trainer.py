@@ -22,25 +22,7 @@ log = get_logger(__name__)
 
 
 class Trainer:
-    """Encapsulates the full training loop for a 3D CNN classifier.
-
-    The Trainer is responsible for the forward/backward pass, metric
-    collection, early stopping, AMP scaler, and firing callback hooks.
-    Everything else (checkpointing, eval, logging setup) lives in callbacks.
-
-    Args:
-        model: Untrained ``nn.Module`` already moved to ``device``.
-        train_loader: Training DataLoader.
-        val_loader: Validation DataLoader.
-        optimizer: Configured optimizer (from ``src.training.optim``).
-        scheduler: LR scheduler, or ``None``.
-        loss_fn: Loss criterion (e.g. ``nn.CrossEntropyLoss``).
-        cfg: Full parsed ``train.yaml`` dict.
-        output_dir: Base output directory for this run.
-        run_id: Unique run identifier (e.g. ``"20250410_120000"``).
-        callbacks: List of ``BaseCallback`` instances.
-        amp_enabled: Whether to use Automatic Mixed Precision.
-    """
+    """Treningsloop for 3D CNN: forward/backward pass, metrikker, early stopping, callbacks."""
 
     def __init__(
         self,
@@ -94,16 +76,9 @@ class Trainer:
     # ------------------------------------------------------------------
 
     def fit(self, num_epochs: int | None = None, resume_from: dict | None = None) -> dict[str, Any]:
-        """Run the training loop.
+        """Kjør treningsloopen og returner final logs-dict.
 
-        Args:
-            num_epochs: Override ``trainer.max_epochs`` from config.
-            resume_from: Checkpoint dict loaded from ``last.pt``. If given,
-                restores training state (best_val_loss, best_epoch, history,
-                scheduler) and starts from the next epoch.
-
-        Returns:
-            Final ``logs`` dict (also accessible via ``self.history``).
+        resume_from: checkpoint-dict fra last.pt for å gjenoppta trening.
         """
         max_epochs = num_epochs or self.max_epochs
         start_epoch = 1

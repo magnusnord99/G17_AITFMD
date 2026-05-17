@@ -14,18 +14,7 @@ def compute_binary_metrics(
     y_pred: np.ndarray,
     y_prob: np.ndarray | None = None,
 ) -> dict[str, float | int]:
-    """Compute binary classification metrics from hard predictions.
-
-    Args:
-        y_true: Ground-truth labels, shape ``(N,)``, values 0 or 1.
-        y_pred: Hard predicted labels, shape ``(N,)``, values 0 or 1.
-        y_prob: Soft probability for class 1, shape ``(N,)``.  If provided,
-                ``auc_roc`` is added to the output dict (requires sklearn).
-
-    Returns:
-        Dict with keys: ``accuracy``, ``precision``, ``recall``, ``f1``,
-        ``tp``, ``tn``, ``fp``, ``fn``, and optionally ``auc_roc``.
-    """
+    """Beregn binære klassifiseringsmetrikker. Legger til auc_roc om y_prob er oppgitt."""
     y_true = np.asarray(y_true, dtype=np.int64)
     y_pred = np.asarray(y_pred, dtype=np.int64)
 
@@ -69,22 +58,11 @@ def compute_roi_metrics(
     probs: np.ndarray,
     labels: np.ndarray,
 ) -> dict[str, float | int]:
-    """Aggregate patch-level probabilities to ROI level and compute metrics.
+    """Aggreger patch-sannsynligheter til ROI-nivå og beregn metrikker.
 
-    Each patch is identified by ``cube_idxs``.  All patches from the same cube
-    are mean-pooled into a single ROI-level probability before metrics are
-    computed.
-
-    Args:
-        cube_idxs: Per-patch cube indices, shape ``(N,)``.
-        probs:     Per-patch probability for class 1, shape ``(N,)``.
-        labels:    Per-patch ground-truth labels, shape ``(N,)``.
-
-    Returns:
-        Dict with: ``auc_roc_roi``, ``avg_precision_roi``, ``f1_at_0.5_roi``,
-        ``f1_at_opt_roi``, ``threshold_opt_roi``, ``n_rois``.
-        Values are ``float("nan")`` when the metric cannot be computed
-        (e.g. only one class present in val set).
+    Alle patcher fra samme kube (identifisert via cube_idxs) gjennomsnittliggjøres
+    til én ROI-sannsynlighet. Brukes til å beregne AUC-ROI, F1, optimal terskel osv.
+    under trening (i valideringsloopen).
     """
     try:
         from sklearn.metrics import (  # type: ignore
