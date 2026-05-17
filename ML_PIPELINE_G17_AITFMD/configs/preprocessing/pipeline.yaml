@@ -38,10 +38,9 @@ pipeline:
   spectral_reduction:
     enabled: true
     # pca | ae | wavelet
-    reducer: "pca"
+    reducer: "wavelet" 
     pca_model: "models/pca_avg3_16.joblib"
     ae_model: "models/ae_avg3_16.pt"
-    # wavelet (når reducer=wavelet):
     wavelet:
       target_bands: 16
       feature_mode: "approx_padded"

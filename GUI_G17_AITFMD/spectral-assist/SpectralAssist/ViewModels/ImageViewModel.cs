@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -118,7 +120,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public float SelectedBandWaveLength => Cube?.Header.WavelengthValues[SelectedBand] ?? -1f;
 
 
-    // DisplayMode Changes ==================================================================
+    //__ DisplayMode Changes ____________________________________________
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
@@ -160,6 +162,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsSpectralMode));
         UpdateBitmap();
     }
+    //______________________________________________________________________________
 
 
     // -- Image loading on Initialization (delegates to ImageLoadingService) -- //
@@ -233,22 +236,38 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var progress = new Progress<string>(s => { InferenceOutput = s; });
 
+            // __ Resource logging: setup up timers _________________________
+            var wallTimer = Stopwatch.StartNew();
+            var cpuStart = Process.GetCurrentProcess().TotalProcessorTime;
+            var preprocessingMs = 0.0;
+            //_______________________________________________________________
+            
+            var progress = new Progress<string>(s => { InferenceOutput = s; });
+            
             // Preprocess (cache invalidation by package change)
             if (_cachedPreprocessing == null || _lastPackage != package)
             {
+                var preprocessingTimer = Stopwatch.StartNew();
                 InferenceOutput = "Performing preprocessing...";
                 _cachedPreprocessing = await Task.Run(
                     () => PreprocessingService.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing), ct);
+                    
+                 preprocessingMs = preprocessingTimer.Elapsed.TotalMilliseconds;
+                 
                 _lastPackage = package;
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
             }
 
             // Perform Inference
+            var inferenceTimer = Stopwatch.StartNew();
             var runResult = await _inferenceService.RunAsync(
                 _cachedPreprocessing.Value, package, progress, ct);
             
+            var inferenceMs = inferenceTimer.Elapsed.TotalMilliseconds;
+            wallTimer.Stop();
+            
+            InferenceOutput = "";
             Overlay.ApplyResult(runResult, Cube!.Samples, Cube!.Lines);
             var summary = await TryAutoSaveRunAsync(runResult, ct);
             if (summary != null)
@@ -258,7 +277,16 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 SaveNotesCommand.NotifyCanExecuteChanged();
             }
             
-            InferenceOutput = "";
+            // __ Resource logging: write one CSV row to console if flagged ___________
+            if (LogMetrics)
+                LogMetricsCsv(
+                    preprocessingMs,
+                    inferenceMs, 
+                    wallTimer.Elapsed.TotalMilliseconds,
+                    (Process.GetCurrentProcess().TotalProcessorTime - cpuStart).TotalMilliseconds, 
+                    Cube!,
+                    _cachedPreprocessing.Value.Cube);
+            // __________________________________________________________________________
         }
         catch (OperationCanceledException)
         {
@@ -301,9 +329,10 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         _cachedSyntheticRgb = bitmap;
         return bitmap;
     }
+    //___________________________________________________
 
 
-    // Persistence Logic _______________________________
+    //__ Persistence Logic _______________________________
 
     /// <summary>
     /// Silently tries to save a thumbnail of the given bitmap.
@@ -423,12 +452,60 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
+    // __ ResourceLogging _______________________________________________
+    private const bool LogMetrics = true;
+    private static bool _headerPrinted;
+
+    /// <summary>
+    /// Writes one CSV row to the console per inference run, CPU timings and
+    /// cube-size compression can be aggregated for the performance evaluation.
+    ///
+    /// Header row is printed once per application start
+    /// (Image, PreprocessMs, InferenceMs, TotalMs, CpuMs, BeforeMiB, AfterMiB, ReductionPct).
+    /// </summary>
+    private static void LogMetricsCsv(
+        double preMs, double infMs, double totalMs, double cpuMs,
+        HsiCube source, HsiCube preprocessed)
+    {
+        if (!_headerPrinted)
+        {
+            Console.WriteLine("Image,PreprocessMs,InferenceMs,TotalMs,CpuMs,BeforeMiB,AfterMiB,ReductionPct");
+            Debug.WriteLine("Image,PreprocessMs,InferenceMs,TotalMs,CpuMs,BeforeMiB,AfterMiB,ReductionPct");
+            _headerPrinted = true;
+        }
+
+        var bytesPerElement = source.Header.DataType switch
+        {
+            1 => 1, // byte
+            2 => 2, // int16
+            3 => 4, // int32
+            4 => 4, // float32
+            5 => 8, // float64
+            12 => 2, // uint16
+            _ => 4, // unknown -> float32
+        };
+
+        var beforeMiB = (long)source.Samples * source.Lines * source.Bands * bytesPerElement / (1024.0 * 1024.0);
+        var afterMiB = (long)preprocessed.Samples * preprocessed.Lines * preprocessed.Bands * bytesPerElement /
+                       (1024.0 * 1024.0);
+        var reduction = beforeMiB > 0 ? (1.0 - afterMiB / beforeMiB) * 100.0 : 0.0;
+
+        var image = Path.GetFileName(Path.GetDirectoryName(source.Header.DataFilePath)) ?? "(unknown)";
+        Console.WriteLine(string.Format(CultureInfo.InvariantCulture,
+            "{0},{1:F0},{2:F0},{3:F0},{4:F0},{5:F2},{6:F2},{7:F2}",
+            image, preMs, infMs, totalMs, cpuMs, beforeMiB, afterMiB, reduction));
+        
+        Debug.WriteLine(string.Format(CultureInfo.InvariantCulture,
+            "{0},{1:F0},{2:F0},{3:F0},{4:F0},{5:F2},{6:F2},{7:F2}",
+            image, preMs, infMs, totalMs, cpuMs, beforeMiB, afterMiB, reduction));
+    }
+
     public int ImageWidth => Cube?.Samples ?? 0;
     public int ImageHeight => Cube?.Lines ?? 0;
     [ObservableProperty] private bool _isSplitViewEnabled;
 
 
-    // Spectral Signature _______________________________________________
+    // __ Spectral Signature _______________________________________________
 
     [ObservableProperty] private int? _pixel1X;
     [ObservableProperty] private int? _pixel1Y;
