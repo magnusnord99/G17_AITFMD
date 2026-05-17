@@ -1,14 +1,19 @@
 ﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SpectralAssist.ViewModels"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="SpectralAssist.Views.MainWindow"
         x:DataType="vm:MainViewModel"
+        MinWidth="1500"
+        MinHeight="800"
         Icon="/Assets/icon-256x256px.ico"
-        Title="SpectralAssist">
-
+        Title="SpectralAssist"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized">
+    
     <Design.DataContext>
         <vm:MainViewModel />
     </Design.DataContext>
@@ -18,101 +23,72 @@
         <Grid RowDefinitions="Auto,*">
 
             <!-- Top Bar -->
-            <Border Grid.Row="0"
-                    Background="#1A1A1A"
-                    BorderBrush="#2D2D2D"
-                    BorderThickness="0,0,1,0"
-                    Padding="10">
+            <Border Grid.Row="0" Classes="topbar" Padding="10">
 
                 <Grid ColumnDefinitions="Auto,*,Auto">
 
                     <!-- Left Section -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                HorizontalAlignment="Left"
-                                Spacing="4">
+                                HorizontalAlignment="Left" Spacing="4">
 
-                        <!-- App Logo -->
                         <TextBlock Text="SpectralAssist"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
+                                   FontSize="13" FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   Foreground="#CCCCCC"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="4,0,4,0" />
 
-                        <Border Width="1" Background="#2D2D2D" Margin="0,0,0,4" />
+                        <Border Width="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" Margin="0,0,0,4" />
 
-                        <!-- Image Navigation -->
-                        <Button Content="Open HSI"
-                                Click="OpenHSIButton_Clicked"
-                                Background="Transparent"
-                                Foreground="#AAAAAA"
-                                Padding="8,6"
-                                CornerRadius="4" />
+                        <Button Content="Open HSI" Classes="nav"
+                                Click="OpenHSIButton_Clicked" />
+
+                        <Button Content="Library" Classes="nav"
+                                Classes.active="{Binding IsOnLibrary}"
+                                Command="{Binding NavigateToLibraryCommand}" />
                         
-                        <Button Content="Library"
-                                Command="{Binding NavigateToLibraryCommand}"
-                                IsEnabled="{Binding !IsOnLibrary}"
-                                Background="Transparent"
-                                Foreground="#AAAAAA"
-                                Padding="8,6"
-                                CornerRadius="4" />
+                        <Button Content="Models" Classes="nav"
+                                Classes.active="{Binding IsOnModels}"
+                                Command="{Binding NavigateToModelsCommand}" />
 
-                        <Button Content="Models"
-                                Command="{Binding NavigateToModelsCommand}"
-                                IsEnabled="{Binding !IsOnModels}"
-                                Background="Transparent"
-                                Foreground="#AAAAAA"
-                                Padding="8,6"
-                                CornerRadius="4" />
-
-                        <Border Width="1" Background="#2D2D2D" Margin="0,8,0,4" />
+                        <Border Width="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" Margin="0,8,0,4" />
+                        
+                        <Grid ColumnDefinitions="Auto,Auto"
+                              IsVisible="{Binding HasOpenImage}"
+                              VerticalAlignment="Center">
+                            <Button Grid.Column="0"
+                                    Content="{Binding OpenImageDisplayName}"
+                                    Classes="nav"
+                                    Classes.active="{Binding IsOnImageView}"
+                                    Command="{Binding NavigateToOpenImageCommand}"
+                                    Padding="8,6,4,6" />
+                            <Button Grid.Column="1"
+                                    Classes="icon"
+                                    Command="{Binding CloseOpenImageCommand}"
+                                    VerticalAlignment="Center"
+                                    ToolTip.Tip="Close image">
+                                <ui:SymbolIcon Symbol="Cancel" FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            </Button>
+                        </Grid>
                         
                     </StackPanel>
 
-                    <!-- Middle Section: Open Image Tab -->
-                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto"
-                          VerticalAlignment="Center"
-                          HorizontalAlignment="Center"
-                          IsVisible="{Binding HasOpenImage}"
-                          Background="Transparent">
-
-                        <Button Grid.Column="0" Content="{Binding OpenImageDisplayName}"
-                                Command="{Binding NavigateToOpenImageCommand}"
-                                IsEnabled="{Binding !IsOnImageView}"
-                                Background="Transparent"
-                                Foreground="#AAAAAA"
-                                Padding="8, 6, 28,6"
-                                CornerRadius="4" />
-
-                        <Button Grid.Column="0"
-                                Content="✕"
-                                Background="Transparent"
-                                Foreground="White"
-                                Padding="2"
-                                Margin="0,0,6,0"
-                                Command="{Binding CloseOpenImageCommand}"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Right"
-                                CornerRadius="2" />
-                    </Grid>
+                    <!-- Center spacer -->
+                    <Grid Grid.Column="1" />
 
                     <!-- Right Section -->
-                    <StackPanel Grid.Column="2"
-                                Orientation="Horizontal"
-                                Spacing="12"
-                                VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                Spacing="12" VerticalAlignment="Center">
 
-                        <!-- Model picker -->
                         <TextBlock Text="Model:"
                                    FontSize="11"
-                                   Foreground="#888888"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    VerticalAlignment="Center"
                                    ToolTip.Tip="Active model used for inference" />
 
                         <ComboBox ItemsSource="{Binding AvailableModels}"
                                   SelectedItem="{Binding Session.ActiveModel}"
-                                  MinWidth="180"
-                                  FontSize="11"
+                                  MinWidth="180" FontSize="11"
                                   PlaceholderText="No model selected"
                                   ToolTip.Tip="Active model used for inference">
                             <ComboBox.ItemTemplate>
@@ -122,17 +98,15 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
 
-                        <!-- Stride picker -->
                         <TextBlock Text="Stride:"
                                    FontSize="11"
-                                   Foreground="#888888"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    VerticalAlignment="Center"
                                    ToolTip.Tip="Patch overlap for inference (higher overlap is smoother but slower)" />
 
                         <ComboBox ItemsSource="{Binding Session.AvailableStrides}"
                                   SelectedItem="{Binding Session.SelectedStride}"
-                                  MinWidth="110"
-                                  FontSize="11"
+                                  MinWidth="110" FontSize="11"
                                   ToolTip.Tip="Controls smoothness vs. speed of inference overlay" />
                     </StackPanel>
                 </Grid>

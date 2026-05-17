@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -34,15 +35,19 @@ public partial class ModelsViewModel : ViewModelBase
     public ModelsViewModel(
         ModelPackageManager modelManager,
         InferenceService inferenceService,
-        SessionService session)
+        SessionService session,
+        IDialogService dialogService)
     {
         _modelManager = modelManager;
         _inferenceService = inferenceService;
+        _dialogService = dialogService;
         Session = session;
 
         Session.ActiveModel ??= AvailableModels.FirstOrDefault();
         Session.PropertyChanged += OnSessionChanged;
     }
+
+    private readonly IDialogService _dialogService;
 
     // -- States -- //
     [ObservableProperty]
@@ -50,17 +55,43 @@ public partial class ModelsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsPreviewing))]
     [NotifyPropertyChangedFor(nameof(IsImporting))]
     [NotifyPropertyChangedFor(nameof(DisplayedModel))]
+    [NotifyPropertyChangedFor(nameof(HasActiveBanner))]
     private ModelViewState _viewState = ModelViewState.Browsing;
 
     public bool IsBrowsing => ViewState == ModelViewState.Browsing;
     public bool IsPreviewing => ViewState == ModelViewState.Previewing;
     public bool IsImporting => ViewState == ModelViewState.Importing;
-    
+
+    public bool HasActiveBanner =>
+        IsPreviewing
+        || IsImporting
+        || !string.IsNullOrEmpty(SuccessMessage)
+        || !string.IsNullOrEmpty(ErrorMessage);
+
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(DisplayedModel))]
     private ModelManifest? _previewModel;
 
-    [ObservableProperty] private string? _errorMessage;
-    [ObservableProperty] private string? _successMessage;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasActiveBanner))]
+    private string? _errorMessage;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasActiveBanner))]
+    private string? _successMessage;
+
+    private CancellationTokenSource? _successDismissCts;
+    private static readonly TimeSpan SuccessAutoDismissAfter = TimeSpan.FromSeconds(4);
+
+    partial void OnSuccessMessageChanged(string? value)
+    {
+        _successDismissCts?.Cancel();
+        if (string.IsNullOrEmpty(value)) return;
+
+        _successDismissCts = new CancellationTokenSource();
+        var token = _successDismissCts.Token;
+        _ = Task.Delay(SuccessAutoDismissAfter, token).ContinueWith(t =>
+        {
+            if (!t.IsCanceled && SuccessMessage == value)
+                SuccessMessage = null;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
 
     public ModelManifest? DisplayedModel =>
         ViewState is ModelViewState.Previewing or ModelViewState.Importing
@@ -114,6 +145,8 @@ public partial class ModelsViewModel : ViewModelBase
 
         if (passed)
             SuccessMessage = summary;
+        else if (modelManifest.Validation.IsSkipped)
+            SuccessMessage = $"Imported. {summary}";
         else
             ErrorMessage = summary;
 
@@ -125,15 +158,22 @@ public partial class ModelsViewModel : ViewModelBase
     private void CancelImport() => ResetImportState();
 
     [RelayCommand]
-    private void DeleteModel(ModelManifest modelInfo)
+    private async Task DeleteModel(ModelManifest modelInfo)
     {
+        var confirmed = await _dialogService.ConfirmAsync(
+            title: "Delete model package",
+            message: $"Permanently delete \"{modelInfo.Metadata.Name}\"? \nThis cannot be undone.",
+            confirmLabel: "Delete",
+            isDestructive: true);
+        if (!confirmed) return;
+
         var result = _modelManager.DeletePackage(modelInfo.Metadata.Id);
         if (!result.IsSuccess)
         {
             ErrorMessage = result.Error;
             return;
         }
-        
+
         if (Session.ActiveModel?.Metadata.Id == modelInfo.Metadata.Id)
             Session.ActiveModel = AvailableModels.FirstOrDefault();
     }
@@ -156,6 +196,7 @@ public partial class ModelsViewModel : ViewModelBase
     {
         _modelManager = new ModelPackageManager();
         _inferenceService = null!;
+        _dialogService = null!;
         Session = new SessionService();
 
         var sample = new ModelManifest
@@ -168,7 +209,7 @@ public partial class ModelsViewModel : ViewModelBase
                 Version = "1.0.0",
                 Description = "3D convolutional classifier for hyperspectral tissue analysis.",
                 Author = "G17 AITFMD",
-                Created = "2026-03-24",
+                Created = new DateTime(2026, 3, 24),
             },
             Pipeline = new PipelineInfo
             {

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using SpectralAssist.Models;
 using SpectralAssist.Services.Preprocessing;
 
@@ -20,37 +21,50 @@ namespace SpectralAssist.Services;
 public static class PreprocessingService
 {
     /// <summary>
-    /// Run the full pipeline from raw capture data.
-    /// The manifest's step list should start with "calibrate".
+    /// Runs the full preprocessing pipeline on raw capture data.
+    /// The manifest's step list is executed in order, starting with "calibrate".
+    /// Cancellation is checked between steps.
     /// </summary>
-    public static PreprocessingResult Run(
-        HsiCube raw, HsiCube dark, HsiCube white, PreprocessingInfo preprocessing)
+    /// <param name="raw">Raw, uncalibrated HSI cube.</param>
+    /// <param name="dark">Dark reference cube.</param>men f
+    /// <param name="white">White reference cube.</param>
+    /// <param name="preprocessing">Preprocessing steps and parameters.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The processed cube and optional tissue mask.</returns>
+    public static PreprocessingResult Run(HsiCube raw, HsiCube dark, HsiCube white, PreprocessingInfo preprocessing, 
+        CancellationToken ct = default)
     {
         var cube = raw;
         bool[]? mask = null;
 
         foreach (var step in preprocessing.Steps)
+        {
+            ct.ThrowIfCancellationRequested();
             (cube, mask) = ApplyStep(step, cube, dark, white, mask, preprocessing.Params);
+        }
 
         return new PreprocessingResult(cube, mask);
     }
 
     /// <summary>
-    /// Run from an already-calibrated cube (e.g. cached by <see cref="ImageLoadingService"/>).
-    /// The "calibrate" step is skipped even if present in the manifest.
-    ///
-    /// The input is cloned because in-place steps (clip) would otherwise
-    /// mutate the caller's cached cube, forcing a costly reload next time.
+    /// Runs preprocessing on an already‑calibrated cube. The calibration step is skipped.
+    /// The cube is cloned to avoid mutating the caller's cached data.
     /// </summary>
-    public static PreprocessingResult RunFromCalibrated(
-        HsiCube calibrated, PreprocessingInfo preprocessing)
+    /// <param name="calibrated">A pre‑calibrated HSI cube, typically loaded from cache.</param>
+    /// <param name="preprocessing">Preprocessing steps and parameters.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The processed cube and optional tissue mask.</returns>
+    public static PreprocessingResult RunFromCalibrated(HsiCube calibrated, PreprocessingInfo preprocessing, 
+        CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var cube = calibrated.Clone();
         bool[]? mask = null;
 
         foreach (var step in preprocessing.Steps)
         {
             if (step == "calibrate") continue; // already done at load time
+            ct.ThrowIfCancellationRequested();
             (cube, mask) = ApplyStep(step, cube, null, null, mask, preprocessing.Params);
         }
 

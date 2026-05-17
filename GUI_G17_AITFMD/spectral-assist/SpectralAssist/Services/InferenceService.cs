@@ -18,7 +18,7 @@ public class InferenceService(
     ModelPackageManager modelManager)
 {
     /// <summary>
-    /// Loads (or returns cached) the package for the currently active model.
+    /// Loads (or returns cached) package for the currently active model.
     /// Returns null if no model is selected.
     /// </summary>
     public ModelPackage? GetActivePackage()
@@ -28,32 +28,36 @@ public class InferenceService(
     }
     
     /// <summary>
-    /// Runs inference using the stride derived from user settings and the manifest.
+    /// Runs inference using the stride computed from user settings and the model manifest.
     /// </summary>
+    /// <param name="preprocessed">Preprocessed input data.</param>
+    /// <param name="package">Model package to run inference with.</param>
+    /// <param name="patchProgress">Optional patch‑level progress reporter.</param>
+    /// <param name="ct">Cancellation token.</param>
     public Task<ClassificationReport> RunAsync(
         PreprocessingResult preprocessed,
         ModelPackage package,
-        IProgress<string>? progress = null,
+        IProgress<(int Done, int Total)>? patchProgress = null,
         CancellationToken ct = default)
-        => RunAsync(preprocessed, package, ComputeStride(package.Manifest), progress, ct);
-    
-    
+        => RunAsync(preprocessed, package, ComputeStride(package.Manifest), patchProgress, ct);
+
+
     /// <summary>
-    /// Runs inference with an explicit stride. Use when callers want to override the user's current stride preference.
+    /// Runs inference with an explicit stride, overriding the user's configured stride.
     /// </summary>
+    /// <param name="preprocessed">Preprocessed input data.</param>
+    /// <param name="package">Model package to run inference with.</param>
+    /// <param name="stride">Stride used when extracting patches.</param>
+    /// <param name="patchProgress">Optional patch‑level progress reporter.</param>
+    /// <param name="ct">Cancellation token.</param>
     public async Task<ClassificationReport> RunAsync(
         PreprocessingResult preprocessed,
         ModelPackage package,
         int stride,
-        IProgress<string>? progress,
-        CancellationToken ct)
+        IProgress<(int Done, int Total)>? patchProgress = null,
+        CancellationToken ct = default)
     {
         classifier.SetModel(package);
-
-        var patchProgress = progress != null
-            ? new Progress<(int Done, int Total)>(p =>
-                progress.Report($"ONNX inference... {p.Done}/{p.Total} patches ({100.0 * p.Done / p.Total:F0}%)"))
-            : null;
 
         return await Task.Run(
             () => classifier.ClassifyImageAsync(

@@ -1,22 +1,26 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:SpectralAssist.ViewModels"
              xmlns:components="clr-namespace:SpectralAssist.ViewModels.Components"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:shared="clr-namespace:SpectralAssist.Views.Components"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
              x:Class="SpectralAssist.Views.LibraryView"
              x:DataType="viewModels:LibraryViewModel">
 
-    <Grid>
+    <Panel>
         <!-- Empty state -->
         <StackPanel IsVisible="{Binding IsEmpty}"
                     VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
-            <TextBlock Text="No library folder open" FontSize="18" Opacity="0.7" HorizontalAlignment="Center" />
+            <TextBlock Text="No library folder open" FontSize="18" Opacity="0.7"
+                       HorizontalAlignment="Center" />
             <TextBlock Text="Pick a root folder containing patient sub-folders to get started."
                        Opacity="0.5" HorizontalAlignment="Center" />
             <Button Content="Open Folder" Click="OpenFolderButton_Click"
-                    HorizontalAlignment="Center" Padding="16,8" />
+                    Classes="primary"
+                    Width="200" HorizontalAlignment="Center" />
         </StackPanel>
 
         <!-- Scanning state -->
@@ -24,66 +28,81 @@
                     VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Width="360">
             <ProgressBar IsIndeterminate="True" Height="4" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <Button Content="Cancel"
+                    Classes="action"
+                    Command="{Binding CancelScanCommand}"
+                    HorizontalAlignment="Center"
+                    MinWidth="120"
+                    Margin="0,8,0,0" />
         </StackPanel>
 
         <!-- Failed state -->
         <StackPanel IsVisible="{Binding IsFailed}"
                     VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Width="400">
-            <TextBlock Text="⚠ Scan failed" FontSize="16" Foreground="#d97706" HorizontalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                <ui:FontIcon Glyph="&#xE7BA;" FontSize="20"
+                             Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                <TextBlock Text="Scan failed" FontSize="16"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+            </StackPanel>
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" HorizontalAlignment="Center" />
-            <Button Content="Try Again" Click="OpenFolderButton_Click" HorizontalAlignment="Center" />
+            <Button Content="Try Again" Click="OpenFolderButton_Click"
+                    Classes="action" HorizontalAlignment="Center" />
         </StackPanel>
 
         <!-- Loaded state -->
-        <DockPanel IsVisible="{Binding IsLoaded}" LastChildFill="True">
-            <!-- Top action bar -->
-            <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="#22000000" BorderThickness="0,0,0,1">
-                <DockPanel LastChildFill="False">
-                    <StackPanel DockPanel.Dock="Left" Orientation="Vertical">
-                        <TextBlock Text="{Binding DatasetName}"
-                                   FontWeight="SemiBold" FontSize="14"
-                                   TextTrimming="CharacterEllipsis"
-                                   ToolTip.Tip="{Binding LibraryRoot}" />
-                        <TextBlock Opacity="0.6" FontSize="11">
-                            <Run Text="{Binding PatientCount}" /><Run Text=" folder(s)" />
-                            <Run Text=" · " />
-                            <Run Text="{Binding ScanCount}" /><Run Text=" images(s)" />
-                            <Run Text=" · " />
-                            <Run Text="{Binding ReportedScanCount}" /><Run Text=" analyzed" />
-                        </TextBlock>
-                        <TextBlock FontSize="11" Foreground="#d97706"
-                                   IsVisible="{Binding MissingCalibrationCount}">
-                            <Run Text="⚠ " /><Run Text="{Binding MissingCalibrationCount}" />
-                            <Run Text=" missing calibration" />
-                        </TextBlock>
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Change Folder…" Click="OpenFolderButton_Click" />
-                        <Button Content="Rescan" Command="{Binding RescanCommand}" />
-                        <Button Content="Close" Command="{Binding CloseLibraryCommand}" />
-                    </StackPanel>
-                </DockPanel>
-            </Border>
+        <shared:SidebarLayout IsVisible="{Binding IsLoaded}" SidebarWidth="280">
+            
+            <!-- SIDEBAR HEADER: Dataset summary -->
+            <shared:SidebarLayout.SidebarHeader>
+                <StackPanel Spacing="10">
 
-            <!-- Left folder tree and right gallery -->
-            <Grid ColumnDefinitions="280,*">
-                <TreeView Grid.Column="0"
-                          ItemsSource="{Binding TreeRoots}"
+                    <!-- Root Folder Name -->
+                    <TextBlock Text="{Binding DatasetName}"
+                               Classes="section-title"
+                               FontSize="14"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding LibraryRoot}" />
+
+                    <!-- Library Stats -->
+                    <Grid ColumnDefinitions="*,*,*">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="{Binding PatientCount}" Classes="mini-value" />
+                            <TextBlock Text="FOLDERS" Classes="mini-label" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="{Binding ScanCount}" Classes="mini-value" />
+                            <TextBlock Text="IMAGES" Classes="mini-label" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="{Binding ReportedScanCount}" Classes="mini-value" />
+                            <TextBlock Text="ANALYZED" Classes="mini-label" />
+                        </StackPanel>
+                    </Grid>
+
+                </StackPanel>
+            </shared:SidebarLayout.SidebarHeader>
+            
+            <!-- SIDEBAR CONTENT: Folder Tree -->
+            <shared:SidebarLayout.SidebarContent>
+                <TreeView ItemsSource="{Binding TreeRoots}"
                           SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
-                          BorderThickness="0,0,1,0" BorderBrush="#22000000">
+                          BorderThickness="0"
+                          Background="Transparent">
                     <TreeView.Styles>
                         <Style Selector="TreeViewItem">
                             <Setter Property="IsExpanded"
                                     Value="{Binding IsExpanded, Mode=TwoWay, DataType=viewModels:LibraryTreeItem}" />
                         </Style>
                     </TreeView.Styles>
-                    
                     <TreeView.ItemTemplate>
                         <TreeDataTemplate DataType="viewModels:LibraryTreeItem"
                                           ItemsSource="{Binding Children}">
-                            <StackPanel Margin="0,3">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                <TextBlock Opacity="0.55" FontSize="11">
+                            <StackPanel Margin="0,6" Spacing="3">
+                                <TextBlock Text="{Binding Name}"
+                                           FontWeight="SemiBold"
+                                           FontSize="13" />
+                                <TextBlock Classes="caption">
                                     <Run Text="{Binding ImageCount}" /><Run Text=" images" />
                                     <Run Text=" · " />
                                     <Run Text="{Binding ReportCount}" /><Run Text=" reports" />
@@ -92,8 +111,36 @@
                         </TreeDataTemplate>
                     </TreeView.ItemTemplate>
                 </TreeView>
+            </shared:SidebarLayout.SidebarContent>
+            
+            <!-- SIDEBAR ACTIONS -->
+            <shared:SidebarLayout.SidebarActions>
+                <StackPanel Spacing="6">
+                    <Button Classes="sidebar action" Click="OpenFolderButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Folder" FontSize="14" />
+                            <TextBlock Text="Change Folder…" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="sidebar action" Command="{Binding RescanCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Refresh" FontSize="14" />
+                            <TextBlock Text="Rescan" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="sidebar action" Command="{Binding CloseLibraryCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Cancel" FontSize="14" />
+                            <TextBlock Text="Close Library" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </shared:SidebarLayout.SidebarActions>
 
-                <ScrollViewer Grid.Column="1" Padding="12"
+
+            <!-- MAIN CONTENT: Image gallery -->
+            <shared:SidebarLayout.MainContent>
+                <ScrollViewer Padding="12,12,12,48"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding CurrentImages}">
@@ -105,53 +152,109 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="components:ImageTileViewModel">
                                 <Button Command="{Binding OpenCommand}"
-                                        Classes="tile"
+                                        Classes="image-tile"
                                         Classes.active="{Binding IsActive}"
-                                        Padding="0" Margin="6" Background="Transparent" CornerRadius="6">
-                                    <Button.Styles>
-                                        <Style Selector="Button.tile">
-                                            <Setter Property="BorderBrush" Value="#22000000" />
-                                            <Setter Property="BorderThickness" Value="2" />
-                                        </Style>
-                                        <Style Selector="Button.tile.active">
-                                            <Setter Property="BorderBrush" Value="#3b82f6" />
-                                        </Style>
-                                    </Button.Styles>
-                                    <StackPanel Width="220" Margin="0">
-                                        <Border Height="140" Background="#0E0E0E" CornerRadius="4,4,0,0">
+                                        Margin="6">
+                                    <StackPanel Width="280">
+
+                                        <!-- Thumbnail -->
+                                        <Border Height="200"
+                                                Background="#0E0E0E"
+                                                CornerRadius="6,6,0,0"
+                                                ClipToBounds="True">
                                             <Grid>
                                                 <Image Source="{Binding Thumbnail}"
                                                        Stretch="UniformToFill"
                                                        IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                 <TextBlock Text="No preview"
-                                                           Foreground="#555"
+                                                           Foreground="{DynamicResource TextFillColorDisabledBrush}"
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center"
                                                            IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNull}}" />
                                             </Grid>
                                         </Border>
-                                        <StackPanel Margin="10,8" Spacing="2" MinHeight="72">
-                                            <TextBlock Text="{Binding DisplayName}"
-                                                       TextTrimming="CharacterEllipsis" FontWeight="SemiBold"
-                                                       ToolTip.Tip="{Binding FileName}" />
-                                            <TextBlock Text="⚠ calibration missing"
-                                                       IsVisible="{Binding MissingCalibration}"
-                                                       Foreground="#d97706" FontSize="11" />
 
-                                            <!-- Not-yet-analyzed state -->
-                                            <TextBlock Text="Not analyzed yet"
-                                                       IsVisible="{Binding IsNotAnalyzed}"
-                                                       Opacity="0.5" FontSize="11"
-                                                       FontStyle="Italic" />
+                                        <!-- Body -->
+                                        <StackPanel Margin="14,12,14,14" Spacing="8" MinHeight="96">
+
+                                            <!-- Image Name -->
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="13"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <TextBlock Text="{Binding FileName}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </StackPanel>
+
 
                                             <!-- Analyzed state -->
-                                            <StackPanel IsVisible="{Binding HasReports}" Spacing="2">
-                                                <TextBlock Text="{Binding PrimarySummary}"
-                                                           FontSize="12"
+                                            <StackPanel IsVisible="{Binding HasReports}" Spacing="8">
+
+                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12"
+                                                      IsVisible="{Binding HasReports}"
+                                                      VerticalAlignment="Center">
+
+                                                    <!-- ≥50% -->
+                                                    <Grid Grid.Column="0" ColumnDefinitions="Auto,*"
+                                                          VerticalAlignment="Center">
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="{Binding PositiveClassPercentAbove50, StringFormat='{}{0:0}%'}"
+                                                                   FontSize="16" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="0">
+                                                            <TextBlock Text="{Binding PositiveClassName}"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="≥ 50% confidence"
+                                                                       FontSize="9"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!-- ≥80% -->
+                                                    <Grid Grid.Column="1" ColumnDefinitions="Auto,*"
+                                                          VerticalAlignment="Center">
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="{Binding PositiveClassPercentAbove80, StringFormat='{}{0:0}%'}"
+                                                                   FontSize="16" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="0">
+                                                            <TextBlock Text="{Binding PositiveClassName}"
+                                                                       FontSize="10"
+                                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="≥ 80% confidence"
+                                                                       FontSize="9"
+                                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                </Grid>
+                                                
+                                                <TextBlock Text="{Binding FooterSummary}"
+                                                           Classes="caption"
                                                            TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding SecondarySummary}"
-                                                           Opacity="0.55" FontSize="11"
-                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+
+                                            <!-- Unanalyzed state -->
+                                            <TextBlock Text="Not analyzed"
+                                                       IsVisible="{Binding IsNotAnalyzed}"
+                                                       Classes="caption"
+                                                       FontStyle="Italic" />
+
+                                            <!-- Calibration warning (only when missing) -->
+                                            <StackPanel Orientation="Horizontal" Spacing="5"
+                                                        IsVisible="{Binding MissingCalibration}">
+                                                <ui:FontIcon Glyph="&#xE7BA;" FontSize="11"
+                                                             Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                                                <TextBlock Text="Missing calibration"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource SystemFillColorCautionBrush}" />
                                             </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
@@ -160,9 +263,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-            </Grid>
-        </DockPanel>
-    </Grid>
-
+            </shared:SidebarLayout.MainContent>
+        </shared:SidebarLayout>
+    </Panel>
 
 </UserControl>

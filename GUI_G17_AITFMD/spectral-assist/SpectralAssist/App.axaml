@@ -1,15 +1,27 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sty="using:FluentAvalonia.Styling"
              x:Class="SpectralAssist.App"
              xmlns:local="using:SpectralAssist"
              RequestedThemeVariant="Default">
-    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
 
     <Application.Styles>
-        <FluentTheme />
+        <sty:FluentAvaloniaTheme />
+        <StyleInclude Source="avares://SpectralAssist/Styles/Typography.axaml" />
+        <StyleInclude Source="avares://SpectralAssist/Styles/Controls.axaml" />
+        <StyleInclude Source="avares://SpectralAssist/Styles/Cards.axaml" />
     </Application.Styles>
+    
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SpectralAssist/Styles/ColorOverrides.axaml" />
+                <ResourceInclude Source="avares://SpectralAssist/Styles/Theme.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

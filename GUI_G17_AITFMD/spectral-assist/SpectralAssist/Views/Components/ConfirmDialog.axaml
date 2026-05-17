@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SpectralAssist.ViewModels"
+        x:Class="SpectralAssist.Views.Components.ConfirmDialog"
+        x:DataType="vm:ConfirmDialogViewModel"
+        Title="{Binding DialogTitle}"
+        Width="440"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+
+    <!-- Outer margin so the drop shadow has room to render -->
+    <Border Margin="12"
+            Background="{DynamicResource SolidBackgroundFillColorTertiaryBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            BoxShadow="0 8 28 0 #99000000">
+
+        <StackPanel Spacing="14" Margin="24,20">
+
+            <!-- Title -->
+            <TextBlock Text="{Binding DialogTitle}"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+            <!-- Message -->
+            <TextBlock Text="{Binding Message}"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       LineHeight="20" />
+
+            <!-- Divider -->
+            <Border Classes="divider" Margin="0,6,0,0" />
+
+            <!-- Action buttons: Cancel (left), Confirm (right) -->
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8">
+                <Button Content="{Binding CancelButtonText}"
+                        Classes="action"
+                        Command="{Binding CancelCommand}"
+                        IsCancel="True"
+                        MinWidth="90" />
+
+                <Button Content="{Binding ConfirmButtonText}"
+                        Classes.danger="{Binding IsDestructive}"
+                        Classes.primary="{Binding !IsDestructive}"
+                        Command="{Binding ConfirmCommand}"
+                        IsDefault="True"
+                        MinWidth="90" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

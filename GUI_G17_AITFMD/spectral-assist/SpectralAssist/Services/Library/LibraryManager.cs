@@ -201,6 +201,31 @@ public class LibraryManager
 
 
     /// <summary>
+    /// Updates the notes attached to an image (per-image, not per-run).
+    /// Persisted as <see cref="ImageNode.Notes"/> in the library manifest.
+    /// </summary>
+    /// <param name="imageId">The ID of the image the run belongs to.</param>
+    /// <param name="notes">The new notes text.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task UpdateImageNotesAsync(string imageId, string notes, CancellationToken ct = default)
+    {
+        if (Root == null || Manifest == null) return;
+
+        await _manifestLock.WaitAsync(ct);
+        try
+        {
+            var image = FindImage(imageId);
+            if (image == null) return;
+            image.Notes = notes;
+            await WriteManifestAsync(Root, Manifest, ct);
+        }
+        finally
+        {
+            _manifestLock.Release();
+        }
+    }
+
+    /// <summary>
     /// Updates the notes for a saved run. Persists the change to both the run JSON
     /// file and the lightweight RunSummary entry in library.json.
     /// </summary>

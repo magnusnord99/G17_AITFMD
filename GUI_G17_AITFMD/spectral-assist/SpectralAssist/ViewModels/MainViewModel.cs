@@ -69,9 +69,18 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void OpenImageFromPath(string filePath)
     {
+        // If chosen image is already open, just switch to it.
+        if (OpenImage is { } current
+            && string.Equals(current.ImageNode.AbsolutePath, filePath, StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentView = OpenImage;
+            return;
+        }
+
         OpenImage?.Dispose();
         var transientNode = ImageNode.CreateTransient(filePath);
         OpenImage = _imageVmFactory(transientNode);
+        OpenImage.CloseRequested += CloseOpenImage;
         Session.ActiveImageId = transientNode.ImageId;
         CurrentView = OpenImage;
     }
@@ -87,8 +96,16 @@ public partial class MainViewModel : ViewModelBase
 
     private void OpenImageFromLibrary(ImageNode imageNode)
     {
+        // If the clicked image is already open, just switch to it.
+        if (OpenImage is { } current && current.ImageNode.ImageId == imageNode.ImageId)
+        {
+            CurrentView = OpenImage;
+            return;
+        }
+
         OpenImage?.Dispose();
         OpenImage = _imageVmFactory(imageNode);
+        OpenImage.CloseRequested += CloseOpenImage;
         Session.ActiveImageId = imageNode.ImageId;
         CurrentView = OpenImage;
     }

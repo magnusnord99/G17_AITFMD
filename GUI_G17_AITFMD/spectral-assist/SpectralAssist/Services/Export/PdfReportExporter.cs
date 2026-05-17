@@ -37,16 +37,17 @@ public static class PdfReportExporter
         Bitmap syntheticRgb,
         float[] heatmap,
         ExportOptions options,
-        Stream output)
+        Stream output,
+        string? imageNotes = null)
     {
-        var document = BuildDocument(report, syntheticRgb, heatmap, options);
+        var document = BuildDocument(report, syntheticRgb, heatmap, options, imageNotes);
         Write(output, document);
     }
 
     // Build and Write =========================================================================
-    
+
     private static PdfReportDocument BuildDocument(ClassificationReport report, Bitmap syntheticRgb, float[] heatmap,
-        ExportOptions options)
+        ExportOptions options, string? imageNotes)
     {
         var imageWidth = report.ImageWidth;
         var imageHeight = report.ImageHeight;
@@ -82,7 +83,7 @@ public static class PdfReportExporter
                 Overlay1Threshold = options.Overlay1Threshold,
                 Overlay2Threshold = options.Overlay2Threshold,
                 OverlayOpacity = options.OverlayOpacity,
-                RunNotes = string.IsNullOrWhiteSpace(report.Notes) ? null : report.Notes,
+                ImageNotes = string.IsNullOrWhiteSpace(imageNotes) ? null : imageNotes,
             };
         }
         finally
@@ -123,7 +124,7 @@ public static class PdfReportExporter
                     col.Spacing(18);
                     col.Item().Element(c => MetadataSection(c, doc));
                     col.Item().Element(c => SummarySection(c, doc));
-                    if (!string.IsNullOrWhiteSpace(doc.RunNotes))
+                    if (!string.IsNullOrWhiteSpace(doc.ImageNotes))
                         col.Item().Element(c => NotesSection(c, doc));
                     col.Item().Element(c => ImagesSection(c, doc));
                 });
@@ -232,7 +233,7 @@ public static class PdfReportExporter
                 .Border(1).BorderColor(ColorBorder)
                 .Background(ColorSurface)
                 .PaddingHorizontal(14).PaddingVertical(10)
-                .Text(doc.RunNotes!.TrimEnd())
+                .Text(doc.ImageNotes!.TrimEnd())
                 .FontSize(10).FontColor("#2D3748");
         });
     }

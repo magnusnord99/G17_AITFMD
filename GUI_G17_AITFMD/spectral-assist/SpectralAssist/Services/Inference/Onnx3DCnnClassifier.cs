@@ -145,7 +145,7 @@ public class Onnx3DCnnClassifier : IDisposable
                     }
 
                     // Extract patch into reusable buffer (no allocation)
-                    ExtractPatchInto(cube, x, y, grid.PatchW, grid.PatchH, patchBuffer);
+                    cube.ExtractPatchInto(x, y, grid.PatchW, grid.PatchH, patchBuffer);
 
                     // Create OrtValue from managed Memory<float> with length equal to patch size
                     using var inputOrtValue = OrtValue.CreateTensorValueFromMemory(
@@ -215,7 +215,7 @@ public class Onnx3DCnnClassifier : IDisposable
                         continue;
                     }
 
-                    ExtractPatchInto(cube, x, y, grid.PatchW, grid.PatchH, patchBuffer);
+                    cube.ExtractPatchInto(x, y, grid.PatchW, grid.PatchH, patchBuffer);
 
                     // DenseTensor wraps the memory segment (exact length, not pooled capacity)
                     var tensor = new DenseTensor<float>(

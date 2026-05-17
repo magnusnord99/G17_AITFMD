@@ -39,36 +39,48 @@ public class HsiCube(HsiHeader header, float[] data)
     {
         return new HsiCube(Header, (float[])data.Clone());
     }
-
+    
+    
     /// <summary>
-    /// Extracts a spatial patch from the cube at the given position.
-    /// Returns a flat array in BSQ order (bands, height, width),
-    /// which is the layout ONNX models expect.
+    /// Extracts a spatial patch from the cube into a pre-allocated buffer.
+    /// The buffer must have length Bands * patchH * patchW, and the result
+    /// is written in BSQ order (bands, height, width).
+    /// This is the allocation-free variant intended for hot loops such as
+    /// patch-wise inference.
     /// </summary>
-    public float[] ExtractPatch(int startX, int startY, int patchW, int patchH)
+    public void ExtractPatchInto(int startX, int startY, int patchW, int patchH, Span<float> destination)
     {
         if (startX < 0 || startY < 0 || startX + patchW > Samples || startY + patchH > Lines)
             throw new ArgumentOutOfRangeException(
                 $"Patch ({startX},{startY}) size ({patchW}×{patchH}) " +
                 $"exceeds image bounds ({Samples}×{Lines})");
 
-        var result = new float[Bands * patchH * patchW];
+        if (destination.Length < Bands * patchH * patchW)
+            throw new ArgumentException("Destination buffer is too small.", nameof(destination));
 
         for (var b = 0; b < Bands; b++)
         {
-            var band = GetBand(b); // full image row data for this band
+            var band = GetBand(b);
             var destOffset = b * patchH * patchW;
 
-            for (var y = 0; y < patchH; y++)
+            for (var row = 0; row < patchH; row++)
             {
                 // Copy one row of the patch at a time
-                // Source: row (startY + y) in full image, starting at column startX
-                // Destination: row y in the patch
-                band.Slice((startY + y) * Samples + startX, patchW)
-                    .CopyTo(result.AsSpan(destOffset + y * patchW, patchW));
+                band.Slice((startY + row) * Samples + startX, patchW)
+                    .CopyTo(destination.Slice(destOffset + row * patchW, patchW));
             }
         }
-
+    }
+    
+    /// <summary>
+    /// Convenience overload that allocates and returns a new buffer.
+    /// Prefer <see cref="ExtractPatchInto"/> when calling repeatedly.
+    /// </summary>
+    public float[] ExtractPatch(int startX, int startY, int patchW, int patchH)
+    {
+        var result = new float[Bands * patchH * patchW];
+        ExtractPatchInto(startX, startY, patchW, patchH, result);
         return result;
     }
+    
 }
