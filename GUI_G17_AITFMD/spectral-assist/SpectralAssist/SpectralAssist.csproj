@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets/icon-256x256px.ico</ApplicationIcon>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
@@ -12,6 +12,14 @@
     <PropertyGroup>
         <IsMacOSTarget Condition="$(RuntimeIdentifier.StartsWith('osx'))">true</IsMacOSTarget>
         <IsMacOSTarget Condition="'$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">true</IsMacOSTarget>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <OutputType>WinExe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>

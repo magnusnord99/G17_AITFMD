@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -16,13 +15,15 @@ namespace SpectralAssist.Services;
 /// Full manager for model packages: discover, import, load ONNX sessions, and delete.
 /// Scans <c>ModelPackages/</c> for subdirectories containing a valid <c>manifest.json</c>,
 /// exposes them as an observable list for UI binding, and loads ONNX sessions on demand.
-/// Registered as a singleton in DI.
 /// </summary>
 public class ModelPackageManager : IDisposable
 {
-    private static readonly string ModelPackagesDir = Path.Combine(AppContext.BaseDirectory, "ModelPackages");
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
-
+    private static readonly string ShippedModelsDir = Path.Combine(AppContext.BaseDirectory, "ModelPackages");
+    private static readonly string UserModelsDir =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SpectralAssist",
+            "ModelPackages");
+    
     private ModelPackage? _loadedPackage;
     private string? _loadedPackageDir;
 
@@ -37,21 +38,29 @@ public class ModelPackageManager : IDisposable
     public void Refresh()
     {
         AvailableModels.Clear();
-
-        // Ensure the directory exists (first launch or after deletion)
-        if (!Directory.Exists(ModelPackagesDir))
-        {
-            Directory.CreateDirectory(ModelPackagesDir);
-            Debug.WriteLine($"ModelPackageService: created {ModelPackagesDir}");
-        }
-
-        foreach (var dir in Directory.GetDirectories(ModelPackagesDir))
-        {
-            var result = TryLoadManifest(dir);
-            if (result.Value != null)
+        
+        if (!Directory.Exists(UserModelsDir)) 
+            Directory.CreateDirectory(UserModelsDir);
+        
+        // User-imported models (writable)
+        foreach (var dir in Directory.GetDirectories(UserModelsDir))
+        { 
+            var result = TryLoadManifest(dir); 
+            if (result.Value != null) 
                 AvailableModels.Add(result.Value);
         }
-
+        
+        // Shipped default models (read-only)
+        if (Directory.Exists(ShippedModelsDir))
+        {
+            foreach (var dir in Directory.GetDirectories(ShippedModelsDir)) 
+            { 
+                var result = TryLoadManifest(dir); 
+                if (result.Value != null) AvailableModels.Add(result.Value); 
+            }
+            
+        }
+        
         Debug.WriteLine($"ModelPackageService: found {AvailableModels.Count} model(s)");
     }
 
@@ -77,26 +86,26 @@ public class ModelPackageManager : IDisposable
         if (existing != null)
             return ServiceResult<ModelManifest>.Fail(
                 $"This model is already imported as '{existing.DisplayName}'.");
-        
+
         var folderName =
             Path.GetFileName(sourceDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        var targetDir = Path.Combine(ModelPackagesDir, folderName);
+        var targetDir = Path.Combine(UserModelsDir, folderName);
 
         if (Directory.Exists(targetDir))
             return ServiceResult<ModelManifest>.Fail(
                 $"Folder '{folderName}' already exists. Remove it manually if it's a stale import.");
-        
+
         // Copy model package files to app directory
         try
         {
-            Directory.CreateDirectory(ModelPackagesDir);
+            Directory.CreateDirectory(UserModelsDir);
             CopyDirectory(sourceDir, targetDir);
         }
         catch (Exception ex)
         {
             try
             {
-                if (Directory.Exists(targetDir)) 
+                if (Directory.Exists(targetDir))
                     Directory.Delete(targetDir, recursive: true);
             }
             catch
@@ -121,11 +130,15 @@ public class ModelPackageManager : IDisposable
     public ServiceResult<bool> DeletePackage(string modelId)
     {
         var manifest = AvailableModels.FirstOrDefault(m => m.Metadata.Id == modelId);
-        if (manifest == null) 
+        if (manifest == null)
             return ServiceResult<bool>.Fail($"Model package '{modelId}' not found.");
-        
+
         var targetDir = manifest.DirectoryPath;
         
+        // Prevent deletion of shipped default models
+        if (targetDir.StartsWith(ShippedModelsDir, StringComparison.OrdinalIgnoreCase)) 
+            return ServiceResult<bool>.Fail("Cannot delete a default model that ships with the application.");
+
         // If the deleted package is currently loaded, dispose it
         if (_loadedPackageDir == targetDir)
         {

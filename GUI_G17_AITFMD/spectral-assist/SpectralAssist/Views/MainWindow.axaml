@@ -9,7 +9,7 @@
         x:DataType="vm:MainViewModel"
         MinWidth="1500"
         MinHeight="800"
-        Icon="/Assets/spectralassist-logo.ico"
+        Icon="/Assets/icon-256x256px.ico"
         Title="SpectralAssist"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized">
