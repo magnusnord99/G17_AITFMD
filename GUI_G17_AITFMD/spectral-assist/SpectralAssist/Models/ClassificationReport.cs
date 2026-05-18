@@ -7,9 +7,20 @@ namespace SpectralAssist.Models;
 
 public class ClassificationReport
 {
-    [JsonIgnore] public string ModelDisplayName =>
-        string.IsNullOrWhiteSpace(ModelMetadata.Name) ? ModelMetadata.Id : $"{ModelMetadata.Name} v{ModelMetadata.Version}";
-    
+    [JsonIgnore]
+    public string ModelDisplayName =>
+        string.IsNullOrWhiteSpace(ModelMetadata.Name)
+            ? ModelMetadata.Id
+            : $"{ModelMetadata.Name} v{ModelMetadata.Version}";
+
+    [JsonIgnore]
+    public double CoveragePercent =>
+        TotalPatches > 0 ? 100.0 * EvaluatedPatches / TotalPatches : 0;
+
+    [JsonIgnore]
+    public double SkippedPercent =>
+        TotalPatches > 0 ? 100.0 * SkippedPatches / TotalPatches : 0;
+
     // Run identity
     public string RunId { get; init; } = string.Empty;
     public string ImageId { get; init; } = string.Empty;

@@ -64,7 +64,7 @@
 
         <!-- Ready State -->
         <shared:SidebarLayout IsVisible="{Binding IsReady}">
-            
+
             <!-- SIDEBAR HEADER -->
             <shared:SidebarLayout.SidebarHeader>
                 <StackPanel Spacing="6">
@@ -136,7 +136,7 @@
                                             <Grid ColumnDefinitions="*,*"
                                                   ColumnSpacing="16"
                                                   VerticalAlignment="Center">
-                                                
+
                                                 <Grid Grid.Column="0" ColumnDefinitions="Auto,*"
                                                       VerticalAlignment="Center">
                                                     <TextBlock Grid.Column="0"
@@ -156,7 +156,7 @@
                                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                                                     </StackPanel>
                                                 </Grid>
-                                                
+
                                                 <Grid Grid.Column="1" ColumnDefinitions="Auto,*"
                                                       VerticalAlignment="Center">
                                                     <TextBlock Grid.Column="0"
@@ -178,15 +178,64 @@
                                                 </Grid>
 
                                             </Grid>
-                                            
+
                                             <!-- ACTIVE-ONLY DETAILS -->
                                             <ContentControl IsVisible="{Binding IsActive}">
                                                 <StackPanel Spacing="10"
                                                             DataContext="{Binding $parent[ItemsControl].((vm:ImageViewModel)DataContext).Overlay.ClassificationResult}">
 
                                                     <Border Classes="divider" Margin="0,4,0,0" />
-                                                    
-                                                    <!-- Patch + Stride mini-stats -->
+
+
+                                                    <!-- Coverage + Skipped big stats -->
+                                                    <Grid ColumnDefinitions="*,*"
+                                                          ColumnSpacing="16"
+                                                          VerticalAlignment="Center">
+
+                                                        <Grid Grid.Column="0" ColumnDefinitions="Auto,*"
+                                                              VerticalAlignment="Center">
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding CoveragePercent, StringFormat='{}{0:0}%'}"
+                                                                       FontSize="20" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                       VerticalAlignment="Center" />
+                                                            <StackPanel Grid.Column="1" Spacing="0"
+                                                                        Margin="8,0,0,0"
+                                                                        VerticalAlignment="Center">
+                                                                <TextBlock Text="Evaluated"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                                <TextBlock FontSize="10"
+                                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                                                    <Run Text="{Binding EvaluatedPatches}" />
+                                                                    <Run Text=" of " />
+                                                                    <Run Text="{Binding TotalPatches}" />
+                                                                    <Run Text=" patches" />
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                        </Grid>
+
+                                                        <Grid Grid.Column="1" ColumnDefinitions="Auto,*"
+                                                              VerticalAlignment="Center">
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding SkippedPercent, StringFormat='{}{0:0}%'}"
+                                                                       FontSize="20" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                       VerticalAlignment="Center" />
+                                                            <StackPanel Grid.Column="1" Spacing="0"
+                                                                        Margin="8,0,0,0"
+                                                                        VerticalAlignment="Center">
+                                                                <TextBlock Text="Skipped"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                                <TextBlock Text="background / sparse tissue"
+                                                                           FontSize="10"
+                                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Grid>
+
+                                                    <!-- Patch + Stride mini-stats (kept smaller, technical) -->
                                                     <Grid ColumnDefinitions="*,*">
                                                         <StackPanel Grid.Column="0" Spacing="2">
                                                             <TextBlock Text="PATCH" Classes="mini-label" />
@@ -205,17 +254,10 @@
                                                             </TextBlock>
                                                         </StackPanel>
                                                     </Grid>
-
-                                                    <!-- Quality footer -->
-                                                    <TextBlock Classes="caption">
-                                                        <Run Text="{Binding EvaluatedPatches}" />
-                                                        <Run Text=" / " />
-                                                        <Run Text="{Binding TotalPatches}" />
-                                                        <Run Text=" patches via " />
-                                                        <Run Text="{Binding ExecutionProvider}" />
-                                                    </TextBlock>
+                                                    
                                                 </StackPanel>
                                             </ContentControl>
+                                            
                                         </StackPanel>
                                     </Button>
                                 </DataTemplate>
@@ -225,7 +267,7 @@
                 </ScrollViewer>
 
             </shared:SidebarLayout.SidebarContent>
-            
+
             <!-- SIDEBAR ACTIONS -->
             <shared:SidebarLayout.SidebarActions>
                 <StackPanel Spacing="8">
@@ -233,7 +275,7 @@
                     <!-- Action buttons -->
                     <StackPanel Spacing="6">
 
-                        <!-- Disabled explaination -->
+                        <!-- Disabled explanation -->
                         <TextBlock Text="{Binding RunBlockedReason}"
                                    Classes="caption"
                                    HorizontalAlignment="Center"
@@ -315,7 +357,7 @@
                 </StackPanel>
             </shared:SidebarLayout.SidebarActions>
 
- 
+
             <!-- MAIN CONTENT -->
             <shared:SidebarLayout.MainContent>
                 <Grid RowDefinitions="*, 56">
@@ -492,7 +534,7 @@
                                     <ui:SymbolIcon Symbol="Cancel" FontSize="12" />
                                 </Button>
                             </Grid>
-                            
+
                             <!-- TextBox Area -->
                             <TextBox Text="{Binding ImageNotes}"
                                      AcceptsReturn="True"
