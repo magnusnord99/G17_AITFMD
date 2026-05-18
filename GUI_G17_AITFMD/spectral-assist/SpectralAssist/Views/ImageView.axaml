@@ -67,21 +67,23 @@
 
             <!-- SIDEBAR HEADER -->
             <shared:SidebarLayout.SidebarHeader>
-                <StackPanel Spacing="6">
+                <StackPanel>
 
                     <!-- Uncalibrated warning: only shown when missing -->
                     <ui:InfoBar IsOpen="{Binding !IsCalibrated}"
+                                IsVisible="{Binding !IsCalibrated}"
                                 Severity="Error"
                                 IsClosable="False"
-                                Message="Image not calibrated — results may be inaccurate" />
+                                Message="Image not calibrated! Results may be inaccurate."
+                                Margin="0, 0, 0, 6"/>
 
                     <!-- Runs section label with count -->
                     <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0">
-                        <TextBlock Grid.Column="0" Text="Available Runs" Classes="stat-label"
+                        <TextBlock Grid.Column="0" Text="Available Runs" Classes="section-title"
                                    VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1"
                                    Text="{Binding RunCards.Count}"
-                                   Classes="caption"
+                                   Classes="section-title"
                                    VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
