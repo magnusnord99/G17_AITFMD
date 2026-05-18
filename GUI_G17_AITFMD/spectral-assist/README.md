@@ -1,4 +1,4 @@
-# SpectralAssist
+﻿# SpectralAssist
 
 Cross-platform desktop application for visualizing and analyzing
 hyperspectral histology images, with ONNX-based anomaly detection.
@@ -55,17 +55,15 @@ installer and icon polish from Parcel:
 
 ```bash
 # Windows x64
-dotnet publish SpectralAssist/SpectralAssist.csproj -c Release \
-    -r win-x64 -o ./dist/win-x64 -p:PublishSingleFile=true -p:SelfContained=true
+dotnet publish SpectralAssist/SpectralAssist.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true
 
 # macOS arm64
-dotnet publish SpectralAssist/SpectralAssist.csproj -c Release \
-    -r osx-arm64 -o ./dist/macos-arm64 -p:PublishSingleFile=true -p:SelfContained=true
+dotnet publish SpectralAssist/SpectralAssist.csproj -c Release -r osx-arm64 -p:PublishSingleFile=true -p:SelfContained=true
 
 # Linux x64
-dotnet publish SpectralAssist/SpectralAssist.csproj -c Release \
-    -r linux-x64 -o ./dist/linux-x64 -p:PublishSingleFile=true -p:SelfContained=true
+dotnet publish SpectralAssist/SpectralAssist.csproj -c Release -r linux-x64 -p:PublishSingleFile=true -p:SelfContained=true
 ```
+Output lands in `SpectralAssist/bin/Release/net10.0/<rid>/publish/`.
 
 ## Project Structure
 
