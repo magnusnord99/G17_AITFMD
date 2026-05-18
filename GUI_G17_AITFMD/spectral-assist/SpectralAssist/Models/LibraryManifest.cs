@@ -34,7 +34,7 @@ public class ImageNode
 
     /// <summary>
     /// Creates a temporary (transient) ImageNode for single-file mode.
-    /// Used for single image node (meaning no library or persistence).
+    /// Used for single image node (meaning no library nor persistence).
     /// </summary>
     /// <param name="absPath">the absolute path to the image's header file (.hdr)</param>
     /// <returns>A transient <c>ImageNode</c> with empty ImageId</returns>
