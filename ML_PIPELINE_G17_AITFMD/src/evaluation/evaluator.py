@@ -67,12 +67,8 @@ class Evaluator:
 
         from src.models import build_model_from_config  # type: ignore
 
-        if torch.cuda.is_available():
-            device = torch.device("cuda")
-        elif torch.backends.mps.is_available():
-            device = torch.device("mps")
-        else:
-            device = torch.device("cpu")
+        from src.utils.device import pick_training_device
+        device = pick_training_device()
 
         try:
             ckpt = torch.load(self.checkpoint_path, map_location=device, weights_only=False)

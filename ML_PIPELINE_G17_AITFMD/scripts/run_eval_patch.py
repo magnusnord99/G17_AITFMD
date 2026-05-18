@@ -37,11 +37,8 @@ from src.utils.logging_setup import configure_logging, get_logger
 
 
 def _pick_device() -> torch.device:
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
+    from src.utils.device import pick_training_device
+    return pick_training_device()
 
 
 def _load_cfg_from_hyperparams(hp_path: Path) -> tuple[dict[str, Any], dict[str, Any]]:

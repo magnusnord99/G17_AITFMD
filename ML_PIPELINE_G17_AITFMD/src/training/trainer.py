@@ -9,8 +9,16 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.amp import GradScaler, autocast
+from torch.amp import autocast
 from torch.utils.data import DataLoader
+
+# torch.amp.GradScaler(device=...) requires PyTorch 2.3+ (not on macOS x86_64 wheels).
+try:
+    from torch.amp import GradScaler as _GradScaler
+    _GRAD_SCALER_SUPPORTS_DEVICE = True
+except ImportError:
+    from torch.cuda.amp import GradScaler as _GradScaler
+    _GRAD_SCALER_SUPPORTS_DEVICE = False
 from tqdm import tqdm
 
 from src.training.callbacks import BaseCallback
@@ -62,7 +70,10 @@ class Trainer:
 
         device_type = next(model.parameters()).device.type
         self.device = next(model.parameters()).device
-        self.scaler = GradScaler(device=device_type, enabled=amp_enabled)
+        if _GRAD_SCALER_SUPPORTS_DEVICE:
+            self.scaler = _GradScaler(device=device_type, enabled=amp_enabled)
+        else:
+            self.scaler = _GradScaler(enabled=amp_enabled)
 
         self.history: list[dict[str, Any]] = []
         self.best_checkpoint_path: Path | None = None

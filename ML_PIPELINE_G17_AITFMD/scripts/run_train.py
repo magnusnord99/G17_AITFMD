@@ -66,11 +66,8 @@ def _resolve_path(config_path: Path, raw: str) -> Path:
 
 
 def _pick_device() -> torch.device:
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
+    from src.utils.device import pick_training_device
+    return pick_training_device()
 
 
 def _try_git_short_sha(cwd: Path) -> str | None:

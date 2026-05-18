@@ -1,4 +1,4 @@
-numpy
+numpy>=1.26,<2
 pandas
 PyYAML
 spectral
@@ -9,7 +9,9 @@ tqdm
 PyWavelets
 
 # Deep learning
-torch
+# x86_64 Mac: pip naturally caps at 2.2.2 (no newer wheels on PyPI)
+# arm64 Mac / Linux CUDA: gets latest available
+torch>=2.0
 torchvision
 
 # ONNX export (torch.onnx.export on PyTorch 2.x)
