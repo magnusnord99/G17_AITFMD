@@ -3,7 +3,7 @@
 Cross-platform desktop application for visualizing and analyzing
 hyperspectral histology images, with ONNX-based anomaly detection.
 
-The app consumes model packages — each a directory containing an
+The app consumes model packages; each a directory containing an
 ONNX model, a `manifest.json` describing the preprocessing pipeline,
 and an optional validation folder with a small HSI patch used for
 an import-time smoke test. Packages are produced by the Python ML
@@ -34,7 +34,7 @@ dotnet run --project SpectralAssist
 ### Option 1: Avalonia Parcel (recommended for releases)
 
 Open `SpectralAssist/SpectralAssist.parcel` in the
-[Avalonia Parcel GUI](https://github.com/AvaloniaUI/Avalonia.Parcel)
+[Avalonia Parcel GUI](https://docs.avaloniaui.net/tools/parcel/setup)
 and run the build. Platform targets, icons, installer metadata,
 and single-file packaging are pre-configured in the `.parcel` file.
 
@@ -63,7 +63,7 @@ dotnet publish SpectralAssist/SpectralAssist.csproj -c Release -r osx-arm64 -p:P
 # Linux x64
 dotnet publish SpectralAssist/SpectralAssist.csproj -c Release -r linux-x64 -p:PublishSingleFile=true -p:SelfContained=true
 ```
-Output lands in `SpectralAssist/bin/Release/net10.0/<rid>/publish/`.
+Output is written to `SpectralAssist/bin/Release/net10.0/<rid>/publish/`.
 
 ## Project Structure
 
@@ -108,9 +108,9 @@ resnet_3dcnn/
 ```
 
 The `roi_validation/` folder is run through the full
-preprocess → infer pipeline at import time and its output compared
+preprocess and inference pipeline at import time and its output compared
 against expected values stored in `manifest.json`. Validation is
-warn-only — a failed check does not block use of the package.
+warn-only; a failed check does not block use of the package.
 
 ## Documentation
 
@@ -118,8 +118,3 @@ For end-user documentation, installation instructions, and a
 walkthrough of the application's features, see the
 **Systemdokumentasjon** appendix in the bachelor thesis included
 with this codebase.
-
-## License
-
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for
-the full text.
