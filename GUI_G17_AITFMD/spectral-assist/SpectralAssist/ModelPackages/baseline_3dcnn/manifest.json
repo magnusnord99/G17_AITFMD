@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "metadata": {
+    "id": "sha256-1cad0a9c6fd1218b",
+    "name": "baseline_3dcnn_wavelet",
+    "version": "1.0.0",
+    "created": "2026-05-16T13:56:19Z",
+    "author": "ML Pipeline",
+    "description": "Baseline 3D-CNN, Wavelet16, best fold_0 (ROI-AUC 0.898 val)"
+  },
+  "pipeline": {
+    "preprocessing": {
+      "steps": [
+        "calibrate",
+        "clip",
+        "neighbor_average",
+        "tissue_mask",
+        "wavelet"
+      ],
+      "params": {
+        "calibration_epsilon": 1E-08,
+        "clip_min": 0,
+        "clip_max": 1,
+        "neighbor_average_window": 3,
+        "tissue_mask_method": "mean_std_percentile",
+        "tissue_mask_q_mean": 0.5,
+        "tissue_mask_q_std": 0.4,
+        "tissue_mask_min_object_size": 500,
+        "tissue_mask_min_hole_size": 1000,
+        "band_reduce_out_bands": 16,
+        "band_reduce_strategy": "wavelet",
+        "patch_min_tissue_ratio": 0.3
+      }
+    },
+    "spectral_reducer": {
+      "method": "wavelet",
+      "embedded_in_onnx": false,
+      "input_bands": 275,
+      "output_bands": 16
+    },
+    "model": {
+      "architecture": "baseline_3dcnn",
+      "task": "classification",
+      "total_parameters": 19218,
+      "trainable_parameters": 19218,
+      "layers": {
+        "Conv3d": 2,
+        "GroupNorm": 2,
+        "ReLU": 2,
+        "MaxPool3d": 2,
+        "AdaptiveAvgPool3d": 1,
+        "Dropout": 1,
+        "Linear": 1
+      }
+    }
+  },
+  "input_spec": {
+    "input_rank": 5,
+    "tensor_layout": "NCDHW",
+    "input_shape": [
+      1,
+      1,
+      16,
+      64,
+      64
+    ],
+    "spectral_bands": 16,
+    "spatial_patch_size": [
+      64,
+      64
+    ],
+    "default_stride": [
+      32,
+      32
+    ],
+    "dtype": "float32"
+  },
+  "output_spec": {
+    "type": "logits",
+    "num_classes": 2,
+    "classes": [
+      "Healthy",
+      "Tumor"
+    ]
+  },
+  "training": {
+    "dataset": "wavelet16",
+    "samples": null,
+    "epochs": 42,
+    "metrics": {
+      "accuracy": 0.8341619318181818,
+      "precision": 0.793236301369863,
+      "recall": 0.8042534722222222,
+      "f1": 0.7987068965517241
+    }
+  },
+  "artifacts": {
+    "model_onnx": "baseline_3dcnn_final.onnx",
+    "architecture_diagram": null
+  },
+  "validation": {
+    "status": "passed",
+    "summary": "PASSED: max logit difference 2,38E-007 within tolerance 1,00E-003",
+    "roi_dir": "roi_validation",
+    "tolerance": 0.001,
+    "expected_output": {
+      "logits": [
+        3.169982,
+        -2.330553
+      ],
+      "softmax": [
+        0.995932,
+        0.004068
+      ],
+      "predicted_class": 0
+    },
+    "actual_output": {
+      "logits": [
+        3.1699817,
+        -2.330553
+      ],
+      "softmax": [
+        0.99593204,
+        0.0040679695
+      ],
+      "predicted_class": 0,
+      "max_logit_diff": 2.3841858E-07,
+      "validated_at": "05/17/2026 21:28:35"
+    }
+  }
+}

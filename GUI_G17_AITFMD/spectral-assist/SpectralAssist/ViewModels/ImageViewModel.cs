@@ -6,7 +6,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -377,7 +376,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 InferencePhase = "Preprocessing";
                 var preprocessingTimer = Stopwatch.StartNew();
                 _cachedPreprocessing = await Task.Run(
-                    () => PreprocessingService.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing), ct);
+                    () => PreprocessingService.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing, ct), ct);
                     
                  preprocessingMs = preprocessingTimer.Elapsed.TotalMilliseconds;
                  
