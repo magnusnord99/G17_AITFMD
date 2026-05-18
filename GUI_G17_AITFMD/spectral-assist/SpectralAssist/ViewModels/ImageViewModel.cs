@@ -377,7 +377,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 InferencePhase = "Preprocessing";
                 var preprocessingTimer = Stopwatch.StartNew();
                 _cachedPreprocessing = await Task.Run(
-                    () => PreprocessingService.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing), ct), ct);
+                    () => PreprocessingService.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing), ct);
                     
                  preprocessingMs = preprocessingTimer.Elapsed.TotalMilliseconds;
                  
