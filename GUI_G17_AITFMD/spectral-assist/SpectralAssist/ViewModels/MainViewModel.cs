@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Packaging;
 
 namespace SpectralAssist.ViewModels;
 

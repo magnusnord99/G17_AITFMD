@@ -1,5 +1,6 @@
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Preprocessing;
 using SpectralAssist.Tests.Utils;
 using Xunit;
 
@@ -35,7 +36,7 @@ public class BaselinePreprocessingParityTests
         var white = GoldenFloatLoader.LoadCube(4, 4, 9, "small_white.bin");
         var expected = GoldenFloatLoader.LoadCube(4, 4, 3, "small_expect_after_avg3.bin");
 
-        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
+        var result = PreprocessingPipeline.Run(raw, dark, white, preprocessing);
         var diff = GoldenFloatLoader.MaxAbsDiff(result.Cube, expected);
         Assert.True(diff < Tolerance, $"max abs diff {diff} >= {Tolerance}");
     }
@@ -63,7 +64,7 @@ public class BaselinePreprocessingParityTests
         var white = GoldenFloatLoader.LoadCube(4, 4, 275, "chain275_white.bin");
         var expected = GoldenFloatLoader.LoadCube(4, 4, 16, "chain275_expect_avg16.bin");
 
-        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
+        var result = PreprocessingPipeline.Run(raw, dark, white, preprocessing);
         var diff = GoldenFloatLoader.MaxAbsDiff(result.Cube, expected);
         Assert.True(diff < Tolerance, $"max abs diff {diff} >= {Tolerance}");
     }

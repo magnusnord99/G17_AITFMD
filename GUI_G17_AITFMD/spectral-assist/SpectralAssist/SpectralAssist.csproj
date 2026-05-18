@@ -32,7 +32,7 @@
         <AvaloniaResource Remove="**/._*.axaml"/>
     </ItemGroup>
 
-    <!-- Base ModelsPackages: copied to output on build -->
+    <!-- Base ModelPackages: copied to output on build -->
     <ItemGroup>
         <None Include="ModelPackages\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

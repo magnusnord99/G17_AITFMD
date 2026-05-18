@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Packaging;
 
 namespace SpectralAssist.Models;
 
@@ -266,6 +267,9 @@ public class TrainingInfo
 
     [JsonPropertyName("metrics")]
     public TrainingMetrics Metrics { get; set; } = new();
+    
+    [JsonPropertyName("test_metrics")]
+    public TestMetrics TestMetrics { get; set; } = new();
 }
 
 /// <summary>Evaluation metrics from the training validation set.</summary>
@@ -273,15 +277,40 @@ public class TrainingMetrics
 {
     [JsonPropertyName("accuracy")]
     public double? Accuracy { get; set; }
-
+    
     [JsonPropertyName("precision")]
     public double? Precision { get; set; }
-
+    
     [JsonPropertyName("recall")]
     public double? Recall { get; set; }
-
+    
     [JsonPropertyName("f1")]
     public double? F1 { get; set; }
+    
+    [JsonPropertyName("auc_roc")]
+    public double? AucRoc { get; set; }
+}
+
+/// <summary>ROI metrics from the test-set. Preferred over training metrics for display.</summary>
+public class TestMetrics
+{
+    [JsonPropertyName("roi_accuracy")]
+    public double? Accuracy { get; set; }
+
+    [JsonPropertyName("roi_precision")]
+    public double? Precision { get; set; }
+    
+    [JsonPropertyName("roi_recall")]
+    public double? Recall { get; set; }
+
+    [JsonPropertyName("roi_f1")]
+    public double? F1 { get; set; }
+
+    [JsonPropertyName("roi_auc_roc")]
+    public double? AucRoc { get; set; }
+    
+    [JsonPropertyName("roi_avg_precision")]
+    public double? AvgPrecision { get; set; }
 }
 
 /// <summary>File paths within the model package folder: ONNX model,
@@ -309,9 +338,7 @@ public class ValidationInfo
 
     [JsonIgnore]
     public bool IsFailed => string.Equals(Status, "failed", System.StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>True when validation couldn't run — missing data, missing files, etc.
-    /// Distinct from <see cref="IsFailed"/> (model produced wrong output).</summary>
+    
     [JsonIgnore]
     public bool IsSkipped => string.Equals(Status, "skipped", System.StringComparison.OrdinalIgnoreCase);
 

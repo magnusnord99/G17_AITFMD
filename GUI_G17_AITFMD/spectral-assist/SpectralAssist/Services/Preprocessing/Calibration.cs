@@ -8,15 +8,13 @@ namespace SpectralAssist.Services.Preprocessing;
 /// Flat-field calibration: reflectance = (raw - dark) / (white - dark + eps).
 /// Matches Python <c>calibrate_cube</c> exactly (epsilon-based denominator).
 ///
-/// This differs from <see cref="HsiCalibration.ApplyReflectance"/> which uses a
-/// <c>d > 1 ? 1/d : 0</c> guard designed for raw sensor counts. For preprocessing
-/// parity with Python, this eps-based version is used by the manifest-driven pipeline.
+/// At runtime the load path uses <see cref="HsiCalibration.ApplyReflectance"/>
+/// instead, which adds progress reporting, and cancellation support.
 /// </summary>
 public static class Calibration
 {
     /// <summary>
     /// Applies reflectance calibration: (raw - dark) / (white - dark + eps).
-    /// Each band is processed independently in parallel.
     /// </summary>
     public static HsiCube Apply(HsiCube raw, HsiCube dark, HsiCube white, float eps)
     {

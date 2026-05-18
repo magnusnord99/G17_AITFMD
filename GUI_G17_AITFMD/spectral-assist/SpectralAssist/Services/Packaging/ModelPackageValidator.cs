@@ -6,8 +6,11 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SpectralAssist.Models;
+using SpectralAssist.Services.Hsi;
+using SpectralAssist.Services.Inference;
+using SpectralAssist.Services.Preprocessing;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Packaging;
 
 /// <summary>
 /// The model package import smoke test validation.
@@ -35,12 +38,12 @@ public static class ModelPackageValidator
         try
         {
             // Step 1: Parse .hdr, load image, perform calibration:
-            var imageResult = await ImageLoadingService.LoadAsync(Path.Combine(validationDir, "raw.hdr"));
+            var imageResult = await ImageLoader.LoadAsync(Path.Combine(validationDir, "raw.hdr"));
             if (preprocessingInfo.Steps.Contains("calibrate") && !imageResult.HasCalibration)
                 return (false, "Skipped: calibration white/black files missing");
             
             // Step 2: Perform remaining preprocessing steps
-            var preprocessingResult = PreprocessingService.RunFromCalibrated(imageResult.Cube, preprocessingInfo);
+            var preprocessingResult = PreprocessingPipeline.RunFromCalibrated(imageResult.Cube, preprocessingInfo);
             
             // Step 3: Perform model inference
             var package = packageManager.LoadPackage(manifest.DirectoryPath);

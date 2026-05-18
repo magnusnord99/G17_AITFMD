@@ -46,7 +46,7 @@ public static class ClassificationReportMetrics
         return true;
     }
 
-    /// <summary>Human-readable summary for UI and PDF (no per-patch listing).</summary>
+    /// <summary>Human readable summary for UI and PDF (no per-patch listing).</summary>
     public static string BuildReportSummaryText(ClassificationReport result)
     {
         var text = new StringBuilder();

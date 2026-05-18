@@ -2,12 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using SpectralAssist.Models;
-using SpectralAssist.Services.Hsi;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Hsi;
 
 /// <summary>
-/// Result from <see cref="ImageLoadingService.LoadAsync"/>.
+/// Result from <see cref="ImageLoader.LoadAsync"/>.
 /// </summary>
 public readonly struct ImageLoadResult
 {
@@ -22,7 +21,7 @@ public readonly struct ImageLoadResult
 /// Coordinates the full load-parse-calibrate pipeline for hyperspectral images.
 /// All heavy CPU work is dispatched off the UI thread.
 /// </summary>
-public class ImageLoadingService
+public class ImageLoader
 {
     private const double HeaderEnd = 0.05;
     private const double SceneEndNoCal = 1.00;

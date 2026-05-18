@@ -89,8 +89,7 @@
                         <ComboBox ItemsSource="{Binding AvailableModels}"
                                   SelectedItem="{Binding Session.ActiveModel}"
                                   MinWidth="180" FontSize="11"
-                                  PlaceholderText="No model selected"
-                                  ToolTip.Tip="Active model used for inference">
+                                  PlaceholderText="No model selected">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding DisplayName}" />
@@ -102,18 +101,17 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    VerticalAlignment="Center"
-                                   ToolTip.Tip="Patch overlap for inference (higher overlap is smoother but slower)" />
+                                   ToolTip.Tip="Controls smoothness vs. speed of inference overlay" />
 
                         <ComboBox ItemsSource="{Binding Session.AvailableStrides}"
                                   SelectedItem="{Binding Session.SelectedStride}"
-                                  MinWidth="110" FontSize="11"
-                                  ToolTip.Tip="Controls smoothness vs. speed of inference overlay" />
+                                  MinWidth="110" FontSize="11" />
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- Bottom: Dynamic Content -->
-            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" />
+            <ContentControl Grid.Row="1" Content="{Binding CurrentView}"/>
         </Grid>
 
 

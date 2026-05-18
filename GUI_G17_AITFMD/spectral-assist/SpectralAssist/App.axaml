@@ -3,7 +3,7 @@
              xmlns:sty="using:FluentAvalonia.Styling"
              x:Class="SpectralAssist.App"
              xmlns:local="using:SpectralAssist"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
 
     <Application.DataTemplates>
         <local:ViewLocator />

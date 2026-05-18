@@ -91,7 +91,16 @@
       "accuracy": 0.8341619318181818,
       "precision": 0.793236301369863,
       "recall": 0.8042534722222222,
-      "f1": 0.7987068965517241
+      "f1": 0.7987068965517241,
+      "auc_roc": 0.8947440905448718
+    },
+    "test_metrics": {
+      "roi_accuracy": null,
+      "roi_precision": null,
+      "roi_recall": null,
+      "roi_f1": null,
+      "roi_auc_roc": null,
+      "roi_avg_precision": null
     }
   },
   "artifacts": {
@@ -125,7 +134,7 @@
       ],
       "predicted_class": 0,
       "max_logit_diff": 2.3841858E-07,
-      "validated_at": "05/17/2026 21:28:35"
+      "validated_at": "05/18/2026 01:55:59"
     }
   }
 }

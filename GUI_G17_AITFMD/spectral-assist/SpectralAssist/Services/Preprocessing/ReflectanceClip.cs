@@ -5,7 +5,6 @@ namespace SpectralAssist.Services.Preprocessing;
 
 /// <summary>
 /// Clips reflectance values in-place to [clipMin, clipMax], parallelized by band.
-/// Each band is a contiguous memory slice so threads don't contend on the same cache lines.
 /// </summary>
 public static class ReflectanceClip
 {

@@ -1,9 +1,8 @@
 using System;
 using System.Threading;
 using SpectralAssist.Models;
-using SpectralAssist.Services.Preprocessing;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Preprocessing;
 
 /// <summary>
 /// Manifest-driven preprocessing pipeline.
@@ -18,7 +17,7 @@ namespace SpectralAssist.Services;
 /// and the caller's cached cube must not be mutated.</item>
 /// </list>
 /// </summary>
-public static class PreprocessingService
+public static class PreprocessingPipeline
 {
     /// <summary>
     /// Runs the full preprocessing pipeline on raw capture data.
@@ -133,7 +132,7 @@ public static class PreprocessingService
     }
 }
 
-/// <summary>Output of <see cref="PreprocessingService"/>.</summary>
+/// <summary>Output of <see cref="PreprocessingPipeline"/>.</summary>
 /// <param name="cube">Preprocessed BSQ cube ready for ONNX inference.</param>
 /// <param name="tissueMask">Per-pixel tissue/background flag (row-major), or null if no mask step was run.</param>
 public readonly struct PreprocessingResult(HsiCube cube, bool[]? tissueMask)

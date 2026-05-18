@@ -8,13 +8,13 @@
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
              x:Class="SpectralAssist.Views.ModelsView"
              x:DataType="vm:ModelsViewModel">
-    
+
     <Design.DataContext>
         <vm:ModelsViewModel />
     </Design.DataContext>
 
     <shared:SidebarLayout>
-        
+
         <!-- SIDEBAR HEADER -->
         <shared:SidebarLayout.SidebarHeader>
             <StackPanel Spacing="4">
@@ -23,7 +23,7 @@
                            Classes="caption" TextWrapping="Wrap" />
             </StackPanel>
         </shared:SidebarLayout.SidebarHeader>
-        
+
         <!-- SIDEBAR CONTENT: Model list -->
         <shared:SidebarLayout.SidebarContent>
             <ListBox ItemsSource="{Binding AvailableModels}"
@@ -43,13 +43,13 @@
                             <TextBlock Text="{Binding Metadata.Id}"
                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                        FontSize="10"
-                                       TextTrimming="CharacterEllipsis"/>
+                                       TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
         </shared:SidebarLayout.SidebarContent>
-        
+
         <!-- SIDEBAR ACTIONS: Import / Delete / Confirm -->
         <shared:SidebarLayout.SidebarActions>
             <StackPanel Spacing="6">
@@ -92,7 +92,7 @@
 
             </StackPanel>
         </shared:SidebarLayout.SidebarActions>
-        
+
         <!-- MAIN CONTENT: Details -->
         <shared:SidebarLayout.MainContent>
             <Grid RowDefinitions="Auto,*">
@@ -113,11 +113,12 @@
                                 IsClosable="False"
                                 Message="Importing and validating..." />
 
-                    <ui:InfoBar IsOpen="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                Severity="Success"
-                                IsClosable="True"
-                                Message="{Binding SuccessMessage}"
-                                CloseButtonCommand="{Binding DismissSuccessCommand}" />
+                    <ui:InfoBar
+                        IsOpen="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        Severity="Success"
+                        IsClosable="True"
+                        Message="{Binding SuccessMessage}"
+                        CloseButtonCommand="{Binding DismissSuccessCommand}" />
 
                     <ui:InfoBar IsOpen="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                 Severity="Error"
@@ -139,7 +140,7 @@
                     <StackPanel Spacing="20"
                                 Margin="24,20,24,24"
                                 DataContext="{Binding DisplayedModel}">
-                        
+
                         <!-- HERO CARD -->
                         <Border Classes="hero-card">
                             <Grid ColumnDefinitions="*,Auto"
@@ -186,28 +187,28 @@
                                     <TextBlock Text="{Binding Metadata.Created, StringFormat='{}{0:yyyy-MM-dd}'}"
                                                Classes="caption" />
                                 </StackPanel>
-                                
+
                                 <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
                                            Text="{Binding Metadata.Description}"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            FontSize="13"
                                            TextWrapping="Wrap"
                                            Margin="0,12,0,0" />
-                                
+
                                 <ui:InfoBar Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                                             Margin="0,12,0,0"
                                             IsOpen="{Binding Validation.IsPassed}"
                                             Severity="Success"
                                             IsClosable="False"
                                             Message="{Binding Validation.Summary}" />
-                                
+
                                 <ui:InfoBar Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                                             Margin="0,12,0,0"
                                             IsOpen="{Binding Validation.IsSkipped}"
                                             Severity="Warning"
                                             IsClosable="False"
                                             Message="{Binding Validation.Summary}" />
-                                
+
                                 <ui:InfoBar Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                                             Margin="0,12,0,0"
                                             IsOpen="{Binding Validation.IsFailed}"
@@ -216,7 +217,7 @@
                                             Message="{Binding Validation.Summary}" />
                             </Grid>
                         </Border>
-                        
+
                         <!-- STAT CARDS -->
                         <ItemsControl>
                             <ItemsControl.ItemsPanel>
@@ -229,8 +230,9 @@
                                 <Border Classes="stat-card" Margin="0,0,12,0">
                                     <StackPanel>
                                         <TextBlock Text="PARAMETERS" Classes="stat-label" />
-                                        <TextBlock Text="{Binding Pipeline.Model.TotalParameters, StringFormat='{}{0:N0}'}"
-                                                   Classes="stat-value" />
+                                        <TextBlock
+                                            Text="{Binding Pipeline.Model.TotalParameters, StringFormat='{}{0:N0}'}"
+                                            Classes="stat-value" />
                                     </StackPanel>
                                 </Border>
 
@@ -260,7 +262,7 @@
 
                             </ItemsControl.Items>
                         </ItemsControl>
-                        
+
                         <!-- PIPELINE: visual flow diagram -->
                         <Border Classes="section-card">
                             <StackPanel Spacing="14">
@@ -272,7 +274,7 @@
                                     <Border Grid.Column="0" Classes="pipeline-stage">
                                         <StackPanel Spacing="6">
                                             <TextBlock Text="PREPROCESS" Classes="stat-label" />
-                                            
+
                                             <ItemsControl ItemsSource="{Binding Pipeline.PreprocessingStepsForDisplay}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
@@ -341,75 +343,75 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
-                        
-                        <!-- TRAINING METRICS -->
+
+                        <!-- TESTING METRICS -->
                         <Border Classes="section-card">
                             <StackPanel Spacing="14">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Grid.Column="0" Text="TRAINING METRICS" Classes="section-label" />
-                                    <TextBlock Grid.Column="1" Classes="caption">
-                                        <Run Text="{Binding Training.Samples}" />
-                                        <Run Text=" samples · " />
-                                        <Run Text="{Binding Training.Epochs}" />
-                                        <Run Text=" epochs" />
-                                    </TextBlock>
-                                </Grid>
-
-                                <UniformGrid Columns="4">
+                                <TextBlock Text="TESTING METRICS" Classes="section-label" />
+                                
+                                <UniformGrid Columns="5">
                                     <StackPanel Margin="0,0,12,0" Spacing="4">
                                         <TextBlock Text="ACCURACY" Classes="stat-label" />
-                                        <TextBlock Text="{Binding Training.Metrics.Accuracy, StringFormat='{}{0:P1}'}"
-                                                   Classes="stat-value" />
-                                        <ProgressBar Value="{Binding Training.Metrics.Accuracy}"
+                                        <TextBlock
+                                            Text="{Binding Training.TestMetrics.Accuracy, StringFormat='{}{0:P1}'}"
+                                            Classes="stat-value" />
+                                        <ProgressBar Value="{Binding Training.TestMetrics.Accuracy}"
                                                      Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <StackPanel Margin="0,0,12,0" Spacing="4">
                                         <TextBlock Text="PRECISION" Classes="stat-label" />
-                                        <TextBlock Text="{Binding Training.Metrics.Precision, StringFormat='{}{0:P1}'}"
-                                                   Classes="stat-value" />
-                                        <ProgressBar Value="{Binding Training.Metrics.Precision}"
+                                        <TextBlock
+                                            Text="{Binding Training.TestMetrics.Precision, StringFormat='{}{0:P1}'}"
+                                            Classes="stat-value" />
+                                        <ProgressBar Value="{Binding Training.TestMetrics.Precision}"
                                                      Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <StackPanel Margin="0,0,12,0" Spacing="4">
                                         <TextBlock Text="RECALL" Classes="stat-label" />
-                                        <TextBlock Text="{Binding Training.Metrics.Recall, StringFormat='{}{0:P1}'}"
+                                        <TextBlock
+                                            Text="{Binding Training.TestMetrics.Recall, StringFormat='{}{0:P1}'}"
+                                            Classes="stat-value" />
+                                        <ProgressBar Value="{Binding Training.TestMetrics.Recall}"
+                                                     Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,12,0" Spacing="4">
+                                        <TextBlock Text="F1 SCORE" Classes="stat-label" />
+                                        <TextBlock Text="{Binding Training.TestMetrics.F1, StringFormat='{}{0:P1}'}"
                                                    Classes="stat-value" />
-                                        <ProgressBar Value="{Binding Training.Metrics.Recall}"
+                                        <ProgressBar Value="{Binding Training.TestMetrics.F1}"
                                                      Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="F1 SCORE" Classes="stat-label" />
-                                        <TextBlock Text="{Binding Training.Metrics.F1, StringFormat='{}{0:P1}'}"
-                                                   Classes="stat-value" />
-                                        <ProgressBar Value="{Binding Training.Metrics.F1}"
+                                        <TextBlock Text="AUC-ROC" Classes="stat-label" />
+                                        <TextBlock
+                                            Text="{Binding Training.TestMetrics.AucRoc, StringFormat='{}{0:P1}'}"
+                                            Classes="stat-value" />
+                                        <ProgressBar Value="{Binding Training.TestMetrics.AucRoc}"
                                                      Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
                                     </StackPanel>
                                 </UniformGrid>
-
-                                <TextBlock Text="{Binding Training.Dataset, StringFormat='Dataset: {0}'}"
-                                           Classes="caption"
-                                           IsVisible="{Binding Training.Dataset, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                
                             </StackPanel>
                         </Border>
-                        
+
                         <!-- I/O SPEC (side-by-side) -->
                         <Grid ColumnDefinitions="*,12,*">
 
                             <Border Grid.Column="0" Classes="section-card">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="INPUT SPEC" Classes="section-label" />
-                                    <shared:LabeledRow Label="Tensor Layout"  Value="{Binding InputSpec.TensorLayout}" />
-                                    <shared:LabeledRow Label="Input Rank"     Value="{Binding InputSpec.InputRank}" />
+                                    <shared:LabeledRow Label="Tensor Layout" Value="{Binding InputSpec.TensorLayout}" />
+                                    <shared:LabeledRow Label="Input Rank" Value="{Binding InputSpec.InputRank}" />
                                     <shared:LabeledRow Label="Spectral Bands" Value="{Binding InputSpec.SpectralBands}" />
-                                    <shared:LabeledRow Label="Patch Size"     Value="{Binding PatchSizeDisplay}" />
-                                    <shared:LabeledRow Label="Data Type"      Value="{Binding InputSpec.Dtype}" />
+                                    <shared:LabeledRow Label="Patch Size" Value="{Binding PatchSizeDisplay}" />
+                                    <shared:LabeledRow Label="Data Type" Value="{Binding InputSpec.Dtype}" />
                                 </StackPanel>
                             </Border>
 
                             <Border Grid.Column="2" Classes="section-card">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="OUTPUT SPEC" Classes="section-label" />
-                                    <shared:LabeledRow Label="Type"        Value="{Binding OutputSpec.Type}" />
+                                    <shared:LabeledRow Label="Type" Value="{Binding OutputSpec.Type}" />
                                     <shared:LabeledRow Label="Num Classes" Value="{Binding OutputSpec.NumClasses}" />
 
                                     <StackPanel Spacing="6">
@@ -432,7 +434,7 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        
+
                         <!-- ARCHITECTURE -->
                         <Border Classes="section-card">
                             <StackPanel Spacing="14">

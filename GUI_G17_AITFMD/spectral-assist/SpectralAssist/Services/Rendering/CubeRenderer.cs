@@ -29,7 +29,6 @@ public static class CubeRenderer
         var pixels = new byte[cube.Lines * stride];
         for (var i = 0; i < band.Length; i++)
         {
-            // Same value in R, G, B channels produces grayscale
             var value = NormalizeClamp(band[i], min, range);
             pixels[i * 4 + 0] = value; // B
             pixels[i * 4 + 1] = value; // G

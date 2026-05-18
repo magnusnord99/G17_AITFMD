@@ -10,7 +10,7 @@ public static class FolderNodeExtension
     extension(FolderNode folder)
     {
         public IEnumerable<ImageNode> AllImages() =>
-            LibraryScanner.FlattenImages(new[] { folder });
+            LibraryScanner.FlattenImages([folder]);
 
         public int TotalImageCount() =>
             folder.AllImages().Count();

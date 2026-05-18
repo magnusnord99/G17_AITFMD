@@ -3,9 +3,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SpectralAssist.Models;
-using SpectralAssist.Services.Inference;
+using SpectralAssist.Services.Packaging;
+using SpectralAssist.Services.Preprocessing;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Inference;
 
 /// <summary>
 /// Orchestrates inference: resolves the active model, computes stride from user

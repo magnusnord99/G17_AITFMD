@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "created": "2026-05-17T13:18:33Z",
     "author": "ML Pipeline",
-    "description": "3D CNN ONNX export (baseline_3dcnn); NCDHW in [1,1,275,64,64]"
+    "description": "Legacy Baseline 3D-CNN (PCA16). Included only to demonstrate PCA pipeline."
   },
   "pipeline": {
     "preprocessing": {
@@ -83,14 +83,23 @@
     ]
   },
   "training": {
-    "dataset": "pca16",
+    "dataset": null,
     "samples": null,
     "epochs": 13,
     "metrics": {
       "accuracy": 0.8674479166666667,
       "precision": 0.8183508989460633,
       "recall": 0.859375,
-      "f1": 0.8383613845665291
+      "f1": 0.8383613845665291,
+      "auc_roc": null
+    },
+    "test_metrics": {
+      "roi_accuracy": null,
+      "roi_precision": null,
+      "roi_recall": null,
+      "roi_f1": null,
+      "roi_auc_roc": null,
+      "roi_avg_precision": null
     }
   },
   "artifacts": {
@@ -124,7 +133,7 @@
       ],
       "predicted_class": 1,
       "max_logit_diff": 9.536743E-07,
-      "validated_at": "05/17/2026 21:28:50"
+      "validated_at": "05/18/2026 01:55:38"
     }
   }
 }
