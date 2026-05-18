@@ -6,8 +6,7 @@ using SpectralAssist.Models;
 namespace SpectralAssist.Services.Preprocessing;
 
 /// <summary>
-/// Builds a tissue mask from an <see cref="HsiCube"/> using mean+std percentile thresholds.
-/// Uses band-plane accumulator pattern for cache-friendly BSQ traversal.
+/// Builds a tissue mask from an <see cref="HsiCube"/> using mean + std percentile thresholds.
 /// Includes morphological cleanup matching Python <c>tissue_mask._clean_mask</c>.
 /// </summary>
 public static class TissueMask
@@ -27,7 +26,6 @@ public static class TissueMask
         var bands = cube.Bands;
 
         // Single-pass mean + std using sum-of-squares identity: std = sqrt(E[x²] - E[x]²)
-        // Parallelized across bands — each thread accumulates into its own buffer, merged at the end.
         var sum = new float[n];
         var sumSq = new float[n];
 
@@ -100,7 +98,7 @@ public static class TissueMask
         var result = (bool[])mask.Clone();
         var visited = new bool[n];
         var stack = new Stack<int>();
-        var comp = new List<int>(); // Reused across components to avoid repeated allocation
+        var comp = new List<int>();
 
         for (var idx = 0; idx < n; idx++)
         {
@@ -178,19 +176,4 @@ public static class TissueMask
             return sorted[low];
         return sorted[low] + (vi - low) * (sorted[high] - sorted[low]);
     }
-}
-
-/// <summary>Options aligned with Python <c>build_tissue_mask(..., method="mean_std_percentile")</c>.</summary>
-public readonly struct TissueMaskOptions(
-    string method = "unknown",
-    float qMean = 0.0f,
-    float qStd = 0.0f,
-    int minObjectSize = 0,
-    int minHoleSize = 0)
-{
-    public string Method { get; } = method;
-    public float QMean { get; } = qMean;
-    public float QStd { get; } = qStd;
-    public int MinObjectSize { get; } = minObjectSize;
-    public int MinHoleSize { get; } = minHoleSize;
 }

@@ -48,8 +48,6 @@ public enum LoadingState
 /// </summary>
 public partial class ImageViewModel : ViewModelBase, IDisposable
 {
-    // ── Dependencies & lifecycle ─────────────────────────────────────────────
-
     public ImageNode ImageNode { get; }
     public OverlayViewModel Overlay { get; } = new();
 
@@ -86,7 +84,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         };
         Overlay.PropertyChanged += _overlayHandler;
 
-        // React to active-model changes so RunBlockedReason/CanRunInference stay in sync
+        // Add listener for sessionHandler changes (active model)
         _sessionHandler = (_, e) =>
         {
             if (e.PropertyName == nameof(SessionService.ActiveModel))
@@ -98,10 +96,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         };
         _session.PropertyChanged += _sessionHandler;
 
-        // Keep RunCards in sync with ImageNode.Runs
         RebuildRunCards();
         ImageNode.Runs.CollectionChanged += OnRunsCollectionChanged;
-
         _ = LoadAsync();
     }
 
@@ -128,10 +124,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Raised when the view-model wants to be closed by the host (e.g. user
-    /// canceled image loading and there's no useful state left to display).
-    /// </summary>
+
     public event Action? CloseRequested;
 
     /// <summary>
@@ -145,7 +138,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // ── Loading (delegates to ImageLoader) ───────────────────────────────────
+    // -- Loading (delegates to ImageLoader) -------------------------------------- //
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoading))]
@@ -159,7 +152,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(SelectedBandWaveLength))]
     [NotifyPropertyChangedFor(nameof(ImageWidth))]
     [NotifyPropertyChangedFor(nameof(ImageHeight))]
-    [NotifyPropertyChangedFor(nameof(SpecLine))]
     [NotifyPropertyChangedFor(nameof(RunBlockedReason))]
     [NotifyPropertyChangedFor(nameof(CanRunInference))]
     [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
@@ -177,19 +169,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     public int ImageWidth => Cube?.Samples ?? 0;
     public int ImageHeight => Cube?.Lines ?? 0;
 
-    /// <summary>Compact one-line image spec for the sidebar header: dimensions · bands · wavelength range.</summary>
-    public string SpecLine
-    {
-        get
-        {
-            if (Cube == null) return string.Empty;
-            var wls = Cube.Header.WavelengthValues;
-            var spec = $"{Cube.Samples} × {Cube.Lines}  ·  {Cube.Bands} bands";
-            if (wls.Length >= 2)
-                spec += $"  ·  {wls[0]:F0}–{wls[^1]:F0} {Cube.Header.WavelengthUnit}";
-            return spec;
-        }
-    }
 
     private async Task LoadAsync()
     {
@@ -203,27 +182,21 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
             });
 
             var result = await ImageLoader.LoadAsync(ImageNode.AbsolutePath, progress,
-                onHeaderParsed: h => LoadingMetadata = $"{h.Samples} height  ·  {h.Lines} width  ·  {h.Bands} bands  ·  {h.Interleave.ToUpperInvariant()}  ·  {h.DataTypeName}",
+                onHeaderParsed: h =>
+                    LoadingMetadata =
+                        $"{h.Samples} height  ·  {h.Lines} width  ·  {h.Bands} bands  ·  {h.Interleave.ToUpperInvariant()}  ·  {h.DataTypeName}",
                 _cts.Token);
             Cube = result.Cube;
             IsCalibrated = result.HasCalibration;
 
-            // Pre-render the synthetic RGB on a background thread.
-            // Generating a 512×512×3 bitmap from the cube is CPU-heavy and would
-            // otherwise freeze the UI for 1–3 seconds at the tail end of loading.
-            StatusMessage = "Rendering preview…";
-            Progress = 0.98;
             var rgbParams = SelectedDisplayMode.RgbParameters;
             var preview = await Task.Run(
-                () => CubeRenderer.SyntheticRgbToBitmap(result.Cube, rgbParams),
-                _cts.Token);
+                () => CubeRenderer.SyntheticRgbToBitmap(result.Cube, rgbParams), _cts.Token);
             _cachedSyntheticRgb = preview;
 
             LoadingState = LoadingState.Ready;
-            StatusMessage = "Loading Complete";
             UpdateBitmap();
 
-            // Thumbnail save is disk I/O + bitmap encode. Fire-and-forget on background.
             if (InLibraryMode)
             {
                 var bmp = preview;
@@ -238,7 +211,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             Console.WriteLine("Error Loading Image: " + ex.Message);
-            Console.WriteLine(ex);
             LoadingState = LoadingState.Error;
             StatusMessage = $"Failed to load: {ex.Message}";
         }
@@ -249,10 +221,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // ── Display mode & bitmap (RGB ↔ spectral band) ──────────────────────────
+    // -- Display Mode & Bitmaps (RGB + Spectral Band) ----------------------- //
 
     [ObservableProperty] private DisplayOption _selectedDisplayMode = DisplayOption.Default;
-    public static IReadOnlyList<DisplayOption> AvailableDisplayModes => DisplayOption.Presets;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(WavelengthUnit))]
@@ -332,7 +303,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // ── Inference (preprocess + ONNX run) ────────────────────────────────────
+    // -- Inference (preprocess + ONNX run) -------------------------------- //
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RunBlockedReason))]
@@ -340,8 +311,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     [NotifyCanExecuteChangedFor(nameof(RunInferenceCommand))]
     private bool _isCalibrated;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RunStatusText))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(RunStatusText))]
     private double _inferenceProgress;
 
     [ObservableProperty]
@@ -350,7 +320,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     private string? _inferencePhase;
 
     [ObservableProperty] private string? _lastRunError;
-    [ObservableProperty] private string _inferenceOutput = "";
     [ObservableProperty] private bool _hasPreprocessedCube;
 
     private PreprocessingResult? _cachedPreprocessing;
@@ -362,7 +331,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     /// <summary>Human-readable status shown on the Run button while running.</summary>
     public string RunStatusText => InferencePhase switch
     {
-        "Inferring"     => $"Inferring  {InferenceProgress:P0}",
+        "Inferring" => $"Inferring  {InferenceProgress:P0}",
         "Preprocessing" => "Preprocessing…",
         _ => string.Empty,
     };
@@ -403,22 +372,21 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         try
         {
-
-            // __ Resource logging: setup up timers _________________________
+            // Resource logging: setup up timers
             var wallTimer = Stopwatch.StartNew();
             var cpuStart = Process.GetCurrentProcess().TotalProcessorTime;
             var preprocessingMs = 0.0;
-            //_______________________________________________________________
 
-            // Preprocess (cache invalidation by package change)
+            // Preform Preprocessing (cache invalidation by package change)
             if (_cachedPreprocessing == null || _lastPackage != package)
             {
                 InferencePhase = "Preprocessing";
                 var preprocessingTimer = Stopwatch.StartNew();
                 _cachedPreprocessing = await Task.Run(
-                    () => PreprocessingPipeline.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing, ct), ct);
+                    () => PreprocessingPipeline.RunFromCalibrated(Cube!, package.Manifest.Pipeline.Preprocessing, ct),
+                    ct);
 
-                 preprocessingMs = preprocessingTimer.Elapsed.TotalMilliseconds;
+                preprocessingMs = preprocessingTimer.Elapsed.TotalMilliseconds;
 
                 _lastPackage = package;
                 HasPreprocessedCube = _cachedPreprocessing.HasValue;
@@ -445,7 +413,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                 ActiveRun = summary;
             }
 
-            // __ Resource logging: write one CSV row to console if flagged ___________
+            // Resource logging: write one CSV row to console if flagged
             if (LogMetrics)
                 LogMetricsCsv(
                     preprocessingMs,
@@ -454,7 +422,6 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
                     (Process.GetCurrentProcess().TotalProcessorTime - cpuStart).TotalMilliseconds,
                     Cube!,
                     _cachedPreprocessing.Value.Cube);
-            // __________________________________________________________________________
         }
         catch (OperationCanceledException)
         {
@@ -521,8 +488,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // ── Runs (saved classification results) ──────────────────────────────────
-
+    // -- Runs (saved classification results) ------------------------------------ /
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(ExportPdfCommand))]
     private RunSummary? _activeRun;
 
@@ -531,6 +497,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     /// (notably <see cref="RunCardViewModel.IsActive"/>) so XAML can bind to a simple bool.
     /// </summary>
     public ObservableCollection<RunCardViewModel> RunCards { get; } = [];
+
     public bool HasNoRuns => RunCards.Count == 0;
 
     private void RebuildRunCards()
@@ -572,7 +539,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            InferenceOutput = $"Inference succeeded but save failed: {ex.Message}";
+            Debug.WriteLine("Auto Save Run failed: " + ex.Message);
             return null;
         }
     }
@@ -583,21 +550,14 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         if (summary == null || !InLibraryMode) return;
 
         if (Cube == null)
-        {
-            InferenceOutput = "Image still loading...";
             return;
-        }
 
         var report = await _libraryManager.LoadRunAsync(ImageNode.ImageId, summary.RunId, _cts.Token);
         if (report == null)
-        {
-            InferenceOutput = "Run file missing or unreadable.";
             return;
-        }
 
         Overlay.ApplyResult(report, Cube.Samples, Cube.Lines);
         ActiveRun = summary;
-        InferenceOutput = $"Loaded report from {summary.CompletedAt:yyyy-MM-dd HH:mm} ({summary.ModelDisplayName})";
     }
 
     /// <summary>
@@ -611,7 +571,8 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
 
         var confirmed = await _dialogService.ConfirmAsync(
             title: "Delete run",
-            message: $"Delete the run from {summary.CompletedAt:yyyy-MM-dd HH:mm} ({summary.ModelDisplayName})? This cannot be undone.",
+            message:
+            $"Delete the run from {summary.CompletedAt:yyyy-MM-dd HH:mm} ({summary.ModelDisplayName})? This cannot be undone.",
             confirmLabel: "Delete",
             isDestructive: true);
         if (!confirmed) return;
@@ -627,12 +588,12 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            InferenceOutput = $"Delete failed: {ex.Message}";
+            Debug.WriteLine("Delete Run failed: " + ex.Message);
         }
     }
 
 
-    // ── Notes (per-image clinical notes) ─────────────────────────────────────
+    // -- Notes (per-image clinical notes) ------------------------ //
 
     [ObservableProperty] private bool _showNotes;
 
@@ -662,13 +623,13 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            InferenceOutput = $"Failed to save notes: {ex.Message}";
+            Debug.WriteLine("Failed to save notes: " + ex.Message);
         }
     }
 
 
-    // ── Spectral signature (pixel picks) ─────────────────────────────────────
-
+    // -- Spectral signature (pixel picks) ----------------------------- /
+    
     [ObservableProperty] private int? _pixel1X;
     [ObservableProperty] private int? _pixel1Y;
     [ObservableProperty] private int? _pixel2X;
@@ -704,7 +665,7 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // ── PDF export ───────────────────────────────────────────────────────────
+    // -- PDF export ----------------------------------------------------------- /
 
     private bool CanExportPdf() => Cube != null && Overlay.ClassificationResult != null;
 
@@ -756,8 +717,9 @@ public partial class ImageViewModel : ViewModelBase, IDisposable
     }
 
 
-    // ── Design-time preview constructor ──────────────────────────────────────
 
+
+    
     /// <summary>Design preview constructor filled with dummy data.</summary>
     public ImageViewModel()
     {

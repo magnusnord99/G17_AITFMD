@@ -37,8 +37,7 @@ public static class ColorMaps
     
     /// <summary>
     /// Sequential colormap: dark purple → blue → teal → green → yellow.
-    /// Perceptually uniform and colorblind-safe. The modern default in
-    /// libraries like matplotlib, plotly, and many scientific Python tools.
+    /// Perceptually uniform and the modern default in libraries like matplotlib.
     /// </summary>
     private static Color Viridis(float probability)
     {
@@ -77,7 +76,7 @@ public static class ColorMaps
 
     /// <summary>
     /// Sequential colormap: black → dark purple → red → orange → light yellow.
-    /// Perceptually uniform like Viridis but with a warmer, higher-contrast palette.
+    /// Perceptually uniform like Viridis but with a higher-contrast palette.
     /// </summary>
     private static Color Inferno(float probability)
     {
@@ -139,9 +138,6 @@ public static class ColorMaps
 
     /// <summary>
     /// Performs linear interpolation between two values.
-    /// Returns <paramref name="a"/> when <paramref name="t"/> is 0,
-    /// <paramref name="b"/> when <paramref name="t"/> is 1, and
-    /// proportional values in between.
     /// </summary>
     /// <param name="a">The start value (returned when t = 0).</param>
     /// <param name="b">The end value (returned when t = 1).</param>
