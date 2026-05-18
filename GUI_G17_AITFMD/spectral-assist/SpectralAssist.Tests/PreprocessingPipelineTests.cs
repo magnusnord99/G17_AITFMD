@@ -1,13 +1,14 @@
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Preprocessing;
 using Xunit;
 
 namespace SpectralAssist.Tests;
 
 /// <summary>
-/// Tests for <see cref="PreprocessingService"/>: manifest-driven step execution.
+/// Tests for <see cref="PreprocessingPipeline"/>: manifest-driven step execution.
 /// </summary>
-public class PreprocessingServiceTests
+public class PreprocessingPipelineTests
 {
     [Fact]
     public void Default_steps_produce_reduced_bands_and_mask()
@@ -36,7 +37,7 @@ public class PreprocessingServiceTests
             }
         };
 
-        var result = PreprocessingService.Run(sceneCube, darkCube, whiteCube, preprocessing);
+        var result = PreprocessingPipeline.Run(sceneCube, darkCube, whiteCube, preprocessing);
 
         // avg3: 9/3 = 3 bands, then band_average with 3 out = 1 band each
         Assert.Equal(h, result.Cube.Lines);
@@ -68,7 +69,7 @@ public class PreprocessingServiceTests
             }
         };
 
-        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
+        var result = PreprocessingPipeline.Run(raw, dark, white, preprocessing);
 
         Assert.Equal(3, result.Cube.Bands);
         Assert.Null(result.TissueMask);
@@ -85,7 +86,7 @@ public class PreprocessingServiceTests
         };
 
         Assert.Throws<NotSupportedException>(() =>
-            PreprocessingService.Run(cube, cube, cube, preprocessing));
+            PreprocessingPipeline.Run(cube, cube, cube, preprocessing));
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class PreprocessingServiceTests
             }
         };
 
-        var result = PreprocessingService.RunFromCalibrated(calibrated, preprocessing);
+        var result = PreprocessingPipeline.RunFromCalibrated(calibrated, preprocessing);
 
         Assert.Equal(3, result.Cube.Bands);
         Assert.NotNull(result.TissueMask);
@@ -147,7 +148,7 @@ public class PreprocessingServiceTests
             }
         };
 
-        _ = PreprocessingService.RunFromCalibrated(calibrated, preprocessing);
+        _ = PreprocessingPipeline.RunFromCalibrated(calibrated, preprocessing);
 
         // Original cube must be unchanged
         var afterBand0 = calibrated.GetBand(0);

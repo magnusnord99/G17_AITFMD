@@ -2,8 +2,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using SpectralAssist.Models;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Hsi;
 using SpectralAssist.Services.Inference;
 using SpectralAssist.Services.Library;
+using SpectralAssist.Services.Packaging;
 using SpectralAssist.ViewModels;
 
 namespace SpectralAssist;
@@ -14,7 +16,7 @@ public static class ServiceCollectionExtensions
     {
         // Services
         collection.AddSingleton<SessionService>();
-        collection.AddSingleton<ImageLoadingService>();
+        collection.AddSingleton<ImageLoader>();
 
         collection.AddSingleton<InferenceService>();
         collection.AddSingleton<Onnx3DCnnClassifier>();

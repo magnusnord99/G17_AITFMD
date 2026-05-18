@@ -9,7 +9,7 @@ using System.Text.Json;
 using Microsoft.ML.OnnxRuntime;
 using SpectralAssist.Models;
 
-namespace SpectralAssist.Services;
+namespace SpectralAssist.Services.Packaging;
 
 /// <summary>
 /// Full manager for model packages: discover, import, load ONNX sessions, and delete.

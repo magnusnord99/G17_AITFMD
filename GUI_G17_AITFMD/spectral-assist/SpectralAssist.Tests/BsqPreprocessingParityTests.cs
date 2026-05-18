@@ -128,7 +128,7 @@ public class BsqPreprocessingParityTests
             }
         };
 
-        var result = PreprocessingService.Run(raw, dark, white, preprocessing);
+        var result = PreprocessingPipeline.Run(raw, dark, white, preprocessing);
 
         Assert.Equal(3, result.Cube.Bands);
         Assert.Equal(h, result.Cube.Lines);

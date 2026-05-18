@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Packaging;
 
 namespace SpectralAssist.Models;
 

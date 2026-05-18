@@ -6,6 +6,7 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using SpectralAssist.Services;
+using SpectralAssist.Services.Packaging;
 using SpectralAssist.ViewModels;
 using SpectralAssist.Views;
 
