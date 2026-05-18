@@ -359,11 +359,11 @@
                                                      Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <StackPanel Margin="0,0,12,0" Spacing="4">
-                                        <TextBlock Text="PRECISION" Classes="stat-label" />
+                                        <TextBlock Text="AVG PRECISION" Classes="stat-label" />
                                         <TextBlock
-                                            Text="{Binding Training.TestMetrics.Precision, StringFormat='{}{0:P1}'}"
+                                            Text="{Binding Training.TestMetrics.AvgPrecision, StringFormat='{}{0:P1}'}"
                                             Classes="stat-value" />
-                                        <ProgressBar Value="{Binding Training.TestMetrics.Precision}"
+                                        <ProgressBar Value="{Binding Training.TestMetrics.AvgPrecision}"
                                                      Minimum="0" Maximum="1" Height="3" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <StackPanel Margin="0,0,12,0" Spacing="4">
