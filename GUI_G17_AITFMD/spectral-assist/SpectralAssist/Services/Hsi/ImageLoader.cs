@@ -66,20 +66,19 @@ public class ImageLoader
             progress?.Report(("Done", 1.0));
             return new ImageLoadResult { Cube = scene, HasCalibration = false };
         }
-        progress?.Report(("Loading calibration references…", ReferencesEnd));
+
+        progress?.Report(("Loading calibration references...", ReferencesEnd));
 
         //__ Step 4: Apply reflectance (70 – 100%) ___________________________________
         progress?.Report(("Calibrating reflectance...", ReferencesEnd));
         var bandProgress = new Progress<float>(p =>
         {
             var pct = ReferencesEnd + p * (CalibrationEnd - ReferencesEnd);
-            progress?.Report(("Calibrating reflectance", pct));
+            progress?.Report(("Calibrating reflectance...", pct));
         });
 
         var calibrated = await Task.Run(
-            () => HsiCalibration.ApplyReflectance(scene, pair.Dark, pair.White,
-                                                  bandProgress: bandProgress, ct: ct),
-            ct);
+            () => HsiCalibration.ApplyReflectance(scene, pair.Dark, pair.White, bandProgress: bandProgress, ct: ct), ct);
 
         progress?.Report(("Done", 1.0));
         return new ImageLoadResult { Cube = calibrated, HasCalibration = true };
