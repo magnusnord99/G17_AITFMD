@@ -48,7 +48,7 @@ public class ImageLoader
         var sceneLoadProgress = new Progress<(float percent, int band)>(p =>
         {
             var pct = HeaderEnd + p.percent * (sceneEnd - HeaderEnd);
-            progress?.Report(("Loading image data…", pct));
+            progress?.Report(("Loading image data...", pct));
         });
         var scene = await HsiCubeLoader.LoadAsync(header, sceneLoadProgress, ct);
 
@@ -59,7 +59,7 @@ public class ImageLoader
         }
 
         //__ Step 3: Load dark/white references (50 – 70%) ____________________________
-        progress?.Report(("Loading calibration references…", sceneEnd));
+        progress?.Report(("Loading calibration references...", sceneEnd));
         var refs = await HsiCalibration.LoadReferencesAsync(hdrPath, ct);
         if (refs is not { } pair)
         {
@@ -69,11 +69,11 @@ public class ImageLoader
         progress?.Report(("Loading calibration references…", ReferencesEnd));
 
         //__ Step 4: Apply reflectance (70 – 100%) ___________________________________
-        progress?.Report(("Calibrating reflectance…", ReferencesEnd));
+        progress?.Report(("Calibrating reflectance...", ReferencesEnd));
         var bandProgress = new Progress<float>(p =>
         {
             var pct = ReferencesEnd + p * (CalibrationEnd - ReferencesEnd);
-            progress?.Report(("Calibrating reflectance…", pct));
+            progress?.Report(("Calibrating reflectance", pct));
         });
 
         var calibrated = await Task.Run(
